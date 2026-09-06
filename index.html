@@ -340,34 +340,36 @@
 
     .toast.show { opacity: 1; transform: none; }
 
-    .modal-bg {
-      position: fixed;
-      inset: 0;
-      background: rgba(20, 18, 16, 0.55);
-      display: none;
-      place-items: center;
-      z-index: 40;
-      padding: 20px;
+    .import-view { display: none; min-height: 100%; background: var(--desk); }
+    body.import-open { overflow: auto; }
+    body.import-open .app { display: none; }
+    body.import-open .import-view { display: block; }
+
+    .import-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      height: 58px;
+      background: #141210;
+      color: #f6efe6;
     }
-    .modal-bg.open { display: grid; }
-    .modal {
-      width: min(640px, 100%);
-      max-height: min(88vh, 820px);
-      overflow: auto;
-      background: #fffdf8;
-      color: #171411;
+    .import-wrap {
+      width: min(860px, calc(100% - 32px));
+      margin: 24px auto 48px;
+      background: var(--paper);
       border-radius: 16px;
       box-shadow: var(--shadow);
-      padding: 18px 18px 16px;
+      padding: 22px;
     }
-    .modal h2 {
+    .import-wrap h2 {
       font-family: "Shippori Mincho", serif;
-      font-size: 20px;
+      font-size: 22px;
       margin-bottom: 4px;
     }
-    .modal .lead { color: #6a6258; font-size: 12px; margin-bottom: 14px; }
-    .modal label { display: grid; gap: 6px; font-size: 12px; color: #6a6258; margin-bottom: 10px; }
-    .modal input[type="password"], .modal input[type="text"], .modal textarea {
+    .import-wrap .lead { color: #6a6258; font-size: 13px; margin-bottom: 16px; }
+    .import-wrap label { display: grid; gap: 6px; font-size: 12px; color: #6a6258; margin-bottom: 12px; }
+    .import-wrap input[type="password"], .import-wrap input[type="text"], .import-wrap textarea {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -375,31 +377,32 @@
       font-size: 14px;
       background: #fff;
     }
-    .modal textarea { min-height: 68px; resize: vertical; }
-    .key-row, .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .import-wrap textarea { min-height: 72px; resize: vertical; }
+    .key-row, .import-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .key-row input { flex: 1; min-width: 160px; }
-    .modal-tabs { display: flex; gap: 6px; margin: 8px 0 12px; }
-    .modal-tabs button, .modal .ghost, .modal .go, .ex {
+    .import-tabs { display: flex; gap: 6px; margin: 8px 0 14px; }
+    .import-tabs button, .import-view .ghost, .import-view .go, .ex {
       appearance: none;
       border: 1px solid var(--line);
       background: #f6f0e6;
+      color: var(--ink);
       border-radius: 8px;
       height: 34px;
       padding: 0 12px;
       cursor: pointer;
       font-size: 13px;
     }
-    .modal-tabs button.active, .modal .go {
+    .import-tabs button.active, .import-view .go {
       background: var(--seal);
       color: #fff;
       border-color: transparent;
     }
-    .modal .go { height: 40px; font-weight: 600; }
-    .modal .go:disabled { opacity: 0.4; cursor: default; }
+    .import-view .go { height: 42px; font-weight: 600; }
+    .import-view .go:disabled { opacity: 0.4; cursor: default; }
     .drop {
       border: 1.5px dashed #cfc4b4;
       border-radius: 12px;
-      min-height: 110px;
+      min-height: 140px;
       display: grid;
       place-items: center;
       text-align: center;
@@ -412,11 +415,11 @@
     .drop input { display: none; }
     .examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
     .ex { height: 28px; font-size: 12px; }
-    .preview-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+    .preview-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
     .pv {
       border: 1px solid var(--line);
       border-radius: 12px;
-      min-height: 140px;
+      min-height: 180px;
       background:
         linear-gradient(45deg, #eee8dc 25%, transparent 25%),
         linear-gradient(-45deg, #eee8dc 25%, transparent 25%),
@@ -429,9 +432,9 @@
       place-items: center;
       overflow: hidden;
     }
-    .pv img, .pv svg { max-width: 100%; max-height: 160px; }
-    .modal-status { font-size: 12px; color: #6a6258; min-height: 18px; }
-    .modal-status.err { color: #b42318; }
+    .pv img, .pv svg { max-width: 100%; max-height: 200px; }
+    .import-status { font-size: 13px; color: #6a6258; min-height: 18px; margin-bottom: 10px; }
+    .import-status.err { color: #b42318; }
     .spinner {
       width: 14px; height: 14px;
       border: 2px solid rgba(255,255,255,0.35);
@@ -458,6 +461,10 @@
         <h1>Scratch SVG Paint <span>VECTOR STUDIO</span></h1>
       </div>
       <div class="top-actions">
+        <button id="btn-ai" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 16l5-4 4 3 3-2 4 3"/></svg>
+          画像から取込
+        </button>
         <button id="btn-undo" title="Ctrl+Z" disabled>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 7H5V3"/><path d="M5 7a8 8 0 1 1-1.3 6.2"/></svg>
           元に戻す
@@ -500,10 +507,6 @@
           <button class="tool" data-tool="eraser">
             <svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7-4 4H9z"/><path d="M8 18h8"/></svg>
             <span class="hint">消しゴム E</span>
-          </button>
-          <button class="tool" id="btn-ai" type="button">
-            <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 16l5-4 4 3 3-2 4 3"/></svg>
-            <span class="hint">画像/AIから取込</span>
           </button>
         </div>
 
@@ -568,10 +571,19 @@
     </div>
   </div>
   <div class="toast" id="toast"></div>
-  <div class="modal-bg" id="ai-modal" role="dialog" aria-modal="true">
-    <div class="modal">
+  <div class="import-view" id="view-import">
+    <header class="import-bar">
+      <div class="brand">
+        <div class="seal">線</div>
+        <h1>Scratch SVG Paint <span>画像から取込</span></h1>
+      </div>
+      <div class="top-actions">
+        <button id="btn-close-ai" type="button">キャンバスへ戻る</button>
+      </div>
+    </header>
+    <div class="import-wrap">
       <h2>画像 / AI からキャンバスへ</h2>
-      <p class="lead">画像をアップロード、またはAIで生成し、GeminiがSVGに変換してキャンバスに載せます。</p>
+      <p class="lead">ここで画像を用意してベクターに変換すると、キャンバスに戻って編集できます。</p>
       <label>
         Gemini APIキー
         <div class="key-row">
@@ -580,7 +592,7 @@
           <button class="ghost" id="save-key" type="button">保存</button>
         </div>
       </label>
-      <div class="modal-tabs">
+      <div class="import-tabs">
         <button type="button" class="active" data-tab="upload">画像をアップロード</button>
         <button type="button" data-tab="generate">AIで画像を生成</button>
       </div>
@@ -613,10 +625,9 @@
           <div class="pv" id="svg-frame">まだありません</div>
         </div>
       </div>
-      <div class="modal-status" id="ai-status">画像を用意してから変換してください</div>
-      <div class="modal-actions">
+      <div class="import-status" id="ai-status">画像を用意してから変換してください</div>
+      <div class="import-actions">
         <button class="go" id="btn-convert" type="button" disabled>ベクターに変換してキャンバスへ</button>
-        <button class="ghost" id="btn-close-ai" type="button">閉じる</button>
       </div>
     </div>
   </div>
@@ -1400,8 +1411,8 @@
     window.addEventListener("keydown", (e) => {
       const tag = document.activeElement?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (document.getElementById("ai-modal").classList.contains("open")) {
-        if (e.key === "Escape") closeAiModal();
+      if (document.body.classList.contains("import-open")) {
+        if (e.key === "Escape") showCanvasView();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
@@ -1445,12 +1456,13 @@
       el.classList.toggle("err", !!err);
     }
 
-    function openAiModal() {
-      document.getElementById("ai-modal").classList.add("open");
+    function showImportView() {
+      document.body.classList.add("import-open");
+      window.scrollTo(0, 0);
       apiKeyInput.value = localStorage.getItem(STORAGE_KEY) || window.SVG_TRACE_API_KEY || apiKeyInput.value;
     }
-    function closeAiModal() {
-      document.getElementById("ai-modal").classList.remove("open");
+    function showCanvasView() {
+      document.body.classList.remove("import-open");
     }
 
     function showSource(dataUrl) {
@@ -1743,15 +1755,12 @@
       toast("キャンバスに取り込みました");
     }
 
-    document.getElementById("btn-ai").addEventListener("click", openAiModal);
-    document.getElementById("btn-close-ai").addEventListener("click", closeAiModal);
-    document.getElementById("ai-modal").addEventListener("click", (e) => {
-      if (e.target.id === "ai-modal") closeAiModal();
-    });
+    document.getElementById("btn-ai").addEventListener("click", showImportView);
+    document.getElementById("btn-close-ai").addEventListener("click", showCanvasView);
 
-    document.querySelectorAll(".modal-tabs button").forEach((tab) => {
+    document.querySelectorAll(".import-tabs button").forEach((tab) => {
       tab.addEventListener("click", () => {
-        document.querySelectorAll(".modal-tabs button").forEach((t) => t.classList.toggle("active", t === tab));
+        document.querySelectorAll(".import-tabs button").forEach((t) => t.classList.toggle("active", t === tab));
         document.getElementById("panel-upload").classList.toggle("hidden", tab.dataset.tab !== "upload");
         document.getElementById("panel-generate").classList.toggle("hidden", tab.dataset.tab !== "generate");
       });
@@ -1824,7 +1833,7 @@
         ai.svgMarkup = svg;
         showSvgPreview(svg);
         importSvgToCanvas(svg);
-        closeAiModal();
+        showCanvasView();
       } catch (err) {
         aiStatus(err.message || "変換に失敗しました", true);
       } finally {
