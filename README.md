@@ -1,6 +1,10 @@
 # SVG Trace
 
-画像をアップロードするか、AIで生成して、Google Gemini（`gemini-2.5-flash`）で SVG ベクターに変換する Web アプリです。`index.html` をブラウザで開くだけで使えます。
+画像をアップロードするか、AIで生成して、Google Gemini（`gemini-2.5-flash`）で SVG ベクターに変換する Web アプリです。
+
+**公開サイト:** https://whinaotona-debug.github.io/svg-trace/
+
+`index.html` をブラウザで開くだけでも使えます。
 
 ## 使い方
 
