@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVG Trace — 画像をベクターに</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0e1210;
+      --panel: #171d1a;
+      --panel-2: #1e2622;
+      --line: #2c3832;
+      --text: #eef4f0;
+      --muted: #93a59b;
+      --accent: #3ee0a3;
+      --accent-2: #1faa73;
+      --accent-soft: rgba(62, 224, 163, 0.12);
+      --warn: #ffb020;
+      --danger: #ff6b6b;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body {
+      font-family: "IBM Plex Sans JP", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1200px 500px at 10% -10%, rgba(62, 224, 163, 0.08), transparent 50%),
+        radial-gradient(900px 400px at 100% 0%, rgba(80, 140, 255, 0.08), transparent 45%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    button, input, textarea { font-family: inherit; }
+
+    .wrap {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 64px;
+    }
+
+    header.hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .mark {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(160deg, var(--accent), #149e6a);
+      color: #062016;
+      font-family: Syne, sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    h1 {
+      font-family: Syne, sans-serif;
+      font-size: 28px;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+    .chip {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid rgba(62, 224, 163, 0.25);
+      padding: 6px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .settings {
+      padding: 16px 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    label.field { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
+
+    .key-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+    }
+
+    input[type="password"], input[type="text"], textarea {
+      width: 100%;
+      background: #101613;
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus, textarea:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 0 14px;
+      height: 44px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:hover { filter: brightness(1.08); }
+    .btn:disabled { opacity: 0.4; cursor: default; filter: none; }
+    .btn-ghost { border-color: var(--line); }
+    .btn-primary {
+      background: linear-gradient(180deg, #4af0b0, #1db37a);
+      color: #062016;
+      min-width: 180px;
+    }
+    .btn-accent { background: #22332c; color: var(--accent); border-color: rgba(62, 224, 163, 0.25); }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      background: #121816;
+      border-radius: 14px;
+      margin: 18px 0 12px;
+      width: fit-content;
+    }
+
+    .tab {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      height: 40px;
+      padding: 0 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .tab.active { background: var(--panel-2); color: var(--text); }
+
+    .panel { padding: 18px; display: none; }
+    .panel.active { display: block; }
+
+    .drop {
+      border: 1.5px dashed #3b4b43;
+      border-radius: 16px;
+      min-height: 180px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      cursor: pointer;
+      background: #121816;
+      padding: 24px;
+    }
+
+    .drop.drag { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+    .drop strong { color: var(--text); display: block; margin-bottom: 4px; }
+    .drop input { display: none; }
+
+    .prompt-grid { display: grid; gap: 10px; }
+    textarea { min-height: 92px; resize: vertical; }
+    .examples { display: flex; flex-wrap: wrap; gap: 8px; }
+    .examples button {
+      background: #121816;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .examples button:hover { color: var(--text); border-color: var(--accent-2); }
+
+    .convert-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+
+    .status { color: var(--muted); font-size: 13px; }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--accent); }
+
+    .previews {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .preview-card { padding: 14px; }
+    .preview-card h2 {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .frame {
+      background:
+        linear-gradient(45deg, #1a221e 25%, transparent 25%),
+        linear-gradient(-45deg, #1a221e 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1a221e 75%),
+        linear-gradient(-45deg, transparent 75%, #1a221e 75%);
+      background-size: 22px 22px;
+      background-position: 0 0, 0 11px, 11px -11px, -11px 0;
+      background-color: #101613;
+      border-radius: 14px;
+      min-height: 280px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .frame img, .frame svg, .frame iframe {
+      max-width: 100%;
+      max-height: 360px;
+      display: block;
+    }
+
+    .placeholder { color: #6f8278; font-size: 13px; padding: 24px; text-align: center; }
+
+    .actions { display: flex; gap: 8px; }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(6, 32, 22, 0.25);
+      border-top-color: #062016;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer.note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    a { color: var(--accent); }
+
+    @media (max-width: 800px) {
+      header.hero { flex-direction: column; align-items: flex-start; }
+      .key-row { grid-template-columns: 1fr; }
+      .previews { grid-template-columns: 1fr; }
+      .tabs { width: 100%; }
+      .tab { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="brand">
+        <div class="mark">線</div>
+        <div>
+          <h1>SVG Trace</h1>
+          <p class="sub">画像をアップロード、またはAIで生成して、GeminiがベクターSVGに変換します</p>
+        </div>
+      </div>
+      <div class="chip">gemini-2.5-flash</div>
+    </header>
+
+    <section class="card settings">
+      <label class="field">
+        Gemini APIキー（Google AI Studio）
+        <div class="key-row">
+          <input id="api-key" type="password" placeholder="APIキーを入力" autocomplete="off" />
+          <button class="btn btn-ghost" id="toggle-key" type="button">表示</button>
+          <button class="btn btn-accent" id="save-key" type="button">保存</button>
+        </div>
+      </label>
+      <p class="sub">キーはブラウザの localStorage にだけ保存され、外部には送信されません（変換時のみ Google へ送信します）。<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">キーを発行</a></p>
+    </section>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="upload" type="button">画像をアップロード</button>
+      <button class="tab" data-tab="generate" type="button">AIで画像を生成</button>
+    </div>
+
+    <section class="card panel active" id="panel-upload">
+      <label class="drop" id="dropzone">
+        <input id="file" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" />
+        <div>
+          <strong>PNG / JPG をドロップ、またはクリックして選択</strong>
+          スマホのアルバムからも選べます
+        </div>
+      </label>
+    </section>
+
+    <section class="card panel" id="panel-generate">
+      <div class="prompt-grid">
+        <label class="field">
+          プロンプト
+          <textarea id="prompt" placeholder='例: simple cute cat icon, flat design, white background'></textarea>
+        </label>
+        <div class="examples">
+          <button type="button" data-prompt="simple cute cat icon, flat design, vector style, white background">かわいい猫アイコン</button>
+          <button type="button" data-prompt="simple red apple icon, flat design, bold shapes, white background">りんごアイコン</button>
+          <button type="button" data-prompt="minimal mountain landscape logo, geometric, flat colors">山のロゴ</button>
+          <button type="button" data-prompt="kawaii star character, simple shapes, flat design, white background">星キャラ</button>
+        </div>
+        <div>
+          <button class="btn btn-accent" id="btn-generate" type="button">画像を生成</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="convert-bar">
+      <div class="status" id="status">画像を用意してから変換してください</div>
+      <button class="btn btn-primary" id="btn-convert" type="button" disabled>ベクター（SVG）に変換</button>
+    </div>
+
+    <section class="previews">
+      <article class="card preview-card">
+        <h2>元画像</h2>
+        <div class="frame" id="source-frame">
+          <div class="placeholder">まだ画像がありません</div>
+        </div>
+      </article>
+      <article class="card preview-card">
+        <h2>
+          変換されたSVG
+          <span class="actions">
+            <button class="btn btn-ghost" id="btn-copy" type="button" disabled>コピー</button>
+            <button class="btn btn-primary" id="btn-download" type="button" disabled>.svgとしてダウンロード</button>
+          </span>
+        </h2>
+        <div class="frame" id="svg-frame">
+          <div class="placeholder">変換結果がここに表示されます</div>
+        </div>
+      </article>
+    </section>
+
+    <footer class="note">
+      画像生成は Pollinations.ai の無料エンドポイントを使用します。ベクター化は Google Gemini API の無料枠を利用します。複雑な写真より、アイコンやイラストの方がきれいなSVGになりやすいです。
+    </footer>
+  </div>
+
+  <script src="config.local.js"></script>
+  <script>
+    const STORAGE_KEY = "svg-trace-gemini-api-key";
+    const CONVERT_PROMPT = "この画像を解析し、形状や色を再現するSVGコードを作成してください。Scratch等のエディタで扱いやすいよう、単純なpathやpolygon、circle等を組み合わせて構成してください。解説やMarkdownの整形（```xmlなど）は一切含めず、純粋な <svg>...</svg> タグとその中身だけを出力してください。";
+
+    const els = {
+      apiKey: document.getElementById("api-key"),
+      toggleKey: document.getElementById("toggle-key"),
+      saveKey: document.getElementById("save-key"),
+      file: document.getElementById("file"),
+      dropzone: document.getElementById("dropzone"),
+      prompt: document.getElementById("prompt"),
+      generate: document.getElementById("btn-generate"),
+      convert: document.getElementById("btn-convert"),
+      download: document.getElementById("btn-download"),
+      copy: document.getElementById("btn-copy"),
+      status: document.getElementById("status"),
+      sourceFrame: document.getElementById("source-frame"),
+      svgFrame: document.getElementById("svg-frame"),
+    };
+
+    const state = {
+      sourceDataUrl: null,
+      sourceMime: null,
+      svgMarkup: null,
+      busy: false,
+    };
+
+    els.apiKey.value = localStorage.getItem(STORAGE_KEY) || window.SVG_TRACE_API_KEY || "";
+
+    function setStatus(text, kind = "") {
+      els.status.textContent = text;
+      els.status.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function setBusy(on, label) {
+      state.busy = on;
+      els.convert.disabled = on || !state.sourceDataUrl;
+      els.generate.disabled = on;
+      if (on) {
+        els.convert.innerHTML = `<span class="spinner"></span>${label || "処理中..."}`;
+      } else {
+        els.convert.textContent = "ベクター（SVG）に変換";
+      }
+    }
+
+    function showSource(dataUrl) {
+      state.sourceDataUrl = dataUrl;
+      const mime = (dataUrl.split(";")[0] || "").replace("data:", "") || "image/jpeg";
+      state.sourceMime = mime;
+      els.sourceFrame.innerHTML = "";
+      const img = document.createElement("img");
+      img.alt = "入力画像";
+      img.src = dataUrl;
+      els.sourceFrame.append(img);
+      els.convert.disabled = state.busy;
+      setStatus("画像の準備ができました。ベクターに変換できます");
+    }
+
+    function showSvg(markup) {
+      state.svgMarkup = markup;
+      els.svgFrame.innerHTML = "";
+      const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
+      const svg = doc.documentElement;
+      if (svg && svg.nodeName.toLowerCase() === "svg" && !doc.querySelector("parsererror")) {
+        svg.removeAttribute("onload");
+        svg.querySelectorAll("script").forEach((n) => n.remove());
+        [...svg.querySelectorAll("*")].forEach((n) => {
+          [...n.attributes].forEach((a) => {
+            if (a.name.startsWith("on")) n.removeAttribute(a.name);
+          });
+        });
+        svg.style.maxWidth = "100%";
+        svg.style.maxHeight = "360px";
+        svg.style.height = "auto";
+        els.svgFrame.append(svg);
+      } else {
+        els.svgFrame.innerHTML = `<div class="placeholder">SVGの解析に失敗しました</div>`;
+      }
+      els.download.disabled = false;
+      els.copy.disabled = false;
+    }
+
+    function extractSvg(text) {
+      if (!text) return null;
+      const cleaned = text
+        .replace(/```(?:xml|svg|html|markup)?/gi, "")
+        .replace(/```/g, "")
+        .trim();
+      const match = cleaned.match(/<svg\b[\s\S]*<\/svg>/i);
+      return match ? match[0].trim() : null;
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function blobToDataUrl(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("画像データの変換に失敗しました"));
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function resizeDataUrl(dataUrl, maxSize = 1024) {
+      const img = new Image();
+      img.src = dataUrl;
+      await img.decode();
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      if (scale >= 1 && dataUrl.length < 1_500_000) return dataUrl;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d");
+      const png = dataUrl.startsWith("data:image/png");
+      if (!png) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL(png ? "image/png" : "image/jpeg", 0.9);
+    }
+
+    function withTimeout(promise, ms, label) {
+      let timer;
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(label)), ms);
+      });
+      return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+    }
+
+    function urlToDataUrlViaImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth || 768;
+            canvas.height = img.naturalHeight || 768;
+            canvas.getContext("2d").drawImage(img, 0, 0);
+            resolve(canvas.toDataURL("image/png"));
+          } catch (err) {
+            reject(new Error("生成画像の読み取りに失敗しました（CORS）"));
+          }
+        };
+        img.onerror = () => reject(new Error("生成画像の読み込みに失敗しました"));
+        img.src = url;
+      });
+    }
+
+    async function loadGeneratedImage(prompt) {
+      const encoded = encodeURIComponent(prompt.trim());
+      const urls = [
+        `https://image.pollinations.ai/prompt/${encoded}?width=768&height=768&model=flux&nologo=true`,
+        `https://pollinations.ai/p/${encoded}`,
+      ];
+      let lastError = null;
+      for (const url of urls) {
+        try {
+          const res = await withTimeout(fetch(url, { mode: "cors" }), 90000, "画像生成がタイムアウトしました");
+          if (!res.ok) throw new Error(`生成APIが ${res.status} を返しました`);
+          const blob = await res.blob();
+          if (blob.size < 800) throw new Error("画像データが取得できませんでした");
+          return await blobToDataUrl(blob);
+        } catch (err) {
+          lastError = err;
+          try {
+            return await withTimeout(urlToDataUrlViaImage(url), 90000, "画像生成がタイムアウトしました");
+          } catch (imgErr) {
+            lastError = imgErr;
+          }
+        }
+      }
+      throw lastError || new Error("画像生成に失敗しました");
+    }
+
+    async function convertWithGemini(dataUrl, apiKey) {
+      const resized = await resizeDataUrl(dataUrl);
+      const [meta, base64] = resized.split(",");
+      const mime = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              role: "user",
+              parts: [
+                { text: CONVERT_PROMPT },
+                { inlineData: { mimeType: mime, data: base64 } },
+              ],
+            }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 16384,
+            },
+          }),
+        }
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = body?.error?.message || `Gemini APIエラー (${res.status})`;
+        throw new Error(msg);
+      }
+      const parts = body?.candidates?.[0]?.content?.parts || [];
+      const text = parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("\n").trim();
+      const finish = body?.candidates?.[0]?.finishReason;
+      if (!text) {
+        const block = body?.promptFeedback?.blockReason;
+        throw new Error(block ? `リクエストがブロックされました: ${block}` : "Geminiからテキストが返りませんでした");
+      }
+      const svg = extractSvg(text);
+      if (!svg) throw new Error("応答からSVGを取り出せませんでした。もう一度お試しください");
+      if (finish === "MAX_TOKENS") {
+        setStatus("SVGが長いため途中で切れている可能性があります", "error");
+      }
+      return svg;
+    }
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === tab));
+        document.getElementById("panel-upload").classList.toggle("active", tab.dataset.tab === "upload");
+        document.getElementById("panel-generate").classList.toggle("active", tab.dataset.tab === "generate");
+      });
+    });
+
+    els.toggleKey.addEventListener("click", () => {
+      const pass = els.apiKey.type === "password";
+      els.apiKey.type = pass ? "text" : "password";
+      els.toggleKey.textContent = pass ? "隠す" : "表示";
+    });
+
+    els.saveKey.addEventListener("click", () => {
+      localStorage.setItem(STORAGE_KEY, els.apiKey.value.trim());
+      setStatus("APIキーをこのブラウザに保存しました", "ok");
+    });
+
+    els.apiKey.addEventListener("change", () => {
+      localStorage.setItem(STORAGE_KEY, els.apiKey.value.trim());
+    });
+
+    els.file.addEventListener("change", async () => {
+      const file = els.file.files?.[0];
+      if (!file) return;
+      try {
+        const url = await fileToDataUrl(file);
+        showSource(url);
+      } catch (err) {
+        setStatus(err.message, "error");
+      }
+    });
+
+    ["dragenter", "dragover"].forEach((ev) => {
+      els.dropzone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        els.dropzone.classList.add("drag");
+      });
+    });
+    ["dragleave", "drop"].forEach((ev) => {
+      els.dropzone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        els.dropzone.classList.remove("drag");
+      });
+    });
+    els.dropzone.addEventListener("drop", async (e) => {
+      const file = e.dataTransfer.files?.[0];
+      if (!file || !file.type.startsWith("image/")) {
+        setStatus("画像ファイルをドロップしてください", "error");
+        return;
+      }
+      try {
+        showSource(await fileToDataUrl(file));
+      } catch (err) {
+        setStatus(err.message, "error");
+      }
+    });
+
+    document.querySelectorAll(".examples button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        els.prompt.value = btn.dataset.prompt;
+      });
+    });
+
+    els.generate.addEventListener("click", async () => {
+      const prompt = els.prompt.value.trim();
+      if (!prompt) {
+        setStatus("プロンプトを入力してください", "error");
+        return;
+      }
+      setBusy(true, "画像を生成中...");
+      setStatus("Pollinations.ai で画像を生成しています...");
+      try {
+        const dataUrl = await loadGeneratedImage(prompt);
+        showSource(dataUrl);
+        setStatus("生成画像をセットしました。ベクターに変換できます", "ok");
+      } catch (err) {
+        setStatus(err.message || "画像生成に失敗しました", "error");
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    els.convert.addEventListener("click", async () => {
+      const apiKey = els.apiKey.value.trim();
+      if (!apiKey) {
+        setStatus("Gemini APIキーを入力してください", "error");
+        els.apiKey.focus();
+        return;
+      }
+      if (!state.sourceDataUrl) {
+        setStatus("先に画像を用意してください", "error");
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY, apiKey);
+      setBusy(true, "Geminiで変換中...");
+      setStatus("gemini-2.5-flash が画像を解析してSVGを作成しています...");
+      try {
+        const svg = await convertWithGemini(state.sourceDataUrl, apiKey);
+        showSvg(svg);
+        setStatus("変換が完了しました", "ok");
+      } catch (err) {
+        setStatus(err.message || "変換に失敗しました", "error");
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    els.download.addEventListener("click", () => {
+      if (!state.svgMarkup) return;
+      const blob = new Blob([state.svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "traced.svg";
+      document.body.append(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+      setStatus("SVGファイルをダウンロードしました", "ok");
+    });
+
+    els.copy.addEventListener("click", async () => {
+      if (!state.svgMarkup) return;
+      await navigator.clipboard.writeText(state.svgMarkup);
+      setStatus("SVGコードをコピーしました", "ok");
+    });
+  </script>
+</body>
+</html>
