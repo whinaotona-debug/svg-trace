@@ -3,476 +3,1486 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SVG Trace — 画像をベクターに</title>
+  <title>Scratch SVG Paint</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0e1210;
-      --panel: #171d1a;
-      --panel-2: #1e2622;
-      --line: #2c3832;
-      --text: #eef4f0;
-      --muted: #93a59b;
-      --accent: #3ee0a3;
-      --accent-2: #1faa73;
-      --accent-soft: rgba(62, 224, 163, 0.12);
-      --warn: #ffb020;
-      --danger: #ff6b6b;
-      --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-      --radius: 18px;
+      --ink: #171411;
+      --ink-soft: #3a342e;
+      --paper: #fffdf8;
+      --washi: #efe8dc;
+      --desk: #d9d0c2;
+      --line: #cfc4b4;
+      --seal: #d9480f;
+      --seal-soft: #fff1e8;
+      --select: #1d4ed8;
+      --handle: #ffffff;
+      --shadow: 0 18px 50px rgba(40, 28, 16, 0.16);
+      --tool: 48px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { min-height: 100%; }
-    body {
-      font-family: "IBM Plex Sans JP", "Segoe UI", sans-serif;
-      background:
-        radial-gradient(1200px 500px at 10% -10%, rgba(62, 224, 163, 0.08), transparent 50%),
-        radial-gradient(900px 400px at 100% 0%, rgba(80, 140, 255, 0.08), transparent 45%),
-        var(--bg);
-      color: var(--text);
-      line-height: 1.55;
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--desk);
+      color: var(--ink);
+      font-family: "Zen Kaku Gothic New", "Segoe UI", sans-serif;
+      user-select: none;
     }
 
-    button, input, textarea { font-family: inherit; }
+    button, input { font-family: inherit; }
 
-    .wrap {
-      width: min(1120px, calc(100% - 32px));
-      margin: 0 auto;
-      padding: 28px 0 64px;
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-rows: 58px 1fr;
     }
 
-    header.hero {
+    .topbar {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: flex-end;
-      gap: 20px;
-      margin-bottom: 22px;
+      padding: 0 18px 0 16px;
+      background: #141210;
+      color: #f6efe6;
+      border-bottom: 1px solid #000;
+      z-index: 3;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
+      min-width: 0;
     }
 
-    .mark {
-      width: 46px;
-      height: 46px;
-      border-radius: 14px;
+    .seal {
+      width: 28px;
+      height: 28px;
+      border: 1.5px solid #f3c2a8;
+      color: #f3c2a8;
       display: grid;
       place-items: center;
-      background: linear-gradient(160deg, var(--accent), #149e6a);
-      color: #062016;
-      font-family: Syne, sans-serif;
-      font-weight: 800;
-      font-size: 18px;
-    }
-
-    h1 {
-      font-family: Syne, sans-serif;
-      font-size: 28px;
-      letter-spacing: -0.03em;
+      font-family: "Shippori Mincho", serif;
+      font-size: 14px;
       line-height: 1;
     }
 
-    .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    .brand h1 {
+      font-family: "Shippori Mincho", serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .brand span {
+      color: #b5aa9c;
+      font-size: 12px;
+      margin-left: 8px;
+      letter-spacing: 0.08em;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .top-actions button {
+      appearance: none;
+      border: 1px solid transparent;
+      background: #2a2622;
+      color: #f6efe6;
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .top-actions button:hover { background: #3a342e; }
+    .top-actions button:disabled { opacity: 0.38; cursor: default; }
+    .top-actions .primary {
+      background: var(--seal);
+      color: #fff;
+    }
+    .top-actions .primary:hover { background: #f0561a; }
+    .top-actions .danger:hover { background: #5c2218; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      min-height: 0;
+    }
+
+    .toolbar {
+      background: #1b1815;
+      color: #efe7dc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 10px 16px;
+      overflow: visible;
+    }
+
+    .tool-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .divider {
+      width: 36px;
+      height: 1px;
+      background: #3e372f;
+      margin: 6px 0;
+    }
+
+    .tool {
+      width: var(--tool);
+      height: var(--tool);
+      border: 1px solid transparent;
+      background: transparent;
+      color: inherit;
+      border-radius: 12px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .tool svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .tool:hover { background: #2c2824; }
+    .tool.active {
+      background: var(--seal-soft);
+      color: var(--seal);
+      border-color: #f3c2a8;
+    }
+
+    .tool[disabled] { opacity: 0.35; cursor: default; }
+
+    .hint {
+      position: absolute;
+      left: calc(100% + 10px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: #111;
+      color: #fff;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 20;
+    }
+
+    .tool:hover .hint { opacity: 1; }
+
+    .swatches {
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+      width: 100%;
+    }
+
+    .swatch {
+      position: relative;
+      width: 42px;
+      height: 42px;
+    }
+
+    .swatch input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
 
     .chip {
-      font-size: 11px;
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      border: 1px solid #5c5348;
+      box-shadow: inset 0 0 0 3px #1b1815;
+      pointer-events: none;
+    }
+
+    .none-fill .chip {
+      background:
+        linear-gradient(135deg, transparent 46%, #d9480f 46% 54%, transparent 54%),
+        repeating-conic-gradient(#fff 0 25%, #d7d0c6 0 50%);
+      background-size: auto, 10px 10px;
+    }
+
+    .swatch-label {
+      font-size: 10px;
+      color: #b5aa9c;
       letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--accent);
-      background: var(--accent-soft);
-      border: 1px solid rgba(62, 224, 163, 0.25);
-      padding: 6px 10px;
-      border-radius: 999px;
-      white-space: nowrap;
     }
 
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
+    .width-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      color: #b5aa9c;
+      font-size: 10px;
+      letter-spacing: 0.08em;
     }
 
-    .settings {
-      padding: 16px 18px;
+    .width-wrap input[type="range"] {
+      writing-mode: vertical-lr;
+      direction: rtl;
+      width: 18px;
+      height: 88px;
+      accent-color: var(--seal);
+      cursor: pointer;
+    }
+
+    .width-value { color: #efe7dc; font-size: 12px; }
+
+    .stage-wrap {
+      min-width: 0;
+      min-height: 0;
+      padding: 18px;
       display: grid;
+      grid-template-rows: 1fr auto;
       gap: 10px;
     }
 
-    label.field { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
-
-    .key-row {
-      display: grid;
-      grid-template-columns: 1fr auto auto;
-      gap: 8px;
-    }
-
-    input[type="password"], input[type="text"], textarea {
-      width: 100%;
-      background: #101613;
-      border: 1px solid var(--line);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-size: 14px;
-      outline: none;
-    }
-
-    input:focus, textarea:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--accent-soft); }
-
-    .btn {
-      appearance: none;
-      border: 1px solid transparent;
-      background: var(--panel-2);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 0 14px;
-      height: 44px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .btn:hover { filter: brightness(1.08); }
-    .btn:disabled { opacity: 0.4; cursor: default; filter: none; }
-    .btn-ghost { border-color: var(--line); }
-    .btn-primary {
-      background: linear-gradient(180deg, #4af0b0, #1db37a);
-      color: #062016;
-      min-width: 180px;
-    }
-    .btn-accent { background: #22332c; color: var(--accent); border-color: rgba(62, 224, 163, 0.25); }
-
-    .tabs {
-      display: flex;
-      gap: 8px;
-      padding: 8px;
-      background: #121816;
-      border-radius: 14px;
-      margin: 18px 0 12px;
-      width: fit-content;
-    }
-
-    .tab {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      height: 40px;
-      padding: 0 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .tab.active { background: var(--panel-2); color: var(--text); }
-
-    .panel { padding: 18px; display: none; }
-    .panel.active { display: block; }
-
-    .drop {
-      border: 1.5px dashed #3b4b43;
+    .paper {
+      position: relative;
+      min-height: 0;
+      background: var(--paper);
       border-radius: 16px;
-      min-height: 180px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 1px solid #f3ece1;
+    }
+
+    .paper::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.35;
+      background-image: radial-gradient(rgba(80, 60, 40, 0.12) 0.8px, transparent 0.8px);
+      background-size: 22px 22px;
+    }
+
+    svg.canvas {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    svg.canvas.select { cursor: default; }
+    svg.canvas.eraser { cursor: cell; }
+
+    .statusbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--ink-soft);
+      font-size: 12px;
+      padding: 0 6px;
+    }
+
+    .kbd {
+      border: 1px solid #c2b7a6;
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 0 5px;
+      font-size: 11px;
+      background: #f6f0e6;
+    }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      background: #141210;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: 0.25s ease;
+      z-index: 50;
+    }
+
+    .toast.show { opacity: 1; transform: none; }
+
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 18, 16, 0.55);
+      display: none;
+      place-items: center;
+      z-index: 40;
+      padding: 20px;
+    }
+    .modal-bg.open { display: grid; }
+    .modal {
+      width: min(640px, 100%);
+      max-height: min(88vh, 820px);
+      overflow: auto;
+      background: #fffdf8;
+      color: #171411;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px 18px 16px;
+    }
+    .modal h2 {
+      font-family: "Shippori Mincho", serif;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    .modal .lead { color: #6a6258; font-size: 12px; margin-bottom: 14px; }
+    .modal label { display: grid; gap: 6px; font-size: 12px; color: #6a6258; margin-bottom: 10px; }
+    .modal input[type="password"], .modal input[type="text"], .modal textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: #fff;
+    }
+    .modal textarea { min-height: 68px; resize: vertical; }
+    .key-row, .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .key-row input { flex: 1; min-width: 160px; }
+    .modal-tabs { display: flex; gap: 6px; margin: 8px 0 12px; }
+    .modal-tabs button, .modal .ghost, .modal .go, .ex {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: #f6f0e6;
+      border-radius: 8px;
+      height: 34px;
+      padding: 0 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .modal-tabs button.active, .modal .go {
+      background: var(--seal);
+      color: #fff;
+      border-color: transparent;
+    }
+    .modal .go { height: 40px; font-weight: 600; }
+    .modal .go:disabled { opacity: 0.4; cursor: default; }
+    .drop {
+      border: 1.5px dashed #cfc4b4;
+      border-radius: 12px;
+      min-height: 110px;
       display: grid;
       place-items: center;
       text-align: center;
-      color: var(--muted);
+      color: #6a6258;
       cursor: pointer;
-      background: #121816;
-      padding: 24px;
+      background: #f6f0e6;
+      padding: 16px;
     }
-
-    .drop.drag { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
-    .drop strong { color: var(--text); display: block; margin-bottom: 4px; }
+    .drop.drag { border-color: var(--seal); background: var(--seal-soft); }
     .drop input { display: none; }
-
-    .prompt-grid { display: grid; gap: 10px; }
-    textarea { min-height: 92px; resize: vertical; }
-    .examples { display: flex; flex-wrap: wrap; gap: 8px; }
-    .examples button {
-      background: #121816;
+    .examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .ex { height: 28px; font-size: 12px; }
+    .preview-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+    .pv {
       border: 1px solid var(--line);
-      color: var(--muted);
-      border-radius: 999px;
-      padding: 6px 10px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .examples button:hover { color: var(--text); border-color: var(--accent-2); }
-
-    .convert-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin: 16px 0;
-      flex-wrap: wrap;
-    }
-
-    .status { color: var(--muted); font-size: 13px; }
-    .status.error { color: var(--danger); }
-    .status.ok { color: var(--accent); }
-
-    .previews {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .preview-card { padding: 14px; }
-    .preview-card h2 {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 600;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .frame {
+      border-radius: 12px;
+      min-height: 140px;
       background:
-        linear-gradient(45deg, #1a221e 25%, transparent 25%),
-        linear-gradient(-45deg, #1a221e 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #1a221e 75%),
-        linear-gradient(-45deg, transparent 75%, #1a221e 75%);
-      background-size: 22px 22px;
-      background-position: 0 0, 0 11px, 11px -11px, -11px 0;
-      background-color: #101613;
-      border-radius: 14px;
-      min-height: 280px;
+        linear-gradient(45deg, #eee8dc 25%, transparent 25%),
+        linear-gradient(-45deg, #eee8dc 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eee8dc 75%),
+        linear-gradient(-45deg, transparent 75%, #eee8dc 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+      background-color: #fff;
       display: grid;
       place-items: center;
       overflow: hidden;
-      border: 1px solid var(--line);
     }
-
-    .frame img, .frame svg, .frame iframe {
-      max-width: 100%;
-      max-height: 360px;
-      display: block;
-    }
-
-    .placeholder { color: #6f8278; font-size: 13px; padding: 24px; text-align: center; }
-
-    .actions { display: flex; gap: 8px; }
-
+    .pv img, .pv svg { max-width: 100%; max-height: 160px; }
+    .modal-status { font-size: 12px; color: #6a6258; min-height: 18px; }
+    .modal-status.err { color: #b42318; }
     .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(6, 32, 22, 0.25);
-      border-top-color: #062016;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
+      display: inline-block;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 640px) { .preview-row { grid-template-columns: 1fr; } }
 
-    footer.note {
-      margin-top: 18px;
-      color: var(--muted);
-      font-size: 12px;
-    }
+    #selection-ui { pointer-events: none; }
+    svg.canvas.select #selection-ui .handle,
+    svg.canvas.select #selection-ui .rot-handle { pointer-events: auto; cursor: pointer; }
 
-    a { color: var(--accent); }
-
-    @media (max-width: 800px) {
-      header.hero { flex-direction: column; align-items: flex-start; }
-      .key-row { grid-template-columns: 1fr; }
-      .previews { grid-template-columns: 1fr; }
-      .tabs { width: 100%; }
-      .tab { flex: 1; }
-    }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header class="hero">
+  <div class="app">
+    <header class="topbar">
       <div class="brand">
-        <div class="mark">線</div>
-        <div>
-          <h1>SVG Trace</h1>
-          <p class="sub">画像をアップロード、またはAIで生成して、GeminiがベクターSVGに変換します</p>
-        </div>
+        <div class="seal">線</div>
+        <h1>Scratch SVG Paint <span>VECTOR STUDIO</span></h1>
       </div>
-      <div class="chip">gemini-2.5-flash</div>
+      <div class="top-actions">
+        <button id="btn-undo" title="Ctrl+Z" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 7H5V3"/><path d="M5 7a8 8 0 1 1-1.3 6.2"/></svg>
+          元に戻す
+        </button>
+        <button id="btn-redo" title="Ctrl+Shift+Z" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M15 7h4V3"/><path d="M19 7a8 8 0 1 0 1.3 6.2"/></svg>
+          やり直す
+        </button>
+        <button id="btn-clear" class="danger">全消去</button>
+        <button id="btn-export" class="primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v10"/><path d="M8 10l4 4 4-4"/><path d="M5 18h14"/></svg>
+          SVG保存
+        </button>
+      </div>
     </header>
 
-    <section class="card settings">
-      <label class="field">
-        Gemini APIキー（Google AI Studio）
+    <div class="workspace">
+      <aside class="toolbar">
+        <div class="tool-group">
+          <button class="tool" data-tool="select" title="選択">
+            <svg viewBox="0 0 24 24"><path d="M5 4l6 16 2.2-6.2L19.5 12z"/></svg>
+            <span class="hint">選択 V</span>
+          </button>
+          <button class="tool active" data-tool="pen">
+            <svg viewBox="0 0 24 24"><path d="M4 20l4.2-1.1L19 8.1 15.9 5 5.1 15.8z"/><path d="M13.7 7.2l3.1 3.1"/></svg>
+            <span class="hint">ペン P</span>
+          </button>
+          <button class="tool" data-tool="line">
+            <svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg>
+            <span class="hint">直線 L</span>
+          </button>
+          <button class="tool" data-tool="rect">
+            <svg viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="12" rx="1.5"/></svg>
+            <span class="hint">四角形 R</span>
+          </button>
+          <button class="tool" data-tool="ellipse">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>
+            <span class="hint">円 O</span>
+          </button>
+          <button class="tool" data-tool="eraser">
+            <svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7-4 4H9z"/><path d="M8 18h8"/></svg>
+            <span class="hint">消しゴム E</span>
+          </button>
+          <button class="tool" id="btn-ai" type="button">
+            <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 16l5-4 4 3 3-2 4 3"/></svg>
+            <span class="hint">画像/AIから取込</span>
+          </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="swatches">
+          <label class="swatch" title="塗り">
+            <span id="fill-chip" class="chip" style="background:#f4a261"></span>
+            <input id="fill-color" type="color" value="#f4a261" />
+          </label>
+          <div class="swatch-label">塗り</div>
+          <label class="swatch" title="線の色">
+            <span id="stroke-chip" class="chip" style="background:#171411"></span>
+            <input id="stroke-color" type="color" value="#171411" />
+          </label>
+          <div class="swatch-label">線色</div>
+          <button class="tool" id="btn-no-fill" title="塗りなし">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M7 17L17 7"/></svg>
+            <span class="hint">塗りなし</span>
+          </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="width-wrap">
+          太さ
+          <input id="stroke-width" type="range" min="1" max="40" value="4" />
+          <div class="width-value" id="width-label">4</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="tool-group">
+          <button class="tool" id="btn-front" disabled>
+            <svg viewBox="0 0 24 24"><rect x="7" y="8" width="12" height="10"/><rect x="5" y="5" width="12" height="10"/></svg>
+            <span class="hint">最前面へ</span>
+          </button>
+          <button class="tool" id="btn-back" disabled>
+            <svg viewBox="0 0 24 24"><rect x="5" y="5" width="12" height="10"/><rect x="7" y="8" width="12" height="10"/></svg>
+            <span class="hint">最背面へ</span>
+          </button>
+          <button class="tool" id="btn-delete" disabled>
+            <svg viewBox="0 0 24 24"><path d="M6 8h12"/><path d="M9 8V6h6v2"/><path d="M8 8l1 12h6l1-12"/></svg>
+            <span class="hint">削除 Delete</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="stage-wrap">
+        <div class="paper">
+          <svg class="canvas" id="canvas" xmlns="http://www.w3.org/2000/svg">
+            <g id="objects"></g>
+            <g id="preview"></g>
+            <g id="selection-ui"></g>
+          </svg>
+        </div>
+        <div class="statusbar">
+          <div id="status">ペンでドラッグすると、滑らかなパスに変換されます</div>
+          <div>Shift で縦横比固定 / Delete で削除 / Ctrl+Z で元に戻す</div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="modal-bg" id="ai-modal" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2>画像 / AI からキャンバスへ</h2>
+      <p class="lead">画像をアップロード、またはAIで生成し、GeminiがSVGに変換してキャンバスに載せます。</p>
+      <label>
+        Gemini APIキー
         <div class="key-row">
           <input id="api-key" type="password" placeholder="APIキーを入力" autocomplete="off" />
-          <button class="btn btn-ghost" id="toggle-key" type="button">表示</button>
-          <button class="btn btn-accent" id="save-key" type="button">保存</button>
+          <button class="ghost" id="toggle-key" type="button">表示</button>
+          <button class="ghost" id="save-key" type="button">保存</button>
         </div>
       </label>
-      <p class="sub">キーはブラウザの localStorage にだけ保存され、外部には送信されません（変換時のみ Google へ送信します）。<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">キーを発行</a></p>
-    </section>
-
-    <div class="tabs">
-      <button class="tab active" data-tab="upload" type="button">画像をアップロード</button>
-      <button class="tab" data-tab="generate" type="button">AIで画像を生成</button>
-    </div>
-
-    <section class="card panel active" id="panel-upload">
-      <label class="drop" id="dropzone">
-        <input id="file" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" />
-        <div>
-          <strong>PNG / JPG をドロップ、またはクリックして選択</strong>
-          スマホのアルバムからも選べます
-        </div>
-      </label>
-    </section>
-
-    <section class="card panel" id="panel-generate">
-      <div class="prompt-grid">
-        <label class="field">
+      <div class="modal-tabs">
+        <button type="button" class="active" data-tab="upload">画像をアップロード</button>
+        <button type="button" data-tab="generate">AIで画像を生成</button>
+      </div>
+      <div id="panel-upload">
+        <label class="drop" id="dropzone">
+          <input id="file" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" />
+          PNG / JPG をドロップ、またはクリック
+        </label>
+      </div>
+      <div id="panel-generate" class="hidden">
+        <label>
           プロンプト
-          <textarea id="prompt" placeholder='例: simple cute cat icon, flat design, white background'></textarea>
+          <textarea id="prompt" placeholder="simple cute cat icon, flat design, white background"></textarea>
         </label>
         <div class="examples">
-          <button type="button" data-prompt="simple cute cat icon, flat design, vector style, white background">かわいい猫アイコン</button>
-          <button type="button" data-prompt="simple red apple icon, flat design, bold shapes, white background">りんごアイコン</button>
-          <button type="button" data-prompt="minimal mountain landscape logo, geometric, flat colors">山のロゴ</button>
-          <button type="button" data-prompt="kawaii star character, simple shapes, flat design, white background">星キャラ</button>
+          <button type="button" class="ex" data-prompt="simple cute cat icon, flat design, vector style, white background">かわいい猫</button>
+          <button type="button" class="ex" data-prompt="simple red apple icon, flat design, bold shapes, white background">りんご</button>
+          <button type="button" class="ex" data-prompt="minimal mountain landscape logo, geometric, flat colors">山のロゴ</button>
+          <button type="button" class="ex" data-prompt="kawaii star character, simple shapes, flat design, white background">星キャラ</button>
+        </div>
+        <button class="go" id="btn-generate" type="button">画像を生成</button>
+      </div>
+      <div class="preview-row">
+        <div>
+          <div class="lead">元画像</div>
+          <div class="pv" id="source-frame">未選択</div>
         </div>
         <div>
-          <button class="btn btn-accent" id="btn-generate" type="button">画像を生成</button>
+          <div class="lead">変換プレビュー</div>
+          <div class="pv" id="svg-frame">まだありません</div>
         </div>
       </div>
-    </section>
-
-    <div class="convert-bar">
-      <div class="status" id="status">画像を用意してから変換してください</div>
-      <button class="btn btn-primary" id="btn-convert" type="button" disabled>ベクター（SVG）に変換</button>
+      <div class="modal-status" id="ai-status">画像を用意してから変換してください</div>
+      <div class="modal-actions">
+        <button class="go" id="btn-convert" type="button" disabled>ベクターに変換してキャンバスへ</button>
+        <button class="ghost" id="btn-close-ai" type="button">閉じる</button>
+      </div>
     </div>
-
-    <section class="previews">
-      <article class="card preview-card">
-        <h2>元画像</h2>
-        <div class="frame" id="source-frame">
-          <div class="placeholder">まだ画像がありません</div>
-        </div>
-      </article>
-      <article class="card preview-card">
-        <h2>
-          変換されたSVG
-          <span class="actions">
-            <button class="btn btn-ghost" id="btn-copy" type="button" disabled>コピー</button>
-            <button class="btn btn-primary" id="btn-download" type="button" disabled>.svgとしてダウンロード</button>
-          </span>
-        </h2>
-        <div class="frame" id="svg-frame">
-          <div class="placeholder">変換結果がここに表示されます</div>
-        </div>
-      </article>
-    </section>
-
-    <footer class="note">
-      画像生成は Pollinations.ai の無料エンドポイントを使用します。ベクター化は Google Gemini API の無料枠を利用します。複雑な写真より、アイコンやイラストの方がきれいなSVGになりやすいです。
-    </footer>
   </div>
 
   <script src="config.local.js"></script>
   <script>
-    const STORAGE_KEY = "svg-trace-gemini-api-key";
-    const CONVERT_PROMPT = "この画像を解析し、形状や色を再現するSVGコードを作成してください。Scratch等のエディタで扱いやすいよう、単純なpathやpolygon、circle等を組み合わせて構成してください。解説やMarkdownの整形（```xmlなど）は一切含めず、純粋な <svg>...</svg> タグとその中身だけを出力してください。";
-
-    const els = {
-      apiKey: document.getElementById("api-key"),
-      toggleKey: document.getElementById("toggle-key"),
-      saveKey: document.getElementById("save-key"),
-      file: document.getElementById("file"),
-      dropzone: document.getElementById("dropzone"),
-      prompt: document.getElementById("prompt"),
-      generate: document.getElementById("btn-generate"),
-      convert: document.getElementById("btn-convert"),
-      download: document.getElementById("btn-download"),
-      copy: document.getElementById("btn-copy"),
-      status: document.getElementById("status"),
-      sourceFrame: document.getElementById("source-frame"),
-      svgFrame: document.getElementById("svg-frame"),
-    };
+    const svgNS = "http://www.w3.org/2000/svg";
+    const canvas = document.getElementById("canvas");
+    const objectsLayer = document.getElementById("objects");
+    const previewLayer = document.getElementById("preview");
+    const selectionLayer = document.getElementById("selection-ui");
 
     const state = {
+      tool: "pen",
+      fill: "#f4a261",
+      fillNone: false,
+      stroke: "#171411",
+      strokeWidth: 4,
+      objects: [],
+      selectedId: null,
+      history: [],
+      future: [],
+      drawing: null,
+      gesture: null,
+      applyingUI: false,
+    };
+
+    const HANDLE_POS = {
+      nw: [0, 0], n: [0.5, 0], ne: [1, 0],
+      e: [1, 0.5], se: [1, 1], s: [0.5, 1],
+      sw: [0, 1], w: [0, 0.5],
+    };
+
+    const uid = () => "o" + Math.random().toString(36).slice(2, 10);
+    const identity = () => [1, 0, 0, 1, 0, 0];
+    const clone = (v) => JSON.parse(JSON.stringify(v));
+
+    function multiply(a, b) {
+      return [
+        a[0] * b[0] + a[2] * b[1],
+        a[1] * b[0] + a[3] * b[1],
+        a[0] * b[2] + a[2] * b[3],
+        a[1] * b[2] + a[3] * b[3],
+        a[0] * b[4] + a[2] * b[5] + a[4],
+        a[1] * b[4] + a[3] * b[5] + a[5],
+      ];
+    }
+
+    function invert(m) {
+      const [a, b, c, d, e, f] = m;
+      const det = a * d - c * b;
+      if (Math.abs(det) < 1e-8) return identity();
+      return [
+        d / det,
+        -b / det,
+        -c / det,
+        a / det,
+        (c * f - d * e) / det,
+        (b * e - a * f) / det,
+      ];
+    }
+
+    function applyMat(m, x, y) {
+      return { x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] };
+    }
+
+    function mTranslate(tx, ty) { return [1, 0, 0, 1, tx, ty]; }
+    function mScale(sx, sy) { return [sx, 0, 0, sy, 0, 0]; }
+    function mRotate(rad) {
+      const c = Math.cos(rad), s = Math.sin(rad);
+      return [c, s, -s, c, 0, 0];
+    }
+
+    function svgPoint(evt) {
+      const pt = canvas.createSVGPoint();
+      pt.x = evt.clientX;
+      pt.y = evt.clientY;
+      return pt.matrixTransform(canvas.getScreenCTM().inverse());
+    }
+
+    function currentFill() {
+      return state.fillNone ? "none" : state.fill;
+    }
+
+    function snapshot() {
+      state.history.push({
+        objects: clone(state.objects),
+        selectedId: state.selectedId,
+      });
+      if (state.history.length > 80) state.history.shift();
+      state.future = [];
+      refreshHistoryButtons();
+    }
+
+    function undo() {
+      if (!state.history.length) return;
+      state.future.push({ objects: clone(state.objects), selectedId: state.selectedId });
+      const prev = state.history.pop();
+      state.objects = clone(prev.objects);
+      state.selectedId = prev.selectedId;
+      renderObjects();
+      syncSelectionUI();
+      refreshHistoryButtons();
+    }
+
+    function redo() {
+      if (!state.future.length) return;
+      state.history.push({ objects: clone(state.objects), selectedId: state.selectedId });
+      const next = state.future.pop();
+      state.objects = clone(next.objects);
+      state.selectedId = next.selectedId;
+      renderObjects();
+      syncSelectionUI();
+      refreshHistoryButtons();
+    }
+
+    function refreshHistoryButtons() {
+      document.getElementById("btn-undo").disabled = !state.history.length;
+      document.getElementById("btn-redo").disabled = !state.future.length;
+    }
+
+    function selected() {
+      return state.objects.find((o) => o.id === state.selectedId) || null;
+    }
+
+    function setStatus(text) {
+      document.getElementById("status").textContent = text;
+    }
+
+    function toast(text) {
+      const el = document.getElementById("toast");
+      el.textContent = text;
+      el.classList.add("show");
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => el.classList.remove("show"), 1800);
+    }
+
+    function localBBox(obj) {
+      if (obj.type === "rect") return { x: obj.x, y: obj.y, w: obj.width, h: obj.height };
+      if (obj.type === "ellipse") return { x: obj.cx - obj.rx, y: obj.cy - obj.ry, w: obj.rx * 2, h: obj.ry * 2 };
+      if (obj.type === "line") {
+        const x = Math.min(obj.x1, obj.x2);
+        const y = Math.min(obj.y1, obj.y2);
+        return { x, y, w: Math.abs(obj.x2 - obj.x1) || 1, h: Math.abs(obj.y2 - obj.y1) || 1 };
+      }
+      const el = document.getElementById(obj.id)?.querySelector(".shape");
+      if (el) {
+        const b = el.getBBox();
+        return { x: b.x, y: b.y, w: b.width || 1, h: b.height || 1 };
+      }
+      return { x: 0, y: 0, w: 1, h: 1 };
+    }
+
+    function worldCorners(obj) {
+      const b = localBBox(obj);
+      const pts = [
+        [b.x, b.y],
+        [b.x + b.w, b.y],
+        [b.x + b.w, b.y + b.h],
+        [b.x, b.y + b.h],
+      ];
+      return pts.map(([x, y]) => applyMat(obj.matrix, x, y));
+    }
+
+    function createEl(name, attrs = {}) {
+      const el = document.createElementNS(svgNS, name);
+      for (const [k, v] of Object.entries(attrs)) {
+        if (v !== undefined && v !== null) el.setAttribute(k, v);
+      }
+      return el;
+    }
+
+    function shapeNode(obj) {
+      const common = {
+        class: "shape",
+        fill: obj.fill,
+        stroke: obj.stroke,
+        "stroke-width": obj.strokeWidth,
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+      };
+      if (obj.type === "path") return createEl("path", { ...common, d: obj.d });
+      if (obj.type === "rect") {
+        return createEl("rect", { ...common, x: obj.x, y: obj.y, width: obj.width, height: obj.height, rx: 0 });
+      }
+      if (obj.type === "ellipse") {
+        return createEl("ellipse", { ...common, cx: obj.cx, cy: obj.cy, rx: obj.rx, ry: obj.ry });
+      }
+      return createEl("line", {
+        ...common,
+        x1: obj.x1, y1: obj.y1, x2: obj.x2, y2: obj.y2,
+        fill: "none",
+      });
+    }
+
+    function hitNode(obj) {
+      const hitWidth = Math.max(14, obj.strokeWidth + 10);
+      if (obj.type === "path") {
+        const pe = obj.fill === "none" ? "stroke" : "all";
+        return createEl("path", { d: obj.d, fill: obj.fill === "none" ? "none" : "transparent", stroke: "transparent", "stroke-width": hitWidth, class: "hit", "pointer-events": pe });
+      }
+      if (obj.type === "rect") {
+        return createEl("rect", { x: obj.x, y: obj.y, width: obj.width, height: obj.height, fill: "transparent", stroke: "transparent", "stroke-width": hitWidth, class: "hit", "pointer-events": "all" });
+      }
+      if (obj.type === "ellipse") {
+        return createEl("ellipse", { cx: obj.cx, cy: obj.cy, rx: obj.rx, ry: obj.ry, fill: "transparent", stroke: "transparent", "stroke-width": hitWidth, class: "hit", "pointer-events": "all" });
+      }
+      return createEl("line", { x1: obj.x1, y1: obj.y1, x2: obj.x2, y2: obj.y2, stroke: "transparent", "stroke-width": hitWidth, fill: "none", class: "hit", "pointer-events": "stroke" });
+    }
+
+    function renderObjects() {
+      objectsLayer.replaceChildren();
+      for (const obj of state.objects) {
+        const g = createEl("g", {
+          id: obj.id,
+          class: "drawable",
+          transform: `matrix(${obj.matrix.join(" ")})`,
+        });
+        g.append(hitNode(obj), shapeNode(obj));
+        objectsLayer.append(g);
+      }
+    }
+
+    function simplify(points, epsilon) {
+      if (points.length <= 2) return points;
+      const first = points[0];
+      const last = points[points.length - 1];
+      let maxDist = 0;
+      let index = 0;
+      for (let i = 1; i < points.length - 1; i++) {
+        const d = pointLineDistance(points[i], first, last);
+        if (d > maxDist) { maxDist = d; index = i; }
+      }
+      if (maxDist > epsilon) {
+        const left = simplify(points.slice(0, index + 1), epsilon);
+        const right = simplify(points.slice(index), epsilon);
+        return left.slice(0, -1).concat(right);
+      }
+      return [first, last];
+    }
+
+    function pointLineDistance(p, a, b) {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy;
+      if (!len2) return Math.hypot(p.x - a.x, p.y - a.y);
+      let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+    }
+
+    function pointsToSmoothPath(raw) {
+      const pts = simplify(raw, 1.4);
+      if (pts.length === 1) {
+        const p = pts[0];
+        return `M ${p.x} ${p.y} L ${p.x + 0.01} ${p.y}`;
+      }
+      if (pts.length === 2) {
+        return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+      }
+      let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i === 0 ? i : i - 1];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = pts[i + 2] || p2;
+        const c1x = p1.x + (p2.x - p0.x) / 6;
+        const c1y = p1.y + (p2.y - p0.y) / 6;
+        const c2x = p2.x - (p3.x - p1.x) / 6;
+        const c2y = p2.y - (p3.y - p1.y) / 6;
+        d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+      }
+      return d;
+    }
+
+    function polylinePath(pts) {
+      return pts.map((p, i) => `${i ? "L" : "M"} ${p.x} ${p.y}`).join(" ");
+    }
+
+    function constrainedRect(a, b, square) {
+      let x = Math.min(a.x, b.x);
+      let y = Math.min(a.y, b.y);
+      let w = Math.abs(b.x - a.x);
+      let h = Math.abs(b.y - a.y);
+      if (square) {
+        const s = Math.max(w, h);
+        if (b.x < a.x) x = a.x - s;
+        if (b.y < a.y) y = a.y - s;
+        w = s; h = s;
+      }
+      return { x, y, width: Math.max(w, 1), height: Math.max(h, 1) };
+    }
+
+    function constrainedLine(a, b, snap) {
+      if (!snap) return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const ang = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+      const len = Math.hypot(dx, dy);
+      return { x1: a.x, y1: a.y, x2: a.x + Math.cos(ang) * len, y2: a.y + Math.sin(ang) * len };
+    }
+
+    function objectFromPreview(start, now, shift) {
+      if (state.tool === "rect") {
+        const r = constrainedRect(start, now, shift);
+        return { type: "rect", ...r };
+      }
+      if (state.tool === "ellipse") {
+        const r = constrainedRect(start, now, shift);
+        return { type: "ellipse", cx: r.x + r.width / 2, cy: r.y + r.height / 2, rx: r.width / 2, ry: r.height / 2 };
+      }
+      const line = constrainedLine(start, now, shift);
+      return { type: "line", ...line };
+    }
+
+    function setTool(tool) {
+      state.tool = tool;
+      document.querySelectorAll(".tool[data-tool]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tool === tool);
+      });
+      canvas.classList.toggle("select", tool === "select");
+      canvas.classList.toggle("eraser", tool === "eraser");
+      if (tool !== "select") {
+        /* keep selection visible so properties still work */
+      }
+      const labels = {
+        select: "パーツをクリックして選択。ドラッグで移動、ハンドルで拡大縮小・回転",
+        pen: "ペンでドラッグすると、滑らかなパスに変換されます",
+        line: "ドラッグして直線を引きます（Shiftで角度固定）",
+        rect: "ドラッグして四角形を描きます（Shiftで正方形）",
+        ellipse: "ドラッグして円・楕円を描きます（Shiftで正円）",
+        eraser: "パーツをクリック、またはなぞって消します",
+      };
+      setStatus(labels[tool]);
+    }
+
+    function selectObject(id) {
+      state.selectedId = id;
+      const obj = selected();
+      if (obj) loadPropertiesFrom(obj);
+      refreshSelectionButtons();
+      drawSelection();
+    }
+
+    function loadPropertiesFrom(obj) {
+      state.applyingUI = true;
+      state.stroke = obj.stroke;
+      state.strokeWidth = obj.strokeWidth;
+      if (obj.fill === "none") {
+        state.fillNone = true;
+      } else {
+        state.fillNone = false;
+        state.fill = obj.fill;
+      }
+      document.getElementById("stroke-color").value = toHex(obj.stroke);
+      if (obj.fill !== "none") document.getElementById("fill-color").value = toHex(obj.fill);
+      document.getElementById("stroke-width").value = obj.strokeWidth;
+      document.getElementById("width-label").textContent = obj.strokeWidth;
+      updateChips();
+      state.applyingUI = false;
+    }
+
+    function toHex(color) {
+      if (!color || color === "none") return "#000000";
+      if (color.startsWith("#") && color.length === 7) return color;
+      const ctx = toHex._c || (toHex._c = document.createElement("canvas").getContext("2d"));
+      ctx.fillStyle = "#000";
+      ctx.fillStyle = color;
+      const v = ctx.fillStyle;
+      if (v.startsWith("#")) return v.length === 7 ? v : "#000000";
+      return "#000000";
+    }
+
+    function updateChips() {
+      document.getElementById("stroke-chip").style.background = state.stroke;
+      const fillChip = document.getElementById("fill-chip");
+      fillChip.style.background = state.fillNone ? "" : state.fill;
+      fillChip.parentElement.classList.toggle("none-fill", state.fillNone);
+      document.getElementById("btn-no-fill").classList.toggle("active", state.fillNone);
+    }
+
+    function refreshSelectionButtons() {
+      const on = !!state.selectedId;
+      document.getElementById("btn-front").disabled = !on;
+      document.getElementById("btn-back").disabled = !on;
+      document.getElementById("btn-delete").disabled = !on;
+    }
+
+    function drawSelection() {
+      selectionLayer.replaceChildren();
+      const obj = selected();
+      if (!obj) return;
+      const corners = worldCorners(obj);
+      const [nw, ne, se, sw] = corners;
+      const mid = {
+        n: midPoint(nw, ne),
+        e: midPoint(ne, se),
+        s: midPoint(se, sw),
+        w: midPoint(sw, nw),
+      };
+      const poly = createEl("polygon", {
+        points: corners.map((p) => `${p.x},${p.y}`).join(" "),
+        fill: "none",
+        stroke: "#1d4ed8",
+        "stroke-width": 1.2,
+        "stroke-dasharray": "5 4",
+      });
+      selectionLayer.append(poly);
+
+      const upx = nw.x - sw.x;
+      const upy = nw.y - sw.y;
+      const ulen = Math.hypot(upx, upy) || 1;
+      const rot = { x: mid.n.x + (upx / ulen) * 28, y: mid.n.y + (upy / ulen) * 28 };
+      selectionLayer.append(createEl("line", {
+        x1: mid.n.x, y1: mid.n.y, x2: rot.x, y2: rot.y,
+        stroke: "#1d4ed8", "stroke-width": 1.2,
+      }));
+      const rotHandle = createEl("circle", {
+        class: "rot-handle", cx: rot.x, cy: rot.y, r: 7,
+        fill: "#fff4e8", stroke: varStroke(), "stroke-width": 2, "data-handle": "rot",
+      });
+      rotHandle.style.cursor = "grab";
+      selectionLayer.append(rotHandle);
+
+      const handles = { nw, n: mid.n, ne, e: mid.e, se, s: mid.s, sw, w: mid.w };
+      for (const [name, p] of Object.entries(handles)) {
+        const h = createEl("rect", {
+          class: "handle",
+          x: p.x - 5, y: p.y - 5, width: 10, height: 10,
+          fill: "#ffffff", stroke: "#1d4ed8", "stroke-width": 1.5,
+          "data-handle": name,
+        });
+        h.style.cursor = cursorForHandle(name);
+        selectionLayer.append(h);
+      }
+    }
+
+    function varStroke() { return "#d9480f"; }
+    function midPoint(a, b) { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
+
+    function cursorForHandle(name) {
+      const map = { n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize", ne: "nesw-resize", sw: "nesw-resize", nw: "nwse-resize", se: "nwse-resize" };
+      return map[name] || "default";
+    }
+
+    function syncSelectionUI() {
+      refreshSelectionButtons();
+      drawSelection();
+    }
+
+    function findObjectAt(evt) {
+      const el = document.elementFromPoint(evt.clientX, evt.clientY);
+      const g = el?.closest?.(".drawable");
+      return g ? state.objects.find((o) => o.id === g.id) : null;
+    }
+
+    function eraseAt(evt, record) {
+      const obj = findObjectAt(evt);
+      if (!obj) return false;
+      if (record) snapshot();
+      state.objects = state.objects.filter((o) => o.id !== obj.id);
+      if (state.selectedId === obj.id) state.selectedId = null;
+      renderObjects();
+      syncSelectionUI();
+      return true;
+    }
+
+    function applyStyleToSelected() {
+      const obj = selected();
+      if (!obj || state.applyingUI) return;
+      obj.fill = obj.type === "line" ? "none" : currentFill();
+      obj.stroke = state.stroke;
+      obj.strokeWidth = state.strokeWidth;
+      renderObjects();
+      drawSelection();
+    }
+
+    function deleteSelected() {
+      if (!state.selectedId) return;
+      snapshot();
+      state.objects = state.objects.filter((o) => o.id !== state.selectedId);
+      state.selectedId = null;
+      renderObjects();
+      syncSelectionUI();
+      setStatus("パーツを削除しました");
+    }
+
+    function bringToFront() {
+      const obj = selected();
+      if (!obj) return;
+      snapshot();
+      state.objects = state.objects.filter((o) => o.id !== obj.id);
+      state.objects.push(obj);
+      renderObjects();
+      drawSelection();
+    }
+
+    function sendToBack() {
+      const obj = selected();
+      if (!obj) return;
+      snapshot();
+      state.objects = state.objects.filter((o) => o.id !== obj.id);
+      state.objects.unshift(obj);
+      renderObjects();
+      drawSelection();
+    }
+
+    function clearCanvas() {
+      if (!state.objects.length) return;
+      snapshot();
+      state.objects = [];
+      state.selectedId = null;
+      renderObjects();
+      syncSelectionUI();
+      setStatus("キャンバスを全消去しました");
+    }
+
+    function exportSVG() {
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(1, Math.round(rect.width));
+      const h = Math.max(1, Math.round(rect.height));
+      const parts = state.objects.map((obj) => {
+        const inner = serializeShape(obj);
+        return `<g transform="matrix(${obj.matrix.join(" ")})">${inner}</g>`;
+      }).join("");
+      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">\n${parts}\n</svg>`;
+      const blob = new Blob([markup], { type: "image/svg+xml;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "scratch-paint.svg";
+      document.body.append(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+      toast("SVGを保存しました");
+    }
+
+    function serializeShape(obj) {
+      const f = `fill="${obj.fill}"`;
+      const s = `stroke="${obj.stroke}" stroke-width="${obj.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
+      if (obj.type === "path") return `<path d="${obj.d}" ${f} ${s}/>`;
+      if (obj.type === "rect") return `<rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" ${f} ${s}/>`;
+      if (obj.type === "ellipse") return `<ellipse cx="${obj.cx}" cy="${obj.cy}" rx="${obj.rx}" ry="${obj.ry}" ${f} ${s}/>`;
+      return `<line x1="${obj.x1}" y1="${obj.y1}" x2="${obj.x2}" y2="${obj.y2}" fill="none" ${s}/>`;
+    }
+
+    function showPreview(objLike) {
+      previewLayer.replaceChildren();
+      const dummy = { ...objLike, fill: objLike.fill ?? currentFill(), stroke: state.stroke, strokeWidth: state.strokeWidth, matrix: identity() };
+      if (dummy.type === "line") dummy.fill = "none";
+      previewLayer.append(shapeNode(dummy));
+    }
+
+    function handleScale(obj, gesture, mouse, shiftKey) {
+      const localMouse = applyMat(invert(gesture.startMatrix), mouse.x, mouse.y);
+      const b = gesture.bbox;
+      const [hx, hy] = HANDLE_POS[gesture.handle];
+      const handleLocal = { x: b.x + b.w * hx, y: b.y + b.h * hy };
+      const fixed = { x: b.x + b.w * (1 - hx), y: b.y + b.h * (1 - hy) };
+      const dx0 = handleLocal.x - fixed.x;
+      const dy0 = handleLocal.y - fixed.y;
+      let sx = Math.abs(dx0) < 0.001 ? 1 : (localMouse.x - fixed.x) / dx0;
+      let sy = Math.abs(dy0) < 0.001 ? 1 : (localMouse.y - fixed.y) / dy0;
+      if (hx === 0.5) sx = 1;
+      if (hy === 0.5) sy = 1;
+      if (shiftKey) {
+        const u = hx !== 0.5 && hy !== 0.5 ? (Math.abs(sx) > Math.abs(sy) ? sx : sy) : (hx === 0.5 ? sy : sx);
+        if (hx !== 0.5) sx = Math.sign(sx || 1) * Math.abs(u);
+        if (hy !== 0.5) sy = Math.sign(sy || 1) * Math.abs(u);
+      }
+      sx = sx || 0.01;
+      sy = sy || 0.01;
+      const around = multiply(mTranslate(fixed.x, fixed.y), multiply(mScale(sx, sy), mTranslate(-fixed.x, -fixed.y)));
+      obj.matrix = multiply(gesture.startMatrix, around);
+    }
+
+    function onPointerDown(evt) {
+      if (evt.button !== 0) return;
+      const p = svgPoint(evt);
+      canvas.setPointerCapture(evt.pointerId);
+
+      if (state.tool === "eraser") {
+        state.drawing = { mode: "erase", changed: eraseAt(evt, true) };
+        return;
+      }
+
+      if (state.tool === "select") {
+        const handle = evt.target.closest?.("[data-handle]")?.getAttribute("data-handle");
+        if (handle && selected()) {
+          const obj = selected();
+          state.gesture = {
+            type: handle === "rot" ? "rotate" : "scale",
+            handle,
+            startMatrix: obj.matrix.slice(),
+            bbox: localBBox(obj),
+            start: p,
+            recorded: false,
+            center: (() => {
+              const c = worldCorners(obj);
+              return { x: (c[0].x + c[2].x) / 2, y: (c[0].y + c[2].y) / 2 };
+            })(),
+          };
+          return;
+        }
+        const hit = findObjectAt(evt);
+        if (hit) {
+          if (hit.id !== state.selectedId) selectObject(hit.id);
+          state.gesture = { type: "move", start: p, startMatrix: selected().matrix.slice(), recorded: false };
+        } else {
+          selectObject(null);
+        }
+        return;
+      }
+
+      if (state.tool === "pen") {
+        state.drawing = { mode: "pen", points: [p] };
+        showPreview({ type: "path", d: polylinePath([p]), fill: "none" });
+        return;
+      }
+
+      state.drawing = { mode: "shape", start: p };
+      showPreview(objectFromPreview(p, p, evt.shiftKey));
+    }
+
+    function onPointerMove(evt) {
+      if (!(evt.buttons & 1) && !state.drawing && !state.gesture) return;
+      const p = svgPoint(evt);
+
+      if (state.drawing?.mode === "erase") {
+        const changed = eraseAt(evt, !state.drawing.changed);
+        if (changed) state.drawing.changed = true;
+        return;
+      }
+
+      if (state.gesture) {
+        const obj = selected();
+        if (!obj) return;
+        const dx = p.x - state.gesture.start.x;
+        const dy = p.y - state.gesture.start.y;
+        if (!state.gesture.recorded && Math.hypot(dx, dy) > 1.5) {
+          snapshot();
+          state.gesture.recorded = true;
+        }
+        if (state.gesture.type === "move") {
+          obj.matrix = multiply(mTranslate(dx, dy), state.gesture.startMatrix);
+        } else if (state.gesture.type === "rotate") {
+          const c = state.gesture.center;
+          const a0 = Math.atan2(state.gesture.start.y - c.y, state.gesture.start.x - c.x);
+          const a1 = Math.atan2(p.y - c.y, p.x - c.x);
+          let ang = a1 - a0;
+          if (evt.shiftKey) ang = Math.round(ang / (Math.PI / 12)) * (Math.PI / 12);
+          obj.matrix = multiply(multiply(mTranslate(c.x, c.y), multiply(mRotate(ang), mTranslate(-c.x, -c.y))), state.gesture.startMatrix);
+        } else if (state.gesture.type === "scale") {
+          handleScale(obj, state.gesture, p, evt.shiftKey);
+        }
+        renderObjects();
+        drawSelection();
+        return;
+      }
+
+      if (state.drawing?.mode === "pen") {
+        const last = state.drawing.points[state.drawing.points.length - 1];
+        if (Math.hypot(p.x - last.x, p.y - last.y) >= 1.2) state.drawing.points.push(p);
+        showPreview({ type: "path", d: polylinePath(state.drawing.points), fill: "none" });
+        return;
+      }
+
+      if (state.drawing?.mode === "shape") {
+        showPreview({ ...objectFromPreview(state.drawing.start, p, evt.shiftKey), fill: state.tool === "line" ? "none" : currentFill() });
+      }
+    }
+
+    function onPointerUp(evt) {
+      const p = svgPoint(evt);
+      if (state.drawing?.mode === "pen") {
+        const pts = state.drawing.points;
+        previewLayer.replaceChildren();
+        if (pts.length) {
+          snapshot();
+          state.objects.push({
+            id: uid(),
+            type: "path",
+            d: pointsToSmoothPath(pts),
+            fill: "none",
+            stroke: state.stroke,
+            strokeWidth: state.strokeWidth,
+            matrix: identity(),
+          });
+          renderObjects();
+        }
+        state.drawing = null;
+        return;
+      }
+
+      if (state.drawing?.mode === "shape") {
+        const geo = objectFromPreview(state.drawing.start, p, evt.shiftKey);
+        previewLayer.replaceChildren();
+        const tooSmall = (geo.width && geo.width < 2 && geo.height < 2) ||
+          (geo.rx && geo.rx < 1 && geo.ry < 1) ||
+          (geo.x1 !== undefined && Math.hypot(geo.x2 - geo.x1, geo.y2 - geo.y1) < 2);
+        if (!tooSmall) {
+          snapshot();
+          state.objects.push({
+            id: uid(),
+            ...geo,
+            fill: geo.type === "line" ? "none" : currentFill(),
+            stroke: state.stroke,
+            strokeWidth: state.strokeWidth,
+            matrix: identity(),
+          });
+          renderObjects();
+        }
+        state.drawing = null;
+        return;
+      }
+
+      state.drawing = null;
+      state.gesture = null;
+    }
+
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointercancel", onPointerUp);
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    document.querySelectorAll(".tool[data-tool]").forEach((btn) => {
+      btn.addEventListener("click", () => setTool(btn.dataset.tool));
+    });
+
+    document.getElementById("fill-color").addEventListener("input", (e) => {
+      state.fill = e.target.value;
+      state.fillNone = false;
+      updateChips();
+      if (selected()) {
+        snapshot();
+        applyStyleToSelected();
+      }
+    });
+
+    document.getElementById("stroke-color").addEventListener("input", (e) => {
+      state.stroke = e.target.value;
+      updateChips();
+      if (selected()) {
+        snapshot();
+        applyStyleToSelected();
+      }
+    });
+
+    document.getElementById("btn-no-fill").addEventListener("click", () => {
+      state.fillNone = !state.fillNone;
+      updateChips();
+      if (selected()) {
+        snapshot();
+        applyStyleToSelected();
+      }
+    });
+
+    let widthDragRecorded = false;
+    document.getElementById("stroke-width").addEventListener("pointerdown", () => {
+      widthDragRecorded = false;
+    });
+    document.getElementById("stroke-width").addEventListener("input", (e) => {
+      if (selected() && !widthDragRecorded) {
+        snapshot();
+        widthDragRecorded = true;
+      }
+      state.strokeWidth = Number(e.target.value);
+      document.getElementById("width-label").textContent = state.strokeWidth;
+      if (selected()) applyStyleToSelected();
+    });
+
+    document.getElementById("btn-undo").addEventListener("click", undo);
+    document.getElementById("btn-redo").addEventListener("click", redo);
+    document.getElementById("btn-clear").addEventListener("click", clearCanvas);
+    document.getElementById("btn-export").addEventListener("click", exportSVG);
+    document.getElementById("btn-delete").addEventListener("click", deleteSelected);
+    document.getElementById("btn-front").addEventListener("click", bringToFront);
+    document.getElementById("btn-back").addEventListener("click", sendToBack);
+
+    window.addEventListener("keydown", (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (document.getElementById("ai-modal").classList.contains("open")) {
+        if (e.key === "Escape") closeAiModal();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
+        return;
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        deleteSelected();
+        return;
+      }
+      const map = { v: "select", p: "pen", l: "line", r: "rect", o: "ellipse", e: "eraser" };
+      if (!e.ctrlKey && !e.metaKey && map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
+      if (e.key === "Escape") selectObject(null);
+    });
+
+    updateChips();
+    setTool("pen");
+    refreshHistoryButtons();
+    refreshSelectionButtons();
+
+    const STORAGE_KEY = "svg-trace-gemini-api-key";
+    const CONVERT_PROMPT = "この画像を解析し、形状や色を再現するSVGコードを作成してください。Scratch等のエディタで扱いやすいよう、単純なpathやpolygon、circle等を組み合わせて構成してください。解説やMarkdownの整形（```xmlなど）は一切含めず、純粋な <svg>...</svg> タグとその中身だけを出力してください。";
+    const ai = {
       sourceDataUrl: null,
-      sourceMime: null,
       svgMarkup: null,
       busy: false,
     };
+    const apiKeyInput = document.getElementById("api-key");
+    apiKeyInput.value = localStorage.getItem(STORAGE_KEY) || window.SVG_TRACE_API_KEY || "";
 
-    els.apiKey.value = localStorage.getItem(STORAGE_KEY) || window.SVG_TRACE_API_KEY || "";
-
-    function setStatus(text, kind = "") {
-      els.status.textContent = text;
-      els.status.className = "status" + (kind ? " " + kind : "");
+    function aiStatus(text, err) {
+      const el = document.getElementById("ai-status");
+      el.textContent = text;
+      el.classList.toggle("err", !!err);
     }
 
-    function setBusy(on, label) {
-      state.busy = on;
-      els.convert.disabled = on || !state.sourceDataUrl;
-      els.generate.disabled = on;
-      if (on) {
-        els.convert.innerHTML = `<span class="spinner"></span>${label || "処理中..."}`;
-      } else {
-        els.convert.textContent = "ベクター（SVG）に変換";
-      }
+    function openAiModal() {
+      document.getElementById("ai-modal").classList.add("open");
+      apiKeyInput.value = localStorage.getItem(STORAGE_KEY) || window.SVG_TRACE_API_KEY || apiKeyInput.value;
+    }
+    function closeAiModal() {
+      document.getElementById("ai-modal").classList.remove("open");
     }
 
     function showSource(dataUrl) {
-      state.sourceDataUrl = dataUrl;
-      const mime = (dataUrl.split(";")[0] || "").replace("data:", "") || "image/jpeg";
-      state.sourceMime = mime;
-      els.sourceFrame.innerHTML = "";
+      ai.sourceDataUrl = dataUrl;
+      const frame = document.getElementById("source-frame");
+      frame.innerHTML = "";
       const img = document.createElement("img");
       img.alt = "入力画像";
       img.src = dataUrl;
-      els.sourceFrame.append(img);
-      els.convert.disabled = state.busy;
-      setStatus("画像の準備ができました。ベクターに変換できます");
+      frame.append(img);
+      document.getElementById("btn-convert").disabled = ai.busy;
+      aiStatus("画像の準備ができました。変換できます");
     }
 
-    function showSvg(markup) {
-      state.svgMarkup = markup;
-      els.svgFrame.innerHTML = "";
+    function showSvgPreview(markup) {
+      const frame = document.getElementById("svg-frame");
+      frame.innerHTML = "";
       const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
       const svg = doc.documentElement;
       if (svg && svg.nodeName.toLowerCase() === "svg" && !doc.querySelector("parsererror")) {
-        svg.removeAttribute("onload");
         svg.querySelectorAll("script").forEach((n) => n.remove());
-        [...svg.querySelectorAll("*")].forEach((n) => {
-          [...n.attributes].forEach((a) => {
-            if (a.name.startsWith("on")) n.removeAttribute(a.name);
-          });
-        });
         svg.style.maxWidth = "100%";
-        svg.style.maxHeight = "360px";
-        svg.style.height = "auto";
-        els.svgFrame.append(svg);
+        svg.style.maxHeight = "160px";
+        frame.append(document.importNode(svg, true));
       } else {
-        els.svgFrame.innerHTML = `<div class="placeholder">SVGの解析に失敗しました</div>`;
+        frame.textContent = "解析失敗";
       }
-      els.download.disabled = false;
-      els.copy.disabled = false;
     }
 
     function extractSvg(text) {
       if (!text) return null;
-      const cleaned = text
-        .replace(/```(?:xml|svg|html|markup)?/gi, "")
-        .replace(/```/g, "")
-        .trim();
+      const cleaned = text.replace(/```(?:xml|svg|html|markup)?/gi, "").replace(/```/g, "").trim();
       const match = cleaned.match(/<svg\b[\s\S]*<\/svg>/i);
       return match ? match[0].trim() : null;
     }
@@ -501,17 +1511,17 @@
       await img.decode();
       const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
       if (scale >= 1 && dataUrl.length < 1_500_000) return dataUrl;
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(img.width * scale));
-      canvas.height = Math.max(1, Math.round(img.height * scale));
-      const ctx = canvas.getContext("2d");
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.width * scale));
+      c.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = c.getContext("2d");
       const png = dataUrl.startsWith("data:image/png");
       if (!png) {
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, c.width, c.height);
       }
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL(png ? "image/png" : "image/jpeg", 0.9);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      return c.toDataURL(png ? "image/png" : "image/jpeg", 0.9);
     }
 
     function withTimeout(promise, ms, label) {
@@ -528,11 +1538,11 @@
         img.crossOrigin = "anonymous";
         img.onload = () => {
           try {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.naturalWidth || 768;
-            canvas.height = img.naturalHeight || 768;
-            canvas.getContext("2d").drawImage(img, 0, 0);
-            resolve(canvas.toDataURL("image/png"));
+            const c = document.createElement("canvas");
+            c.width = img.naturalWidth || 768;
+            c.height = img.naturalHeight || 768;
+            c.getContext("2d").drawImage(img, 0, 0);
+            resolve(c.toDataURL("image/png"));
           } catch (err) {
             reject(new Error("生成画像の読み取りに失敗しました（CORS）"));
           }
@@ -585,159 +1595,241 @@
                 { inlineData: { mimeType: mime, data: base64 } },
               ],
             }],
-            generationConfig: {
-              temperature: 0.2,
-              maxOutputTokens: 16384,
-            },
+            generationConfig: { temperature: 0.2, maxOutputTokens: 16384 },
           }),
         }
       );
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = body?.error?.message || `Gemini APIエラー (${res.status})`;
-        throw new Error(msg);
-      }
+      if (!res.ok) throw new Error(body?.error?.message || `Gemini APIエラー (${res.status})`);
       const parts = body?.candidates?.[0]?.content?.parts || [];
       const text = parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("\n").trim();
-      const finish = body?.candidates?.[0]?.finishReason;
-      if (!text) {
-        const block = body?.promptFeedback?.blockReason;
-        throw new Error(block ? `リクエストがブロックされました: ${block}` : "Geminiからテキストが返りませんでした");
-      }
+      if (!text) throw new Error("Geminiからテキストが返りませんでした");
       const svg = extractSvg(text);
-      if (!svg) throw new Error("応答からSVGを取り出せませんでした。もう一度お試しください");
-      if (finish === "MAX_TOKENS") {
-        setStatus("SVGが長いため途中で切れている可能性があります", "error");
-      }
+      if (!svg) throw new Error("応答からSVGを取り出せませんでした");
       return svg;
     }
 
-    document.querySelectorAll(".tab").forEach((tab) => {
+    function parseTransform(str) {
+      if (!str) return identity();
+      let m = identity();
+      const re = /(matrix|translate|scale|rotate)\(([^)]+)\)/g;
+      let match;
+      while ((match = re.exec(str))) {
+        const args = match[2].trim().split(/[\s,]+/).map(Number);
+        if (match[1] === "matrix" && args.length >= 6) m = multiply(m, args.slice(0, 6));
+        if (match[1] === "translate") m = multiply(m, mTranslate(args[0] || 0, args[1] || 0));
+        if (match[1] === "scale") m = multiply(m, mScale(args[0] || 1, args[1] ?? args[0] ?? 1));
+        if (match[1] === "rotate") {
+          const rad = ((args[0] || 0) * Math.PI) / 180;
+          if (args.length >= 3) {
+            m = multiply(m, multiply(mTranslate(args[1], args[2]), multiply(mRotate(rad), mTranslate(-args[1], -args[2]))));
+          } else {
+            m = multiply(m, mRotate(rad));
+          }
+        }
+      }
+      return m;
+    }
+
+    function readPaint(el, inherited) {
+      const style = {};
+      (el.getAttribute("style") || "").split(";").forEach((part) => {
+        const [k, v] = part.split(":");
+        if (k && v) style[k.trim()] = v.trim();
+      });
+      const fill = el.getAttribute("fill") || style.fill || inherited.fill;
+      const stroke = el.getAttribute("stroke") || style.stroke || inherited.stroke;
+      const swRaw = el.getAttribute("stroke-width") || style["stroke-width"];
+      const strokeWidth = swRaw ? parseFloat(swRaw) : inherited.strokeWidth;
+      return {
+        fill: fill || "#000000",
+        stroke: stroke || "none",
+        strokeWidth: Number.isFinite(strokeWidth) ? strokeWidth : 2,
+      };
+    }
+
+    function polygonToPath(points, close) {
+      const nums = String(points || "").trim().split(/[\s,]+/).filter(Boolean);
+      if (nums.length < 4) return "";
+      let d = "";
+      for (let i = 0; i + 1 < nums.length; i += 2) {
+        d += `${i ? "L" : "M"} ${nums[i]} ${nums[i + 1]} `;
+      }
+      if (close) d += "Z";
+      return d.trim();
+    }
+
+    function importSvgToCanvas(markup) {
+      const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
+      const root = doc.documentElement;
+      if (!root || root.nodeName.toLowerCase() !== "svg" || doc.querySelector("parsererror")) {
+        throw new Error("SVGを解析できませんでした");
+      }
+      const vb = (root.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number);
+      let minX = 0, minY = 0, srcW = parseFloat(root.getAttribute("width")) || 512, srcH = parseFloat(root.getAttribute("height")) || 512;
+      if (vb.length >= 4 && vb.every(Number.isFinite)) {
+        minX = vb[0]; minY = vb[1]; srcW = vb[2]; srcH = vb[3];
+      }
+      const rect = canvas.getBoundingClientRect();
+      const target = Math.min(rect.width, rect.height) * 0.55;
+      const scale = target / Math.max(srcW, srcH, 1);
+      const ox = (rect.width - srcW * scale) / 2 - minX * scale;
+      const oy = (rect.height - srcH * scale) / 2 - minY * scale;
+      const fit = multiply(mTranslate(ox, oy), mScale(scale, scale));
+      const imported = [];
+      const skip = new Set(["defs", "clippath", "mask", "filter", "style", "script", "title", "desc"]);
+
+      function walk(el, inherited, parentMat) {
+        const tag = el.localName.toLowerCase();
+        if (skip.has(tag)) return;
+        const paint = readPaint(el, inherited);
+        const local = parseTransform(el.getAttribute("transform"));
+        const mat = multiply(parentMat, local);
+        let obj = null;
+        if (tag === "path" && el.getAttribute("d")) {
+          obj = { type: "path", d: el.getAttribute("d") };
+        } else if (tag === "rect") {
+          obj = {
+            type: "rect",
+            x: parseFloat(el.getAttribute("x") || 0),
+            y: parseFloat(el.getAttribute("y") || 0),
+            width: parseFloat(el.getAttribute("width") || 0),
+            height: parseFloat(el.getAttribute("height") || 0),
+          };
+        } else if (tag === "circle") {
+          const r = parseFloat(el.getAttribute("r") || 0);
+          obj = { type: "ellipse", cx: parseFloat(el.getAttribute("cx") || 0), cy: parseFloat(el.getAttribute("cy") || 0), rx: r, ry: r };
+        } else if (tag === "ellipse") {
+          obj = {
+            type: "ellipse",
+            cx: parseFloat(el.getAttribute("cx") || 0),
+            cy: parseFloat(el.getAttribute("cy") || 0),
+            rx: parseFloat(el.getAttribute("rx") || 0),
+            ry: parseFloat(el.getAttribute("ry") || 0),
+          };
+        } else if (tag === "line") {
+          obj = {
+            type: "line",
+            x1: parseFloat(el.getAttribute("x1") || 0),
+            y1: parseFloat(el.getAttribute("y1") || 0),
+            x2: parseFloat(el.getAttribute("x2") || 0),
+            y2: parseFloat(el.getAttribute("y2") || 0),
+          };
+        } else if (tag === "polygon" || tag === "polyline") {
+          const d = polygonToPath(el.getAttribute("points"), tag === "polygon");
+          if (d) obj = { type: "path", d };
+        }
+        if (obj) {
+          imported.push({
+            id: uid(),
+            ...obj,
+            fill: obj.type === "line" ? "none" : paint.fill,
+            stroke: paint.stroke === "none" && obj.type !== "line" ? "none" : paint.stroke,
+            strokeWidth: paint.strokeWidth,
+            matrix: mat,
+          });
+        }
+        [...el.children].forEach((child) => walk(child, paint, mat));
+      }
+
+      [...root.children].forEach((child) => walk(child, { fill: "#000000", stroke: "none", strokeWidth: 2 }, fit));
+      if (!imported.length) throw new Error("取り込み可能な図形が見つかりませんでした");
+      snapshot();
+      state.objects.push(...imported);
+      renderObjects();
+      selectObject(imported[imported.length - 1].id);
+      setTool("select");
+      setStatus(`画像から ${imported.length} 個のパーツをキャンバスに取り込みました`);
+      toast("キャンバスに取り込みました");
+    }
+
+    document.getElementById("btn-ai").addEventListener("click", openAiModal);
+    document.getElementById("btn-close-ai").addEventListener("click", closeAiModal);
+    document.getElementById("ai-modal").addEventListener("click", (e) => {
+      if (e.target.id === "ai-modal") closeAiModal();
+    });
+
+    document.querySelectorAll(".modal-tabs button").forEach((tab) => {
       tab.addEventListener("click", () => {
-        document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === tab));
-        document.getElementById("panel-upload").classList.toggle("active", tab.dataset.tab === "upload");
-        document.getElementById("panel-generate").classList.toggle("active", tab.dataset.tab === "generate");
+        document.querySelectorAll(".modal-tabs button").forEach((t) => t.classList.toggle("active", t === tab));
+        document.getElementById("panel-upload").classList.toggle("hidden", tab.dataset.tab !== "upload");
+        document.getElementById("panel-generate").classList.toggle("hidden", tab.dataset.tab !== "generate");
       });
     });
 
-    els.toggleKey.addEventListener("click", () => {
-      const pass = els.apiKey.type === "password";
-      els.apiKey.type = pass ? "text" : "password";
-      els.toggleKey.textContent = pass ? "隠す" : "表示";
+    document.getElementById("toggle-key").addEventListener("click", () => {
+      const pass = apiKeyInput.type === "password";
+      apiKeyInput.type = pass ? "text" : "password";
+      document.getElementById("toggle-key").textContent = pass ? "隠す" : "表示";
     });
-
-    els.saveKey.addEventListener("click", () => {
-      localStorage.setItem(STORAGE_KEY, els.apiKey.value.trim());
-      setStatus("APIキーをこのブラウザに保存しました", "ok");
+    document.getElementById("save-key").addEventListener("click", () => {
+      localStorage.setItem(STORAGE_KEY, apiKeyInput.value.trim());
+      aiStatus("APIキーを保存しました");
+      toast("APIキーを保存しました");
     });
+    apiKeyInput.addEventListener("change", () => localStorage.setItem(STORAGE_KEY, apiKeyInput.value.trim()));
 
-    els.apiKey.addEventListener("change", () => {
-      localStorage.setItem(STORAGE_KEY, els.apiKey.value.trim());
-    });
-
-    els.file.addEventListener("change", async () => {
-      const file = els.file.files?.[0];
+    document.getElementById("file").addEventListener("change", async () => {
+      const file = document.getElementById("file").files?.[0];
       if (!file) return;
-      try {
-        const url = await fileToDataUrl(file);
-        showSource(url);
-      } catch (err) {
-        setStatus(err.message, "error");
-      }
+      try { showSource(await fileToDataUrl(file)); }
+      catch (err) { aiStatus(err.message, true); }
     });
-
-    ["dragenter", "dragover"].forEach((ev) => {
-      els.dropzone.addEventListener(ev, (e) => {
-        e.preventDefault();
-        els.dropzone.classList.add("drag");
-      });
-    });
-    ["dragleave", "drop"].forEach((ev) => {
-      els.dropzone.addEventListener(ev, (e) => {
-        e.preventDefault();
-        els.dropzone.classList.remove("drag");
-      });
-    });
-    els.dropzone.addEventListener("drop", async (e) => {
+    const dropzone = document.getElementById("dropzone");
+    ["dragenter", "dragover"].forEach((ev) => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.add("drag"); }));
+    ["dragleave", "drop"].forEach((ev) => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.remove("drag"); }));
+    dropzone.addEventListener("drop", async (e) => {
       const file = e.dataTransfer.files?.[0];
-      if (!file || !file.type.startsWith("image/")) {
-        setStatus("画像ファイルをドロップしてください", "error");
-        return;
-      }
-      try {
-        showSource(await fileToDataUrl(file));
-      } catch (err) {
-        setStatus(err.message, "error");
-      }
+      if (!file || !file.type.startsWith("image/")) return aiStatus("画像ファイルをドロップしてください", true);
+      try { showSource(await fileToDataUrl(file)); }
+      catch (err) { aiStatus(err.message, true); }
+    });
+    document.querySelectorAll(".ex").forEach((btn) => {
+      btn.addEventListener("click", () => { document.getElementById("prompt").value = btn.dataset.prompt; });
     });
 
-    document.querySelectorAll(".examples button").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        els.prompt.value = btn.dataset.prompt;
-      });
-    });
+    function setAiBusy(on, label) {
+      ai.busy = on;
+      const convert = document.getElementById("btn-convert");
+      const gen = document.getElementById("btn-generate");
+      convert.disabled = on || !ai.sourceDataUrl;
+      gen.disabled = on;
+      convert.innerHTML = on ? `<span class="spinner"></span>${label || "処理中"}` : "ベクターに変換してキャンバスへ";
+    }
 
-    els.generate.addEventListener("click", async () => {
-      const prompt = els.prompt.value.trim();
-      if (!prompt) {
-        setStatus("プロンプトを入力してください", "error");
-        return;
-      }
-      setBusy(true, "画像を生成中...");
-      setStatus("Pollinations.ai で画像を生成しています...");
+    document.getElementById("btn-generate").addEventListener("click", async () => {
+      const prompt = document.getElementById("prompt").value.trim();
+      if (!prompt) return aiStatus("プロンプトを入力してください", true);
+      setAiBusy(true, "画像を生成中...");
+      aiStatus("Pollinations.ai で画像を生成しています...");
       try {
-        const dataUrl = await loadGeneratedImage(prompt);
-        showSource(dataUrl);
-        setStatus("生成画像をセットしました。ベクターに変換できます", "ok");
+        showSource(await loadGeneratedImage(prompt));
+        aiStatus("生成しました。続けてベクターに変換できます");
       } catch (err) {
-        setStatus(err.message || "画像生成に失敗しました", "error");
+        aiStatus(err.message || "画像生成に失敗しました", true);
       } finally {
-        setBusy(false);
+        setAiBusy(false);
       }
     });
 
-    els.convert.addEventListener("click", async () => {
-      const apiKey = els.apiKey.value.trim();
-      if (!apiKey) {
-        setStatus("Gemini APIキーを入力してください", "error");
-        els.apiKey.focus();
-        return;
-      }
-      if (!state.sourceDataUrl) {
-        setStatus("先に画像を用意してください", "error");
-        return;
-      }
+    document.getElementById("btn-convert").addEventListener("click", async () => {
+      const apiKey = apiKeyInput.value.trim();
+      if (!apiKey) return aiStatus("Gemini APIキーを入力してください", true);
+      if (!ai.sourceDataUrl) return aiStatus("先に画像を用意してください", true);
       localStorage.setItem(STORAGE_KEY, apiKey);
-      setBusy(true, "Geminiで変換中...");
-      setStatus("gemini-2.5-flash が画像を解析してSVGを作成しています...");
+      setAiBusy(true, "Geminiで変換中...");
+      aiStatus("gemini-2.5-flash がSVGを作成しています...");
       try {
-        const svg = await convertWithGemini(state.sourceDataUrl, apiKey);
-        showSvg(svg);
-        setStatus("変換が完了しました", "ok");
+        const svg = await convertWithGemini(ai.sourceDataUrl, apiKey);
+        ai.svgMarkup = svg;
+        showSvgPreview(svg);
+        importSvgToCanvas(svg);
+        closeAiModal();
       } catch (err) {
-        setStatus(err.message || "変換に失敗しました", "error");
+        aiStatus(err.message || "変換に失敗しました", true);
       } finally {
-        setBusy(false);
+        setAiBusy(false);
       }
-    });
-
-    els.download.addEventListener("click", () => {
-      if (!state.svgMarkup) return;
-      const blob = new Blob([state.svgMarkup], { type: "image/svg+xml;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "traced.svg";
-      document.body.append(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(a.href);
-      setStatus("SVGファイルをダウンロードしました", "ok");
-    });
-
-    els.copy.addEventListener("click", async () => {
-      if (!state.svgMarkup) return;
-      await navigator.clipboard.writeText(state.svgMarkup);
-      setStatus("SVGコードをコピーしました", "ok");
     });
   </script>
 </body>
