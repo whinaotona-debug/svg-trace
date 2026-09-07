@@ -4,588 +4,211 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scratch SVG Paint</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --ink: #171411;
-      --ink-soft: #3a342e;
-      --paper: #fffdf8;
-      --washi: #efe8dc;
-      --desk: #d9d0c2;
-      --line: #cfc4b4;
-      --seal: #d9480f;
-      --seal-soft: #fff1e8;
-      --select: #1d4ed8;
-      --handle: #ffffff;
-      --shadow: 0 18px 50px rgba(40, 28, 16, 0.16);
-      --tool: 48px;
+      --purple: #855cd6;
+      --purple-soft: #e9d9f7;
+      --fill: #cf63cf;
+      --bg: #d9e3ea;
+      --panel: #f2f7fb;
+      --line: #c2d0db;
+      --text: #575e75;
+      --ink: #222;
+      --tool: 42px;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      background: var(--desk);
-      color: var(--ink);
-      font-family: "Zen Kaku Gothic New", "Segoe UI", sans-serif;
-      user-select: none;
-    }
-
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Helvetica Neue", "Segoe UI", sans-serif; user-select: none; }
     button, input { font-family: inherit; }
-
-    .app {
-      height: 100%;
-      display: grid;
-      grid-template-rows: 58px 1fr;
-    }
-
+    .app { height: 100%; display: grid; grid-template-rows: 48px 1fr 42px; }
     .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 18px 0 16px;
-      background: #141210;
-      color: #f6efe6;
-      border-bottom: 1px solid #000;
-      z-index: 3;
+      display: flex; align-items: center; gap: 8px; padding: 0 10px;
+      background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto;
     }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
+    .name-wrap { display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
+    .name-wrap input { width: 110px; height: 28px; border: 1px solid var(--line); border-radius: 4px; padding: 0 8px; }
+    .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; flex: 0 0 auto; }
+    .ibtn {
+      width: 32px; height: 32px; border: 0; background: transparent; border-radius: 4px; cursor: pointer;
+      color: var(--text); display: grid; place-items: center;
     }
-
-    .seal {
-      width: 28px;
-      height: 28px;
-      border: 1.5px solid #f3c2a8;
-      color: #f3c2a8;
-      display: grid;
-      place-items: center;
-      font-family: "Shippori Mincho", serif;
-      font-size: 14px;
-      line-height: 1;
+    .ibtn:hover { background: #e6eef5; }
+    .ibtn:disabled { opacity: .35; cursor: default; }
+    .ibtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .color-field { display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
+    .swatch { position: relative; width: 22px; height: 22px; }
+    .swatch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .chip { width: 100%; height: 100%; border-radius: 4px; border: 1px solid #9aaebb; pointer-events: none; }
+    .none .chip { background: linear-gradient(135deg, transparent 46%, #d0021b 46% 54%, transparent 54%), #fff; }
+    .width-num { width: 42px; height: 26px; border: 1px solid var(--line); border-radius: 4px; text-align: center; }
+    .grow { flex: 1; }
+    .ai-btn, .save-btn {
+      height: 30px; padding: 0 10px; border: 0; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 700;
     }
+    .ai-btn { background: #ffbf00; color: #111; }
+    .save-btn { background: var(--purple); color: #fff; }
 
-    .brand h1 {
-      font-family: "Shippori Mincho", serif;
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }
-
-    .brand span {
-      color: #b5aa9c;
-      font-size: 12px;
-      margin-left: 8px;
-      letter-spacing: 0.08em;
-    }
-
-    .top-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .top-actions button {
-      appearance: none;
-      border: 1px solid transparent;
-      background: #2a2622;
-      color: #f6efe6;
-      height: 34px;
-      padding: 0 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    .top-actions button:hover { background: #3a342e; }
-    .top-actions button:disabled { opacity: 0.38; cursor: default; }
-    .top-actions .primary {
-      background: var(--seal);
-      color: #fff;
-    }
-    .top-actions .primary:hover { background: #f0561a; }
-    .top-actions .danger:hover { background: #5c2218; }
-
-    .workspace {
-      display: grid;
-      grid-template-columns: 84px 1fr;
-      min-height: 0;
-    }
-
+    .workspace { display: grid; grid-template-columns: 58px 1fr; min-height: 0; }
     .toolbar {
-      background: #1b1815;
-      color: #efe7dc;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 10px 16px;
-      overflow: visible;
+      background: var(--panel); border-right: 1px solid var(--line);
+      display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0;
     }
-
-    .tool-group {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      width: 100%;
-    }
-
-    .divider {
-      width: 36px;
-      height: 1px;
-      background: #3e372f;
-      margin: 6px 0;
-    }
-
     .tool {
-      width: var(--tool);
-      height: var(--tool);
-      border: 1px solid transparent;
-      background: transparent;
-      color: inherit;
-      border-radius: 12px;
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-      position: relative;
+      width: var(--tool); height: var(--tool); border: 0; background: transparent; border-radius: 8px;
+      color: var(--text); cursor: pointer; display: grid; place-items: center; position: relative;
     }
-
-    .tool svg {
-      width: 22px;
-      height: 22px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.8;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .tool:hover { background: #2c2824; }
-    .tool.active {
-      background: var(--seal-soft);
-      color: var(--seal);
-      border-color: #f3c2a8;
-    }
-
-    .tool[disabled] { opacity: 0.35; cursor: default; }
-
+    .tool svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .tool:hover { background: #e6eef5; }
+    .tool.active { background: var(--purple); color: #fff; }
     .hint {
-      position: absolute;
-      left: calc(100% + 10px);
-      top: 50%;
-      transform: translateY(-50%);
-      background: #111;
-      color: #fff;
-      font-size: 12px;
-      padding: 6px 8px;
-      border-radius: 6px;
-      white-space: nowrap;
-      pointer-events: none;
-      opacity: 0;
-      z-index: 20;
+      position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%);
+      background: #111; color: #fff; font-size: 11px; padding: 4px 6px; border-radius: 4px; white-space: nowrap;
+      pointer-events: none; opacity: 0; z-index: 20;
     }
-
     .tool:hover .hint { opacity: 1; }
 
-    .swatches {
-      display: grid;
-      gap: 10px;
-      justify-items: center;
-      width: 100%;
-    }
-
-    .swatch {
-      position: relative;
-      width: 42px;
-      height: 42px;
-    }
-
-    .swatch input {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-    }
-
-    .chip {
-      width: 100%;
-      height: 100%;
-      border-radius: 10px;
-      border: 1px solid #5c5348;
-      box-shadow: inset 0 0 0 3px #1b1815;
-      pointer-events: none;
-    }
-
-    .none-fill .chip {
-      background:
-        linear-gradient(135deg, transparent 46%, #d9480f 46% 54%, transparent 54%),
-        repeating-conic-gradient(#fff 0 25%, #d7d0c6 0 50%);
-      background-size: auto, 10px 10px;
-    }
-
-    .swatch-label {
-      font-size: 10px;
-      color: #b5aa9c;
-      letter-spacing: 0.08em;
-    }
-
-    .width-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      width: 100%;
-      color: #b5aa9c;
-      font-size: 10px;
-      letter-spacing: 0.08em;
-    }
-
-    .width-wrap input[type="range"] {
-      writing-mode: vertical-lr;
-      direction: rtl;
-      width: 18px;
-      height: 88px;
-      accent-color: var(--seal);
-      cursor: pointer;
-    }
-
-    .width-value { color: #efe7dc; font-size: 12px; }
-
-    .stage-wrap {
-      min-width: 0;
-      min-height: 0;
-      padding: 18px;
-      display: grid;
-      grid-template-rows: 1fr auto;
-      gap: 10px;
-    }
-
+    .stage { min-width: 0; min-height: 0; position: relative; background: #c8d4de; }
     .paper {
-      position: relative;
-      min-height: 0;
-      background: var(--paper);
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      border: 1px solid #f3ece1;
+      position: absolute; inset: 0; overflow: hidden;
+      background-color: #fff;
+      background-image:
+        linear-gradient(45deg, #eceff4 25%, transparent 25%),
+        linear-gradient(-45deg, #eceff4 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eceff4 75%),
+        linear-gradient(-45deg, transparent 75%, #eceff4 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
     }
-
-    .paper::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.35;
-      background-image: radial-gradient(rgba(80, 60, 40, 0.12) 0.8px, transparent 0.8px);
-      background-size: 22px 22px;
-    }
-
-    svg.canvas {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      display: block;
-      touch-action: none;
-      cursor: crosshair;
-    }
-
-    svg.canvas.select { cursor: default; }
+    svg.canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+    svg.canvas.select, svg.canvas.reshape, svg.canvas.fill { cursor: default; }
     svg.canvas.eraser { cursor: cell; }
+    svg.canvas.text { cursor: text; }
 
-    .statusbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: var(--ink-soft);
-      font-size: 12px;
-      padding: 0 6px;
+    .bottombar {
+      display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+      padding: 0 12px; background: var(--panel); border-top: 1px solid var(--line);
     }
-
-    .kbd {
-      border: 1px solid #c2b7a6;
-      border-bottom-width: 2px;
-      border-radius: 4px;
-      padding: 0 5px;
-      font-size: 11px;
-      background: #f6f0e6;
+    .zoom-btn {
+      width: 34px; height: 28px; border: 1px solid var(--line); background: #fff; border-radius: 4px; cursor: pointer; color: var(--text);
     }
+    .zoom-label { min-width: 48px; text-align: center; font-size: 12px; }
 
     .toast {
-      position: fixed;
-      right: 20px;
-      bottom: 20px;
-      background: #141210;
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 10px;
-      font-size: 13px;
-      opacity: 0;
-      transform: translateY(8px);
-      pointer-events: none;
-      transition: 0.25s ease;
-      z-index: 50;
+      position: fixed; right: 16px; bottom: 52px; background: #333; color: #fff; padding: 8px 12px; border-radius: 8px;
+      font-size: 13px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: .25s; z-index: 50;
     }
-
     .toast.show { opacity: 1; transform: none; }
 
-    .import-view { display: none; min-height: 100%; background: var(--desk); }
+    .import-view { display: none; min-height: 100%; background: var(--bg); }
     body.import-open { overflow: auto; }
     body.import-open .app { display: none; }
     body.import-open .import-view { display: block; }
-
-    .import-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 18px;
-      height: 58px;
-      background: #141210;
-      color: #f6efe6;
-    }
-    .import-wrap {
-      width: min(860px, calc(100% - 32px));
-      margin: 24px auto 48px;
-      background: var(--paper);
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-      padding: 22px;
-    }
-    .import-wrap h2 {
-      font-family: "Shippori Mincho", serif;
-      font-size: 22px;
-      margin-bottom: 4px;
-    }
-    .import-wrap .lead { color: #6a6258; font-size: 13px; margin-bottom: 16px; }
-    .import-wrap label { display: grid; gap: 6px; font-size: 12px; color: #6a6258; margin-bottom: 12px; }
-    .import-wrap input[type="password"], .import-wrap input[type="text"], .import-wrap textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-size: 14px;
-      background: #fff;
-    }
-    .import-wrap textarea { min-height: 72px; resize: vertical; }
-    .key-row, .import-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .key-row input { flex: 1; min-width: 160px; }
-    .import-tabs { display: flex; gap: 6px; margin: 8px 0 14px; }
-    .import-tabs button, .import-view .ghost, .import-view .go, .ex {
-      appearance: none;
-      border: 1px solid var(--line);
-      background: #f6f0e6;
-      color: var(--ink);
-      border-radius: 8px;
-      height: 34px;
-      padding: 0 12px;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .import-tabs button.active, .import-view .go {
-      background: var(--seal);
-      color: #fff;
-      border-color: transparent;
-    }
-    .import-view .go { height: 42px; font-weight: 600; }
-    .import-view .go:disabled { opacity: 0.4; cursor: default; }
-    .drop {
-      border: 1.5px dashed #cfc4b4;
-      border-radius: 12px;
-      min-height: 140px;
-      display: grid;
-      place-items: center;
-      text-align: center;
-      color: #6a6258;
-      cursor: pointer;
-      background: #f6f0e6;
-      padding: 16px;
-    }
-    .drop.drag { border-color: var(--seal); background: var(--seal-soft); }
+    .import-bar { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+    .import-wrap { width: min(860px, calc(100% - 32px)); margin: 24px auto 48px; background: #fff; border-radius: 12px; padding: 22px; }
+    .import-wrap h2 { color: var(--ink); margin-bottom: 6px; }
+    .import-wrap .lead, .import-wrap label { color: #667; font-size: 13px; margin-bottom: 10px; }
+    .import-wrap label { display: grid; gap: 6px; }
+    .import-wrap input, .import-wrap textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 14px; }
+    .import-wrap textarea { min-height: 72px; }
+    .key-row, .import-actions, .import-tabs, .examples { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+    .key-row input { flex: 1; }
+    .import-tabs button, .ghost, .go, .ex { border: 1px solid var(--line); background: #f4f7fb; height: 34px; padding: 0 12px; border-radius: 8px; cursor: pointer; }
+    .import-tabs button.active, .go { background: var(--purple); color: #fff; border-color: transparent; }
+    .go { height: 42px; font-weight: 700; }
+    .go:disabled { opacity: .4; }
+    .drop { border: 1.5px dashed var(--line); border-radius: 12px; min-height: 140px; display: grid; place-items: center; background: #f7fafc; cursor: pointer; }
+    .drop.drag { border-color: var(--purple); background: var(--purple-soft); }
     .drop input { display: none; }
-    .examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-    .ex { height: 28px; font-size: 12px; }
-    .preview-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
-    .pv {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      min-height: 180px;
-      background:
-        linear-gradient(45deg, #eee8dc 25%, transparent 25%),
-        linear-gradient(-45deg, #eee8dc 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #eee8dc 75%),
-        linear-gradient(-45deg, transparent 75%, #eee8dc 75%);
-      background-size: 16px 16px;
-      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
-      background-color: #fff;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-    }
+    .preview-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .pv { border: 1px solid var(--line); border-radius: 10px; min-height: 180px; display: grid; place-items: center; background: #fafafa; overflow: hidden; }
     .pv img, .pv svg { max-width: 100%; max-height: 200px; }
-    .import-status { font-size: 13px; color: #6a6258; min-height: 18px; margin-bottom: 10px; }
-    .import-status.err { color: #b42318; }
-    .spinner {
-      width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,0.35);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      display: inline-block;
-    }
+    .import-status { font-size: 13px; min-height: 18px; margin: 10px 0; }
+    .import-status.err { color: #d0021b; }
+    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    @media (max-width: 640px) { .preview-row { grid-template-columns: 1fr; } }
-
     #selection-ui { pointer-events: none; }
-    svg.canvas.select #selection-ui .handle,
-    svg.canvas.select #selection-ui .rot-handle { pointer-events: auto; cursor: pointer; }
-
+    svg.canvas.select #selection-ui .handle, svg.canvas.select #selection-ui .rot-handle,
+    svg.canvas.reshape #selection-ui .node { pointer-events: auto; cursor: pointer; }
     .hidden { display: none !important; }
+    @media (max-width: 640px) { .preview-row { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="app">
     <header class="topbar">
-      <div class="brand">
-        <div class="seal">線</div>
-        <h1>Scratch SVG Paint <span>VECTOR STUDIO</span></h1>
+      <label class="name-wrap">コスチューム <input id="costume-name" value="costume1" /></label>
+      <div class="sep"></div>
+      <button class="ibtn" id="btn-undo" title="元に戻す" disabled><svg viewBox="0 0 24 24"><path d="M9 7H5V3"/><path d="M5 7a8 8 0 1 1-1.3 6.2"/></svg></button>
+      <button class="ibtn" id="btn-redo" title="やり直す" disabled><svg viewBox="0 0 24 24"><path d="M15 7h4V3"/><path d="M19 7a8 8 0 1 0 1.3 6.2"/></svg></button>
+      <div class="sep"></div>
+      <button class="ibtn" id="btn-group" title="グループ化"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="10" height="8"/><rect x="10" y="11" width="10" height="8"/></svg></button>
+      <button class="ibtn" id="btn-ungroup" title="グループ解除"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="8" height="7"/><rect x="13" y="11" width="8" height="7"/></svg></button>
+      <div class="sep"></div>
+      <button class="ibtn" id="btn-forward" title="ひとつ前面へ"><svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></button>
+      <button class="ibtn" id="btn-backward" title="ひとつ背面へ"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></button>
+      <button class="ibtn" id="btn-front" title="最前面へ"><svg viewBox="0 0 24 24"><rect x="7" y="8" width="11" height="10"/><rect x="4" y="4" width="11" height="10"/></svg></button>
+      <button class="ibtn" id="btn-back" title="最背面へ"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="10"/><rect x="7" y="8" width="11" height="10"/></svg></button>
+      <div class="sep"></div>
+      <div class="color-field">塗りつぶし
+        <label class="swatch" id="fill-wrap"><span id="fill-chip" class="chip" style="background:#cf63cf"></span><input id="fill-color" type="color" value="#cf63cf" /></label>
+        <button class="ibtn" id="btn-no-fill" title="塗りなし"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M6 18L18 6"/></svg></button>
       </div>
-      <div class="top-actions">
-        <button id="btn-ai" type="button">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 16l5-4 4 3 3-2 4 3"/></svg>
-          画像から取込
-        </button>
-        <button id="btn-undo" title="Ctrl+Z" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 7H5V3"/><path d="M5 7a8 8 0 1 1-1.3 6.2"/></svg>
-          元に戻す
-        </button>
-        <button id="btn-redo" title="Ctrl+Shift+Z" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M15 7h4V3"/><path d="M19 7a8 8 0 1 0 1.3 6.2"/></svg>
-          やり直す
-        </button>
-        <button id="btn-clear" class="danger">全消去</button>
-        <button id="btn-export" class="primary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v10"/><path d="M8 10l4 4 4-4"/><path d="M5 18h14"/></svg>
-          SVG保存
-        </button>
+      <div class="color-field">枠線
+        <label class="swatch" id="stroke-wrap"><span id="stroke-chip" class="chip" style="background:#111111"></span><input id="stroke-color" type="color" value="#111111" /></label>
+        <input class="width-num" id="stroke-width" type="number" min="0" max="80" value="4" />
       </div>
+      <div class="sep"></div>
+      <button class="ibtn" id="btn-copy" title="コピー"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg></button>
+      <button class="ibtn" id="btn-paste" title="貼り付け"><svg viewBox="0 0 24 24"><path d="M8 8h11v12H8z"/><path d="M5 16V4h10"/></svg></button>
+      <button class="ibtn" id="btn-delete" title="削除"><svg viewBox="0 0 24 24"><path d="M6 8h12"/><path d="M9 8V6h6v2"/><path d="M8 8l1 12h6l1-12"/></svg></button>
+      <div class="sep"></div>
+      <button class="ibtn" id="btn-flip-h" title="左右反転"><svg viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M5 8l7 4-7 4z"/><path d="M19 8l-7 4 7 4z"/></svg></button>
+      <button class="ibtn" id="btn-flip-v" title="上下反転"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M8 5l4 7-4 7"/><path d="M16 5l-4 7 4 7"/></svg></button>
+      <div class="grow"></div>
+      <button class="ai-btn" id="btn-ai" type="button">画像から取込</button>
+      <button class="save-btn" id="btn-export" type="button">SVG保存</button>
     </header>
 
     <div class="workspace">
       <aside class="toolbar">
-        <div class="tool-group">
-          <button class="tool" data-tool="select" title="選択">
-            <svg viewBox="0 0 24 24"><path d="M5 4l6 16 2.2-6.2L19.5 12z"/></svg>
-            <span class="hint">選択 V</span>
-          </button>
-          <button class="tool active" data-tool="pen">
-            <svg viewBox="0 0 24 24"><path d="M4 20l4.2-1.1L19 8.1 15.9 5 5.1 15.8z"/><path d="M13.7 7.2l3.1 3.1"/></svg>
-            <span class="hint">ペン P</span>
-          </button>
-          <button class="tool" data-tool="line">
-            <svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg>
-            <span class="hint">直線 L</span>
-          </button>
-          <button class="tool" data-tool="rect">
-            <svg viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="12" rx="1.5"/></svg>
-            <span class="hint">四角形 R</span>
-          </button>
-          <button class="tool" data-tool="ellipse">
-            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>
-            <span class="hint">円 O</span>
-          </button>
-          <button class="tool" data-tool="eraser">
-            <svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7-4 4H9z"/><path d="M8 18h8"/></svg>
-            <span class="hint">消しゴム E</span>
-          </button>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="swatches">
-          <label class="swatch" title="塗り">
-            <span id="fill-chip" class="chip" style="background:#f4a261"></span>
-            <input id="fill-color" type="color" value="#f4a261" />
-          </label>
-          <div class="swatch-label">塗り</div>
-          <label class="swatch" title="線の色">
-            <span id="stroke-chip" class="chip" style="background:#171411"></span>
-            <input id="stroke-color" type="color" value="#171411" />
-          </label>
-          <div class="swatch-label">線色</div>
-          <button class="tool" id="btn-no-fill" title="塗りなし">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M7 17L17 7"/></svg>
-            <span class="hint">塗りなし</span>
-          </button>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="width-wrap">
-          太さ
-          <input id="stroke-width" type="range" min="1" max="40" value="4" />
-          <div class="width-value" id="width-label">4</div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="tool-group">
-          <button class="tool" id="btn-front" disabled>
-            <svg viewBox="0 0 24 24"><rect x="7" y="8" width="12" height="10"/><rect x="5" y="5" width="12" height="10"/></svg>
-            <span class="hint">最前面へ</span>
-          </button>
-          <button class="tool" id="btn-back" disabled>
-            <svg viewBox="0 0 24 24"><rect x="5" y="5" width="12" height="10"/><rect x="7" y="8" width="12" height="10"/></svg>
-            <span class="hint">最背面へ</span>
-          </button>
-          <button class="tool" id="btn-delete" disabled>
-            <svg viewBox="0 0 24 24"><path d="M6 8h12"/><path d="M9 8V6h6v2"/><path d="M8 8l1 12h6l1-12"/></svg>
-            <span class="hint">削除 Delete</span>
-          </button>
-        </div>
+        <button class="tool active" data-tool="select"><svg viewBox="0 0 24 24"><path d="M5 4l6 16 2.2-6.2L19.5 12z"/></svg><span class="hint">選択</span></button>
+        <button class="tool" data-tool="reshape"><svg viewBox="0 0 24 24"><path d="M5 5l8 14 1.5-6L21 11z"/><circle cx="18" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg><span class="hint">再変形</span></button>
+        <button class="tool" data-tool="pen"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg><span class="hint">筆</span></button>
+        <button class="tool" data-tool="eraser"><svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7-4 4H9z"/></svg><span class="hint">消しゴム</span></button>
+        <button class="tool" data-tool="fill"><svg viewBox="0 0 24 24"><path d="M7 14l6-8 6 8H7z"/><path d="M8 17h8"/></svg><span class="hint">塗りつぶし</span></button>
+        <button class="tool" data-tool="text"><svg viewBox="0 0 24 24"><path d="M5 6h14"/><path d="M12 6v14"/><path d="M8 20h8"/></svg><span class="hint">テキスト</span></button>
+        <button class="tool" data-tool="line"><svg viewBox="0 0 24 24"><path d="M5 19L19 5"/></svg><span class="hint">直線</span></button>
+        <button class="tool" data-tool="ellipse"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg><span class="hint">円</span></button>
+        <button class="tool" data-tool="rect"><svg viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="12"/></svg><span class="hint">四角形</span></button>
       </aside>
-
-      <main class="stage-wrap">
+      <main class="stage">
         <div class="paper">
-          <svg class="canvas" id="canvas" xmlns="http://www.w3.org/2000/svg">
+          <svg class="canvas select" id="canvas" xmlns="http://www.w3.org/2000/svg">
             <g id="objects"></g>
             <g id="preview"></g>
             <g id="selection-ui"></g>
           </svg>
         </div>
-        <div class="statusbar">
-          <div id="status">ペンでドラッグすると、滑らかなパスに変換されます</div>
-          <div>Shift で縦横比固定 / Delete で削除 / Ctrl+Z で元に戻す</div>
-        </div>
       </main>
     </div>
+
+    <footer class="bottombar">
+      <button class="zoom-btn" id="zoom-out" title="縮小">−</button>
+      <button class="zoom-btn" id="zoom-reset" title="100%">=</button>
+      <button class="zoom-btn" id="zoom-in" title="拡大">+</button>
+      <div class="zoom-label" id="zoom-label">100%</div>
+    </footer>
   </div>
   <div class="toast" id="toast"></div>
+
   <div class="import-view" id="view-import">
     <header class="import-bar">
-      <div class="brand">
-        <div class="seal">線</div>
-        <h1>Scratch SVG Paint <span>画像から取込</span></h1>
-      </div>
-      <div class="top-actions">
-        <button id="btn-close-ai" type="button">キャンバスへ戻る</button>
-      </div>
+      <strong>画像から取込</strong>
+      <button class="ghost" id="btn-close-ai" type="button">キャンバスへ戻る</button>
     </header>
     <div class="import-wrap">
       <h2>画像 / AI からキャンバスへ</h2>
-      <p class="lead">ここで画像を用意してベクターに変換すると、キャンバスに戻って編集できます。</p>
-      <label>
-        Gemini APIキー
+      <p class="lead">変換するとキャンバスに戻って、Scratchと同じように編集できます。</p>
+      <label>Gemini APIキー
         <div class="key-row">
           <input id="api-key" type="password" placeholder="APIキーを入力" autocomplete="off" />
           <button class="ghost" id="toggle-key" type="button">表示</button>
@@ -597,38 +220,23 @@
         <button type="button" data-tab="generate">AIで画像を生成</button>
       </div>
       <div id="panel-upload">
-        <label class="drop" id="dropzone">
-          <input id="file" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" />
-          PNG / JPG をドロップ、またはクリック
-        </label>
+        <label class="drop" id="dropzone"><input id="file" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" />PNG / JPG をドロップ、またはクリック</label>
       </div>
       <div id="panel-generate" class="hidden">
-        <label>
-          プロンプト
-          <textarea id="prompt" placeholder="simple cute cat icon, flat design, white background"></textarea>
-        </label>
+        <label>プロンプト<textarea id="prompt" placeholder="simple cute cat icon, flat design, white background"></textarea></label>
         <div class="examples">
           <button type="button" class="ex" data-prompt="simple cute cat icon, flat design, vector style, white background">かわいい猫</button>
           <button type="button" class="ex" data-prompt="simple red apple icon, flat design, bold shapes, white background">りんご</button>
           <button type="button" class="ex" data-prompt="minimal mountain landscape logo, geometric, flat colors">山のロゴ</button>
-          <button type="button" class="ex" data-prompt="kawaii star character, simple shapes, flat design, white background">星キャラ</button>
         </div>
         <button class="go" id="btn-generate" type="button">画像を生成</button>
       </div>
       <div class="preview-row">
-        <div>
-          <div class="lead">元画像</div>
-          <div class="pv" id="source-frame">未選択</div>
-        </div>
-        <div>
-          <div class="lead">変換プレビュー</div>
-          <div class="pv" id="svg-frame">まだありません</div>
-        </div>
+        <div><div class="lead">元画像</div><div class="pv" id="source-frame">未選択</div></div>
+        <div><div class="lead">変換プレビュー</div><div class="pv" id="svg-frame">まだありません</div></div>
       </div>
       <div class="import-status" id="ai-status">画像を用意してから変換してください</div>
-      <div class="import-actions">
-        <button class="go" id="btn-convert" type="button" disabled>ベクターに変換してキャンバスへ</button>
-      </div>
+      <div class="import-actions"><button class="go" id="btn-convert" type="button" disabled>ベクターに変換してキャンバスへ</button></div>
     </div>
   </div>
 
@@ -639,569 +247,456 @@
     const objectsLayer = document.getElementById("objects");
     const previewLayer = document.getElementById("preview");
     const selectionLayer = document.getElementById("selection-ui");
+    const HANDLE_POS = { nw:[0,0], n:[.5,0], ne:[1,0], e:[1,.5], se:[1,1], s:[.5,1], sw:[0,1], w:[0,.5] };
 
     const state = {
-      tool: "pen",
-      fill: "#f4a261",
+      tool: "select",
+      fill: "#cf63cf",
       fillNone: false,
-      stroke: "#171411",
+      stroke: "#111111",
       strokeWidth: 4,
       objects: [],
-      selectedId: null,
+      selectedIds: [],
       history: [],
       future: [],
+      clipboard: [],
       drawing: null,
       gesture: null,
       applyingUI: false,
-    };
-
-    const HANDLE_POS = {
-      nw: [0, 0], n: [0.5, 0], ne: [1, 0],
-      e: [1, 0.5], se: [1, 1], s: [0.5, 1],
-      sw: [0, 1], w: [0, 0.5],
+      zoom: 1,
+      panX: 0,
+      panY: 0,
     };
 
     const uid = () => "o" + Math.random().toString(36).slice(2, 10);
     const identity = () => [1, 0, 0, 1, 0, 0];
     const clone = (v) => JSON.parse(JSON.stringify(v));
+    const currentFill = () => (state.fillNone ? "none" : state.fill);
+    const selectedObjects = () => state.objects.filter((o) => state.selectedIds.includes(o.id));
+    const selected = () => selectedObjects()[0] || null;
 
     function multiply(a, b) {
-      return [
-        a[0] * b[0] + a[2] * b[1],
-        a[1] * b[0] + a[3] * b[1],
-        a[0] * b[2] + a[2] * b[3],
-        a[1] * b[2] + a[3] * b[3],
-        a[0] * b[4] + a[2] * b[5] + a[4],
-        a[1] * b[4] + a[3] * b[5] + a[5],
-      ];
+      return [a[0]*b[0]+a[2]*b[1], a[1]*b[0]+a[3]*b[1], a[0]*b[2]+a[2]*b[3], a[1]*b[2]+a[3]*b[3], a[0]*b[4]+a[2]*b[5]+a[4], a[1]*b[4]+a[3]*b[5]+a[5]];
     }
-
     function invert(m) {
-      const [a, b, c, d, e, f] = m;
-      const det = a * d - c * b;
+      const [a,b,c,d,e,f] = m, det = a*d - c*b;
       if (Math.abs(det) < 1e-8) return identity();
-      return [
-        d / det,
-        -b / det,
-        -c / det,
-        a / det,
-        (c * f - d * e) / det,
-        (b * e - a * f) / det,
-      ];
+      return [d/det, -b/det, -c/det, a/det, (c*f-d*e)/det, (b*e-a*f)/det];
     }
-
-    function applyMat(m, x, y) {
-      return { x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] };
-    }
-
-    function mTranslate(tx, ty) { return [1, 0, 0, 1, tx, ty]; }
-    function mScale(sx, sy) { return [sx, 0, 0, sy, 0, 0]; }
-    function mRotate(rad) {
-      const c = Math.cos(rad), s = Math.sin(rad);
-      return [c, s, -s, c, 0, 0];
-    }
-
+    function applyMat(m, x, y) { return { x: m[0]*x + m[2]*y + m[4], y: m[1]*x + m[3]*y + m[5] }; }
+    function mTranslate(tx, ty) { return [1,0,0,1,tx,ty]; }
+    function mScale(sx, sy) { return [sx,0,0,sy,0,0]; }
+    function mRotate(rad) { const c=Math.cos(rad), s=Math.sin(rad); return [c,s,-s,c,0,0]; }
     function svgPoint(evt) {
       const pt = canvas.createSVGPoint();
-      pt.x = evt.clientX;
-      pt.y = evt.clientY;
+      pt.x = evt.clientX; pt.y = evt.clientY;
       return pt.matrixTransform(canvas.getScreenCTM().inverse());
     }
-
-    function currentFill() {
-      return state.fillNone ? "none" : state.fill;
+    function createEl(name, attrs={}) {
+      const el = document.createElementNS(svgNS, name);
+      for (const [k,v] of Object.entries(attrs)) if (v != null) el.setAttribute(k, v);
+      return el;
+    }
+    function toast(text) {
+      const el = document.getElementById("toast");
+      el.textContent = text; el.classList.add("show");
+      clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("show"), 1600);
+    }
+    function applyView() {
+      const r = canvas.getBoundingClientRect();
+      const w = Math.max(1, r.width / state.zoom);
+      const h = Math.max(1, r.height / state.zoom);
+      canvas.setAttribute("viewBox", `${state.panX} ${state.panY} ${w} ${h}`);
+      document.getElementById("zoom-label").textContent = Math.round(state.zoom * 100) + "%";
     }
 
     function snapshot() {
-      state.history.push({
-        objects: clone(state.objects),
-        selectedId: state.selectedId,
-      });
+      state.history.push({ objects: clone(state.objects), selectedIds: state.selectedIds.slice() });
       if (state.history.length > 80) state.history.shift();
       state.future = [];
       refreshHistoryButtons();
     }
-
     function undo() {
       if (!state.history.length) return;
-      state.future.push({ objects: clone(state.objects), selectedId: state.selectedId });
+      state.future.push({ objects: clone(state.objects), selectedIds: state.selectedIds.slice() });
       const prev = state.history.pop();
       state.objects = clone(prev.objects);
-      state.selectedId = prev.selectedId;
-      renderObjects();
-      syncSelectionUI();
-      refreshHistoryButtons();
+      state.selectedIds = prev.selectedIds || [];
+      renderObjects(); syncSelectionUI(); refreshHistoryButtons();
     }
-
     function redo() {
       if (!state.future.length) return;
-      state.history.push({ objects: clone(state.objects), selectedId: state.selectedId });
+      state.history.push({ objects: clone(state.objects), selectedIds: state.selectedIds.slice() });
       const next = state.future.pop();
       state.objects = clone(next.objects);
-      state.selectedId = next.selectedId;
-      renderObjects();
-      syncSelectionUI();
-      refreshHistoryButtons();
+      state.selectedIds = next.selectedIds || [];
+      renderObjects(); syncSelectionUI(); refreshHistoryButtons();
     }
-
     function refreshHistoryButtons() {
       document.getElementById("btn-undo").disabled = !state.history.length;
       document.getElementById("btn-redo").disabled = !state.future.length;
     }
 
-    function selected() {
-      return state.objects.find((o) => o.id === state.selectedId) || null;
-    }
-
-    function setStatus(text) {
-      document.getElementById("status").textContent = text;
-    }
-
-    function toast(text) {
-      const el = document.getElementById("toast");
-      el.textContent = text;
-      el.classList.add("show");
-      clearTimeout(toast._t);
-      toast._t = setTimeout(() => el.classList.remove("show"), 1800);
-    }
-
     function localBBox(obj) {
-      if (obj.type === "rect") return { x: obj.x, y: obj.y, w: obj.width, h: obj.height };
-      if (obj.type === "ellipse") return { x: obj.cx - obj.rx, y: obj.cy - obj.ry, w: obj.rx * 2, h: obj.ry * 2 };
+      if (obj.type === "group") {
+        const el = document.getElementById(obj.id);
+        if (el) { const b = el.getBBox(); return { x:b.x, y:b.y, w:b.width||1, h:b.height||1 }; }
+        return { x:0,y:0,w:1,h:1 };
+      }
+      if (obj.type === "rect") return { x:obj.x, y:obj.y, w:obj.width, h:obj.height };
+      if (obj.type === "ellipse") return { x:obj.cx-obj.rx, y:obj.cy-obj.ry, w:obj.rx*2, h:obj.ry*2 };
+      if (obj.type === "text") return { x:obj.x, y:obj.y-obj.fontSize, w: Math.max(20, (obj.text||"").length * obj.fontSize * 0.6), h: obj.fontSize * 1.3 };
       if (obj.type === "line") {
-        const x = Math.min(obj.x1, obj.x2);
-        const y = Math.min(obj.y1, obj.y2);
-        return { x, y, w: Math.abs(obj.x2 - obj.x1) || 1, h: Math.abs(obj.y2 - obj.y1) || 1 };
+        const x = Math.min(obj.x1,obj.x2), y = Math.min(obj.y1,obj.y2);
+        return { x, y, w: Math.abs(obj.x2-obj.x1)||1, h: Math.abs(obj.y2-obj.y1)||1 };
       }
       const el = document.getElementById(obj.id)?.querySelector(".shape");
-      if (el) {
-        const b = el.getBBox();
-        return { x: b.x, y: b.y, w: b.width || 1, h: b.height || 1 };
-      }
-      return { x: 0, y: 0, w: 1, h: 1 };
+      if (el) { const b = el.getBBox(); return { x:b.x, y:b.y, w:b.width||1, h:b.height||1 }; }
+      return { x:0,y:0,w:1,h:1 };
     }
-
     function worldCorners(obj) {
       const b = localBBox(obj);
-      const pts = [
-        [b.x, b.y],
-        [b.x + b.w, b.y],
-        [b.x + b.w, b.y + b.h],
-        [b.x, b.y + b.h],
-      ];
-      return pts.map(([x, y]) => applyMat(obj.matrix, x, y));
+      return [[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]].map(([x,y]) => applyMat(obj.matrix, x, y));
     }
-
-    function createEl(name, attrs = {}) {
-      const el = document.createElementNS(svgNS, name);
-      for (const [k, v] of Object.entries(attrs)) {
-        if (v !== undefined && v !== null) el.setAttribute(k, v);
-      }
-      return el;
+    function unionBox(objs) {
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      objs.forEach((o) => worldCorners(o).forEach((p) => {
+        minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y);
+      }));
+      if (!isFinite(minX)) return { x:0,y:0,w:1,h:1 };
+      return { x:minX, y:minY, w:maxX-minX||1, h:maxY-minY||1 };
     }
 
     function shapeNode(obj) {
-      const common = {
-        class: "shape",
-        fill: obj.fill,
-        stroke: obj.stroke,
-        "stroke-width": obj.strokeWidth,
-        "stroke-linecap": "round",
-        "stroke-linejoin": "round",
-      };
+      const common = { class:"shape", fill:obj.fill, stroke:obj.stroke, "stroke-width":obj.strokeWidth, "stroke-linecap":"round", "stroke-linejoin":"round" };
       if (obj.type === "path") return createEl("path", { ...common, d: obj.d });
-      if (obj.type === "rect") {
-        return createEl("rect", { ...common, x: obj.x, y: obj.y, width: obj.width, height: obj.height, rx: 0 });
-      }
-      if (obj.type === "ellipse") {
-        return createEl("ellipse", { ...common, cx: obj.cx, cy: obj.cy, rx: obj.rx, ry: obj.ry });
-      }
-      return createEl("line", {
-        ...common,
-        x1: obj.x1, y1: obj.y1, x2: obj.x2, y2: obj.y2,
-        fill: "none",
-      });
+      if (obj.type === "rect") return createEl("rect", { ...common, x:obj.x, y:obj.y, width:obj.width, height:obj.height });
+      if (obj.type === "ellipse") return createEl("ellipse", { ...common, cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry });
+      if (obj.type === "text") return createEl("text", { ...common, x:obj.x, y:obj.y, "font-size":obj.fontSize, "font-family":"sans-serif" });
+      return createEl("line", { ...common, x1:obj.x1, y1:obj.y1, x2:obj.x2, y2:obj.y2, fill:"none" });
     }
-
     function hitNode(obj) {
-      const hitWidth = Math.max(14, obj.strokeWidth + 10);
-      if (obj.type === "path") {
-        const pe = obj.fill === "none" ? "stroke" : "all";
-        return createEl("path", { d: obj.d, fill: obj.fill === "none" ? "none" : "transparent", stroke: "transparent", "stroke-width": hitWidth, class: "hit", "pointer-events": pe });
-      }
-      if (obj.type === "rect") {
-        return createEl("rect", { x: obj.x, y: obj.y, width: obj.width, height: obj.height, fill: "transparent", stroke: "transparent", "stroke-width": hitWidth, class: "hit", "pointer-events": "all" });
-      }
-      if (obj.type === "ellipse") {
-        return createEl("ellipse", { cx: obj.cx, cy: obj.cy, rx: obj.rx, ry: obj.ry, fill: "transparent", stroke: "transparent", "stroke-width": hitWidth, class: "hit", "pointer-events": "all" });
-      }
-      return createEl("line", { x1: obj.x1, y1: obj.y1, x2: obj.x2, y2: obj.y2, stroke: "transparent", "stroke-width": hitWidth, fill: "none", class: "hit", "pointer-events": "stroke" });
+      const hitWidth = Math.max(14, (obj.strokeWidth||0)+10);
+      if (obj.type === "path") return createEl("path", { d:obj.d, fill: obj.fill==="none"?"none":"transparent", stroke:"transparent", "stroke-width":hitWidth, class:"hit", "pointer-events": obj.fill==="none"?"stroke":"all" });
+      if (obj.type === "rect") return createEl("rect", { x:obj.x, y:obj.y, width:obj.width, height:obj.height, fill:"transparent", class:"hit", "pointer-events":"all" });
+      if (obj.type === "ellipse") return createEl("ellipse", { cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry, fill:"transparent", class:"hit", "pointer-events":"all" });
+      if (obj.type === "text") return createEl("rect", { x:obj.x, y:obj.y-obj.fontSize, width:Math.max(20,(obj.text||"").length*obj.fontSize*.6), height:obj.fontSize*1.3, fill:"transparent", class:"hit", "pointer-events":"all" });
+      return createEl("line", { x1:obj.x1, y1:obj.y1, x2:obj.x2, y2:obj.y2, stroke:"transparent", "stroke-width":hitWidth, class:"hit", "pointer-events":"stroke" });
     }
-
+    function renderOne(obj) {
+      const g = createEl("g", { id: obj.id, class: "drawable", transform: `matrix(${obj.matrix.join(" ")})` });
+      if (obj.type === "group") {
+        obj.children.forEach((ch) => g.append(renderOne(ch)));
+      } else {
+        g.append(hitNode(obj), shapeNode(obj));
+        if (obj.type === "text") g.querySelector(".shape").textContent = obj.text || "";
+      }
+      return g;
+    }
     function renderObjects() {
       objectsLayer.replaceChildren();
-      for (const obj of state.objects) {
-        const g = createEl("g", {
-          id: obj.id,
-          class: "drawable",
-          transform: `matrix(${obj.matrix.join(" ")})`,
-        });
-        g.append(hitNode(obj), shapeNode(obj));
-        objectsLayer.append(g);
-      }
-    }
-
-    function simplify(points, epsilon) {
-      if (points.length <= 2) return points;
-      const first = points[0];
-      const last = points[points.length - 1];
-      let maxDist = 0;
-      let index = 0;
-      for (let i = 1; i < points.length - 1; i++) {
-        const d = pointLineDistance(points[i], first, last);
-        if (d > maxDist) { maxDist = d; index = i; }
-      }
-      if (maxDist > epsilon) {
-        const left = simplify(points.slice(0, index + 1), epsilon);
-        const right = simplify(points.slice(index), epsilon);
-        return left.slice(0, -1).concat(right);
-      }
-      return [first, last];
-    }
-
-    function pointLineDistance(p, a, b) {
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const len2 = dx * dx + dy * dy;
-      if (!len2) return Math.hypot(p.x - a.x, p.y - a.y);
-      let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
-      t = Math.max(0, Math.min(1, t));
-      return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-    }
-
-    function pointsToSmoothPath(raw) {
-      const pts = simplify(raw, 1.4);
-      if (pts.length === 1) {
-        const p = pts[0];
-        return `M ${p.x} ${p.y} L ${p.x + 0.01} ${p.y}`;
-      }
-      if (pts.length === 2) {
-        return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
-      }
-      let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
-      for (let i = 0; i < pts.length - 1; i++) {
-        const p0 = pts[i === 0 ? i : i - 1];
-        const p1 = pts[i];
-        const p2 = pts[i + 1];
-        const p3 = pts[i + 2] || p2;
-        const c1x = p1.x + (p2.x - p0.x) / 6;
-        const c1y = p1.y + (p2.y - p0.y) / 6;
-        const c2x = p2.x - (p3.x - p1.x) / 6;
-        const c2y = p2.y - (p3.y - p1.y) / 6;
-        d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
-      }
-      return d;
-    }
-
-    function polylinePath(pts) {
-      return pts.map((p, i) => `${i ? "L" : "M"} ${p.x} ${p.y}`).join(" ");
-    }
-
-    function constrainedRect(a, b, square) {
-      let x = Math.min(a.x, b.x);
-      let y = Math.min(a.y, b.y);
-      let w = Math.abs(b.x - a.x);
-      let h = Math.abs(b.y - a.y);
-      if (square) {
-        const s = Math.max(w, h);
-        if (b.x < a.x) x = a.x - s;
-        if (b.y < a.y) y = a.y - s;
-        w = s; h = s;
-      }
-      return { x, y, width: Math.max(w, 1), height: Math.max(h, 1) };
-    }
-
-    function constrainedLine(a, b, snap) {
-      if (!snap) return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const ang = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
-      const len = Math.hypot(dx, dy);
-      return { x1: a.x, y1: a.y, x2: a.x + Math.cos(ang) * len, y2: a.y + Math.sin(ang) * len };
-    }
-
-    function objectFromPreview(start, now, shift) {
-      if (state.tool === "rect") {
-        const r = constrainedRect(start, now, shift);
-        return { type: "rect", ...r };
-      }
-      if (state.tool === "ellipse") {
-        const r = constrainedRect(start, now, shift);
-        return { type: "ellipse", cx: r.x + r.width / 2, cy: r.y + r.height / 2, rx: r.width / 2, ry: r.height / 2 };
-      }
-      const line = constrainedLine(start, now, shift);
-      return { type: "line", ...line };
-    }
-
-    function setTool(tool) {
-      state.tool = tool;
-      document.querySelectorAll(".tool[data-tool]").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.tool === tool);
-      });
-      canvas.classList.toggle("select", tool === "select");
-      canvas.classList.toggle("eraser", tool === "eraser");
-      if (tool !== "select") {
-        /* keep selection visible so properties still work */
-      }
-      const labels = {
-        select: "パーツをクリックして選択。ドラッグで移動、ハンドルで拡大縮小・回転",
-        pen: "ペンでドラッグすると、滑らかなパスに変換されます",
-        line: "ドラッグして直線を引きます（Shiftで角度固定）",
-        rect: "ドラッグして四角形を描きます（Shiftで正方形）",
-        ellipse: "ドラッグして円・楕円を描きます（Shiftで正円）",
-        eraser: "パーツをクリック、またはなぞって消します",
-      };
-      setStatus(labels[tool]);
-    }
-
-    function selectObject(id) {
-      state.selectedId = id;
-      const obj = selected();
-      if (obj) loadPropertiesFrom(obj);
-      refreshSelectionButtons();
-      drawSelection();
-    }
-
-    function loadPropertiesFrom(obj) {
-      state.applyingUI = true;
-      state.stroke = obj.stroke;
-      state.strokeWidth = obj.strokeWidth;
-      if (obj.fill === "none") {
-        state.fillNone = true;
-      } else {
-        state.fillNone = false;
-        state.fill = obj.fill;
-      }
-      document.getElementById("stroke-color").value = toHex(obj.stroke);
-      if (obj.fill !== "none") document.getElementById("fill-color").value = toHex(obj.fill);
-      document.getElementById("stroke-width").value = obj.strokeWidth;
-      document.getElementById("width-label").textContent = obj.strokeWidth;
-      updateChips();
-      state.applyingUI = false;
+      state.objects.forEach((obj) => objectsLayer.append(renderOne(obj)));
     }
 
     function toHex(color) {
       if (!color || color === "none") return "#000000";
       if (color.startsWith("#") && color.length === 7) return color;
       const ctx = toHex._c || (toHex._c = document.createElement("canvas").getContext("2d"));
-      ctx.fillStyle = "#000";
-      ctx.fillStyle = color;
-      const v = ctx.fillStyle;
-      if (v.startsWith("#")) return v.length === 7 ? v : "#000000";
-      return "#000000";
+      ctx.fillStyle = "#000"; ctx.fillStyle = color;
+      return ctx.fillStyle.length === 7 ? ctx.fillStyle : "#000000";
     }
-
     function updateChips() {
       document.getElementById("stroke-chip").style.background = state.stroke;
       const fillChip = document.getElementById("fill-chip");
       fillChip.style.background = state.fillNone ? "" : state.fill;
-      fillChip.parentElement.classList.toggle("none-fill", state.fillNone);
-      document.getElementById("btn-no-fill").classList.toggle("active", state.fillNone);
+      document.getElementById("fill-wrap").classList.toggle("none", state.fillNone);
+      document.getElementById("stroke-width").value = state.strokeWidth;
     }
-
+    function loadPropertiesFrom(obj) {
+      if (!obj || obj.type === "group") return;
+      state.applyingUI = true;
+      state.stroke = obj.stroke === "none" ? state.stroke : obj.stroke;
+      state.strokeWidth = obj.strokeWidth;
+      if (obj.fill === "none") state.fillNone = true;
+      else { state.fillNone = false; state.fill = obj.fill; document.getElementById("fill-color").value = toHex(obj.fill); }
+      if (obj.stroke !== "none") document.getElementById("stroke-color").value = toHex(obj.stroke);
+      updateChips();
+      state.applyingUI = false;
+    }
+    function applyStyleToSelected() {
+      if (state.applyingUI || !selectedObjects().length) return;
+      selectedObjects().forEach((obj) => {
+        if (obj.type === "group") {
+          obj.children.forEach((ch) => { ch.fill = currentFill(); ch.stroke = state.stroke; ch.strokeWidth = state.strokeWidth; });
+        } else {
+          if (obj.type !== "line") obj.fill = currentFill();
+          obj.stroke = obj.type === "line" ? state.stroke : state.stroke;
+          obj.strokeWidth = state.strokeWidth;
+        }
+      });
+      renderObjects(); drawSelection();
+    }
     function refreshSelectionButtons() {
-      const on = !!state.selectedId;
-      document.getElementById("btn-front").disabled = !on;
-      document.getElementById("btn-back").disabled = !on;
-      document.getElementById("btn-delete").disabled = !on;
+      const on = state.selectedIds.length > 0;
+      ["btn-front","btn-back","btn-forward","btn-backward","btn-delete","btn-copy","btn-flip-h","btn-flip-v","btn-group","btn-ungroup"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !on;
+      });
+      document.getElementById("btn-group").disabled = state.selectedIds.length < 2;
+      document.getElementById("btn-ungroup").disabled = !selectedObjects().some((o) => o.type === "group");
     }
 
-    function drawSelection() {
-      selectionLayer.replaceChildren();
+    function selectIds(ids, additive) {
+      state.selectedIds = additive ? Array.from(new Set(state.selectedIds.concat(ids))) : ids.slice();
       const obj = selected();
-      if (!obj) return;
-      const corners = worldCorners(obj);
-      const [nw, ne, se, sw] = corners;
-      const mid = {
-        n: midPoint(nw, ne),
-        e: midPoint(ne, se),
-        s: midPoint(se, sw),
-        w: midPoint(sw, nw),
-      };
-      const poly = createEl("polygon", {
-        points: corners.map((p) => `${p.x},${p.y}`).join(" "),
-        fill: "none",
-        stroke: "#1d4ed8",
-        "stroke-width": 1.2,
-        "stroke-dasharray": "5 4",
-      });
-      selectionLayer.append(poly);
-
-      const upx = nw.x - sw.x;
-      const upy = nw.y - sw.y;
-      const ulen = Math.hypot(upx, upy) || 1;
-      const rot = { x: mid.n.x + (upx / ulen) * 28, y: mid.n.y + (upy / ulen) * 28 };
-      selectionLayer.append(createEl("line", {
-        x1: mid.n.x, y1: mid.n.y, x2: rot.x, y2: rot.y,
-        stroke: "#1d4ed8", "stroke-width": 1.2,
-      }));
-      const rotHandle = createEl("circle", {
-        class: "rot-handle", cx: rot.x, cy: rot.y, r: 7,
-        fill: "#fff4e8", stroke: varStroke(), "stroke-width": 2, "data-handle": "rot",
-      });
-      rotHandle.style.cursor = "grab";
-      selectionLayer.append(rotHandle);
-
-      const handles = { nw, n: mid.n, ne, e: mid.e, se, s: mid.s, sw, w: mid.w };
-      for (const [name, p] of Object.entries(handles)) {
-        const h = createEl("rect", {
-          class: "handle",
-          x: p.x - 5, y: p.y - 5, width: 10, height: 10,
-          fill: "#ffffff", stroke: "#1d4ed8", "stroke-width": 1.5,
-          "data-handle": name,
-        });
-        h.style.cursor = cursorForHandle(name);
-        selectionLayer.append(h);
-      }
-    }
-
-    function varStroke() { return "#d9480f"; }
-    function midPoint(a, b) { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
-
-    function cursorForHandle(name) {
-      const map = { n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize", ne: "nesw-resize", sw: "nesw-resize", nw: "nwse-resize", se: "nwse-resize" };
-      return map[name] || "default";
-    }
-
-    function syncSelectionUI() {
+      if (obj) loadPropertiesFrom(obj);
       refreshSelectionButtons();
       drawSelection();
     }
+    function selectObject(id, additive) { selectIds(id ? [id] : [], additive); }
+
+    function drawSelection() {
+      selectionLayer.replaceChildren();
+      const objs = selectedObjects();
+      if (!objs.length) return;
+      if (state.tool === "reshape" && objs.length === 1) { drawReshape(objs[0]); return; }
+      const box = unionBox(objs);
+      const corners = [
+        {x:box.x,y:box.y},{x:box.x+box.w,y:box.y},{x:box.x+box.w,y:box.y+box.h},{x:box.x,y:box.y+box.h}
+      ];
+      const [nw,ne,se,sw] = corners;
+      const mid = { n:{x:(nw.x+ne.x)/2,y:(nw.y+ne.y)/2}, e:{x:(ne.x+se.x)/2,y:(ne.y+se.y)/2}, s:{x:(se.x+sw.x)/2,y:(se.y+sw.y)/2}, w:{x:(sw.x+nw.x)/2,y:(sw.y+nw.y)/2} };
+      selectionLayer.append(createEl("polygon", { points: corners.map(p=>`${p.x},${p.y}`).join(" "), fill:"none", stroke:"#4c97ff", "stroke-width": 1.2 / state.zoom, "stroke-dasharray":"5 4" }));
+      const rot = { x: mid.n.x, y: mid.n.y - 28 / state.zoom };
+      selectionLayer.append(createEl("line", { x1:mid.n.x, y1:mid.n.y, x2:rot.x, y2:rot.y, stroke:"#4c97ff", "stroke-width": 1.2 / state.zoom }));
+      const rh = createEl("circle", { class:"rot-handle", cx:rot.x, cy:rot.y, r: 7 / state.zoom, fill:"#fff", stroke:"#855cd6", "stroke-width": 2 / state.zoom, "data-handle":"rot" });
+      selectionLayer.append(rh);
+      const hs = { nw, n:mid.n, ne, e:mid.e, se, s:mid.s, sw, w:mid.w };
+      const s = 10 / state.zoom;
+      for (const [name,p] of Object.entries(hs)) {
+        selectionLayer.append(createEl("rect", { class:"handle", x:p.x-s/2, y:p.y-s/2, width:s, height:s, fill:"#fff", stroke:"#4c97ff", "stroke-width": 1.5 / state.zoom, "data-handle":name }));
+      }
+    }
+    function drawReshape(obj) {
+      const pts = reshapePoints(obj);
+      pts.forEach((p, i) => {
+        const wp = applyMat(obj.matrix, p.x, p.y);
+        selectionLayer.append(createEl("circle", { class:"node", cx:wp.x, cy:wp.y, r: 6 / state.zoom, fill:"#fff", stroke:"#855cd6", "stroke-width": 2 / state.zoom, "data-node": String(i) }));
+      });
+    }
+    function reshapePoints(obj) {
+      if (obj.type === "line") return [{x:obj.x1,y:obj.y1},{x:obj.x2,y:obj.y2}];
+      if (obj.type === "rect") return [{x:obj.x,y:obj.y},{x:obj.x+obj.width,y:obj.y},{x:obj.x+obj.width,y:obj.y+obj.height},{x:obj.x,y:obj.y+obj.height}];
+      if (obj.type === "ellipse") return [{x:obj.cx-obj.rx,y:obj.cy},{x:obj.cx+obj.rx,y:obj.cy},{x:obj.cx,y:obj.cy-obj.ry},{x:obj.cx,y:obj.cy+obj.ry}];
+      if (obj.type === "path") return pathCoords(obj.d);
+      return [];
+    }
+    function pathCoords(d) {
+      const out = [];
+      const re = /([MLHVCSQTAZmlhvcsqtaz])([^MLHVCSQTAZmlhvcsqtaz]*)/g;
+      let x=0,y=0, m;
+      while ((m = re.exec(d || ""))) {
+        const cmd = m[1], nums = m[2].trim().split(/[\s,]+/).filter(Boolean).map(Number);
+        const abs = cmd === cmd.toUpperCase();
+        const c = cmd.toUpperCase();
+        if (c === "Z") continue;
+        if (c === "H") { nums.forEach((n) => { x = abs ? n : x+n; out.push({x,y}); }); }
+        else if (c === "V") { nums.forEach((n) => { y = abs ? n : y+n; out.push({x,y}); }); }
+        else {
+          for (let i=0;i+1<nums.length;i+=2) {
+            x = abs ? nums[i] : x+nums[i];
+            y = abs ? nums[i+1] : y+nums[i+1];
+            out.push({x,y});
+          }
+        }
+      }
+      return out;
+    }
+    function setPathCoord(obj, index, x, y) {
+      const pts = pathCoords(obj.d);
+      if (!pts[index]) return;
+      pts[index] = {x,y};
+      obj.d = pts.map((p,i) => `${i?"L":"M"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
+    }
+    function syncSelectionUI() { refreshSelectionButtons(); drawSelection(); }
 
     function findObjectAt(evt) {
       const el = document.elementFromPoint(evt.clientX, evt.clientY);
       const g = el?.closest?.(".drawable");
-      return g ? state.objects.find((o) => o.id === g.id) : null;
+      if (!g) return null;
+      let top = g;
+      while (top.parentElement && top.parentElement.id !== "objects") top = top.parentElement;
+      return state.objects.find((o) => o.id === (top.id || g.id)) || null;
     }
 
-    function eraseAt(evt, record) {
-      const obj = findObjectAt(evt);
-      if (!obj) return false;
-      if (record) snapshot();
-      state.objects = state.objects.filter((o) => o.id !== obj.id);
-      if (state.selectedId === obj.id) state.selectedId = null;
-      renderObjects();
-      syncSelectionUI();
-      return true;
-    }
-
-    function applyStyleToSelected() {
-      const obj = selected();
-      if (!obj || state.applyingUI) return;
-      obj.fill = obj.type === "line" ? "none" : currentFill();
-      obj.stroke = state.stroke;
-      obj.strokeWidth = state.strokeWidth;
-      renderObjects();
+    function setTool(tool) {
+      state.tool = tool;
+      document.querySelectorAll(".tool[data-tool]").forEach((btn) => btn.classList.toggle("active", btn.dataset.tool === tool));
+      canvas.className = "canvas " + tool;
       drawSelection();
     }
 
     function deleteSelected() {
-      if (!state.selectedId) return;
+      if (!state.selectedIds.length) return;
       snapshot();
-      state.objects = state.objects.filter((o) => o.id !== state.selectedId);
-      state.selectedId = null;
-      renderObjects();
-      syncSelectionUI();
-      setStatus("パーツを削除しました");
+      state.objects = state.objects.filter((o) => !state.selectedIds.includes(o.id));
+      state.selectedIds = [];
+      renderObjects(); syncSelectionUI();
     }
-
     function bringToFront() {
-      const obj = selected();
-      if (!obj) return;
+      const sel = selectedObjects();
+      if (!sel.length) return;
       snapshot();
-      state.objects = state.objects.filter((o) => o.id !== obj.id);
-      state.objects.push(obj);
-      renderObjects();
-      drawSelection();
+      state.objects = state.objects.filter((o) => !state.selectedIds.includes(o.id)).concat(sel);
+      renderObjects(); drawSelection();
     }
-
     function sendToBack() {
+      const sel = selectedObjects();
+      if (!sel.length) return;
+      snapshot();
+      state.objects = sel.concat(state.objects.filter((o) => !state.selectedIds.includes(o.id)));
+      renderObjects(); drawSelection();
+    }
+    function moveLayer(dir) {
       const obj = selected();
       if (!obj) return;
+      const i = state.objects.findIndex((o) => o.id === obj.id);
+      const j = i + dir;
+      if (j < 0 || j >= state.objects.length) return;
       snapshot();
-      state.objects = state.objects.filter((o) => o.id !== obj.id);
-      state.objects.unshift(obj);
-      renderObjects();
-      drawSelection();
+      const tmp = state.objects[i]; state.objects[i] = state.objects[j]; state.objects[j] = tmp;
+      renderObjects(); drawSelection();
     }
-
-    function clearCanvas() {
-      if (!state.objects.length) return;
+    function copySelected() {
+      state.clipboard = clone(selectedObjects());
+      toast("コピーしました");
+    }
+    function pasteClipboard() {
+      if (!state.clipboard.length) return;
       snapshot();
-      state.objects = [];
-      state.selectedId = null;
+      const pasted = state.clipboard.map((o) => {
+        const n = clone(o); n.id = uid();
+        n.matrix = multiply(mTranslate(20, 20), n.matrix);
+        if (n.children) n.children.forEach((c) => c.id = uid());
+        return n;
+      });
+      state.objects.push(...pasted);
+      selectIds(pasted.map((o) => o.id));
       renderObjects();
-      syncSelectionUI();
-      setStatus("キャンバスを全消去しました");
+    }
+    function flipSelected(axis) {
+      const objs = selectedObjects();
+      if (!objs.length) return;
+      snapshot();
+      const box = unionBox(objs);
+      const cx = box.x + box.w/2, cy = box.y + box.h/2;
+      const s = axis === "h" ? mScale(-1,1) : mScale(1,-1);
+      const around = multiply(mTranslate(cx,cy), multiply(s, mTranslate(-cx,-cy)));
+      objs.forEach((o) => { o.matrix = multiply(around, o.matrix); });
+      renderObjects(); drawSelection();
+    }
+    function groupSelected() {
+      const sel = selectedObjects();
+      if (sel.length < 2) return;
+      snapshot();
+      const ids = new Set(state.selectedIds);
+      const children = [];
+      state.objects = state.objects.filter((o) => {
+        if (ids.has(o.id)) { children.push(o); return false; }
+        return true;
+      });
+      const g = { id: uid(), type:"group", children, fill:"none", stroke:"none", strokeWidth:0, matrix: identity() };
+      state.objects.push(g);
+      selectIds([g.id]);
+      renderObjects();
+    }
+    function ungroupSelected() {
+      const groups = selectedObjects().filter((o) => o.type === "group");
+      if (!groups.length) return;
+      snapshot();
+      const ids = new Set(groups.map((g) => g.id));
+      const next = [];
+      const newSel = [];
+      state.objects.forEach((o) => {
+        if (ids.has(o.id)) {
+          o.children.forEach((ch) => {
+            ch.matrix = multiply(o.matrix, ch.matrix);
+            next.push(ch); newSel.push(ch.id);
+          });
+        } else next.push(o);
+      });
+      state.objects = next;
+      selectIds(newSel);
+      renderObjects();
     }
 
-    function exportSVG() {
-      const rect = canvas.getBoundingClientRect();
-      const w = Math.max(1, Math.round(rect.width));
-      const h = Math.max(1, Math.round(rect.height));
-      const parts = state.objects.map((obj) => {
-        const inner = serializeShape(obj);
-        return `<g transform="matrix(${obj.matrix.join(" ")})">${inner}</g>`;
-      }).join("");
-      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">\n${parts}\n</svg>`;
-      const blob = new Blob([markup], { type: "image/svg+xml;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "scratch-paint.svg";
-      document.body.append(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(a.href);
-      toast("SVGを保存しました");
+    function constrainedRect(a,b,square) {
+      let x=Math.min(a.x,b.x), y=Math.min(a.y,b.y), w=Math.abs(b.x-a.x), h=Math.abs(b.y-a.y);
+      if (square) { const s=Math.max(w,h); if (b.x<a.x) x=a.x-s; if (b.y<a.y) y=a.y-s; w=s; h=s; }
+      return { x, y, width:Math.max(w,1), height:Math.max(h,1) };
     }
-
-    function serializeShape(obj) {
-      const f = `fill="${obj.fill}"`;
-      const s = `stroke="${obj.stroke}" stroke-width="${obj.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
-      if (obj.type === "path") return `<path d="${obj.d}" ${f} ${s}/>`;
-      if (obj.type === "rect") return `<rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" ${f} ${s}/>`;
-      if (obj.type === "ellipse") return `<ellipse cx="${obj.cx}" cy="${obj.cy}" rx="${obj.rx}" ry="${obj.ry}" ${f} ${s}/>`;
-      return `<line x1="${obj.x1}" y1="${obj.y1}" x2="${obj.x2}" y2="${obj.y2}" fill="none" ${s}/>`;
+    function objectFromPreview(start, now, shift) {
+      if (state.tool === "rect") return { type:"rect", ...constrainedRect(start, now, shift) };
+      if (state.tool === "ellipse") {
+        const r = constrainedRect(start, now, shift);
+        return { type:"ellipse", cx:r.x+r.width/2, cy:r.y+r.height/2, rx:r.width/2, ry:r.height/2 };
+      }
+      return { type:"line", x1:start.x, y1:start.y, x2:now.x, y2:now.y };
     }
-
+    function polylinePath(pts) { return pts.map((p,i)=>`${i?"L":"M"} ${p.x} ${p.y}`).join(" "); }
+    function simplify(points, epsilon) {
+      if (points.length <= 2) return points;
+      const first=points[0], last=points[points.length-1];
+      let max=0, index=0;
+      for (let i=1;i<points.length-1;i++) {
+        const d = pointLineDistance(points[i], first, last);
+        if (d>max) { max=d; index=i; }
+      }
+      if (max>epsilon) {
+        const left=simplify(points.slice(0,index+1), epsilon);
+        const right=simplify(points.slice(index), epsilon);
+        return left.slice(0,-1).concat(right);
+      }
+      return [first,last];
+    }
+    function pointLineDistance(p,a,b) {
+      const dx=b.x-a.x, dy=b.y-a.y, len2=dx*dx+dy*dy;
+      if (!len2) return Math.hypot(p.x-a.x,p.y-a.y);
+      let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/len2; t=Math.max(0,Math.min(1,t));
+      return Math.hypot(p.x-(a.x+t*dx), p.y-(a.y+t*dy));
+    }
+    function pointsToSmoothPath(raw) {
+      const pts = simplify(raw, 1.4);
+      if (pts.length===1) return `M ${pts[0].x} ${pts[0].y} L ${pts[0].x+0.01} ${pts[0].y}`;
+      if (pts.length===2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+      let d=`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+      for (let i=0;i<pts.length-1;i++) {
+        const p0=pts[i===0?i:i-1], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+        const c1x=p1.x+(p2.x-p0.x)/6, c1y=p1.y+(p2.y-p0.y)/6;
+        const c2x=p2.x-(p3.x-p1.x)/6, c2y=p2.y-(p3.y-p1.y)/6;
+        d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+      }
+      return d;
+    }
     function showPreview(objLike) {
       previewLayer.replaceChildren();
       const dummy = { ...objLike, fill: objLike.fill ?? currentFill(), stroke: state.stroke, strokeWidth: state.strokeWidth, matrix: identity() };
       if (dummy.type === "line") dummy.fill = "none";
-      previewLayer.append(shapeNode(dummy));
+      const n = shapeNode(dummy);
+      if (dummy.type === "text") n.textContent = dummy.text || "";
+      previewLayer.append(n);
     }
 
-    function handleScale(obj, gesture, mouse, shiftKey) {
-      const localMouse = applyMat(invert(gesture.startMatrix), mouse.x, mouse.y);
-      const b = gesture.bbox;
-      const [hx, hy] = HANDLE_POS[gesture.handle];
-      const handleLocal = { x: b.x + b.w * hx, y: b.y + b.h * hy };
-      const fixed = { x: b.x + b.w * (1 - hx), y: b.y + b.h * (1 - hy) };
-      const dx0 = handleLocal.x - fixed.x;
-      const dy0 = handleLocal.y - fixed.y;
-      let sx = Math.abs(dx0) < 0.001 ? 1 : (localMouse.x - fixed.x) / dx0;
-      let sy = Math.abs(dy0) < 0.001 ? 1 : (localMouse.y - fixed.y) / dy0;
-      if (hx === 0.5) sx = 1;
-      if (hy === 0.5) sy = 1;
-      if (shiftKey) {
-        const u = hx !== 0.5 && hy !== 0.5 ? (Math.abs(sx) > Math.abs(sy) ? sx : sy) : (hx === 0.5 ? sy : sx);
-        if (hx !== 0.5) sx = Math.sign(sx || 1) * Math.abs(u);
-        if (hy !== 0.5) sy = Math.sign(sy || 1) * Math.abs(u);
-      }
-      sx = sx || 0.01;
-      sy = sy || 0.01;
-      const around = multiply(mTranslate(fixed.x, fixed.y), multiply(mScale(sx, sy), mTranslate(-fixed.x, -fixed.y)));
-      obj.matrix = multiply(gesture.startMatrix, around);
+    function handleScaleAll(objs, gesture, mouse, shiftKey) {
+      const box = gesture.box;
+      const [hx,hy] = HANDLE_POS[gesture.handle];
+      const fixed = { x: box.x + box.w*(1-hx), y: box.y + box.h*(1-hy) };
+      let sx = hx===.5 ? 1 : (mouse.x-fixed.x) / ((hx*2-1)*box.w || 1);
+      let sy = hy===.5 ? 1 : (mouse.y-fixed.y) / ((hy*2-1)*box.h || 1);
+      if (shiftKey) { const u = Math.abs(sx)>Math.abs(sy)?sx:sy; if (hx!==.5) sx=Math.sign(sx||1)*Math.abs(u); if (hy!==.5) sy=Math.sign(sy||1)*Math.abs(u); }
+      sx = sx || 0.01; sy = sy || 0.01;
+      const around = multiply(mTranslate(fixed.x,fixed.y), multiply(mScale(sx,sy), mTranslate(-fixed.x,-fixed.y)));
+      objs.forEach((o,i) => { o.matrix = multiply(around, gesture.startMatrices[i]); });
     }
 
     function onPointerDown(evt) {
@@ -1209,639 +704,359 @@
       const p = svgPoint(evt);
       canvas.setPointerCapture(evt.pointerId);
 
-      if (state.tool === "eraser") {
-        state.drawing = { mode: "erase", changed: eraseAt(evt, true) };
+      if (state.tool === "fill") {
+        const hit = findObjectAt(evt);
+        if (hit) {
+          snapshot();
+          if (hit.type === "group") hit.children.forEach((c) => { if (c.type !== "line") c.fill = currentFill(); });
+          else if (hit.type !== "line") hit.fill = currentFill();
+          renderObjects();
+        }
         return;
       }
-
+      if (state.tool === "text") {
+        const text = prompt("テキスト", "Hello") || "";
+        if (!text) return;
+        snapshot();
+        const obj = { id:uid(), type:"text", x:p.x, y:p.y, text, fontSize:28, fill: currentFill(), stroke:"none", strokeWidth:0, matrix:identity() };
+        state.objects.push(obj); renderObjects(); selectObject(obj.id); setTool("select");
+        return;
+      }
+      if (state.tool === "eraser") {
+        const hit = findObjectAt(evt);
+        if (hit) { snapshot(); state.objects = state.objects.filter((o)=>o.id!==hit.id); if (state.selectedIds.includes(hit.id)) state.selectedIds = state.selectedIds.filter(id=>id!==hit.id); renderObjects(); syncSelectionUI(); }
+        state.drawing = { mode:"erase" };
+        return;
+      }
+      if (state.tool === "reshape") {
+        const node = evt.target.closest?.("[data-node]");
+        const obj = selected();
+        if (node && obj) {
+          snapshot();
+          state.gesture = { type:"reshape", index:+node.dataset.node, objId:obj.id };
+        } else {
+          const hit = findObjectAt(evt);
+          selectObject(hit?.id || null);
+        }
+        return;
+      }
       if (state.tool === "select") {
         const handle = evt.target.closest?.("[data-handle]")?.getAttribute("data-handle");
-        if (handle && selected()) {
-          const obj = selected();
+        const objs = selectedObjects();
+        if (handle && objs.length) {
           state.gesture = {
-            type: handle === "rot" ? "rotate" : "scale",
-            handle,
-            startMatrix: obj.matrix.slice(),
-            bbox: localBBox(obj),
-            start: p,
-            recorded: false,
-            center: (() => {
-              const c = worldCorners(obj);
-              return { x: (c[0].x + c[2].x) / 2, y: (c[0].y + c[2].y) / 2 };
-            })(),
+            type: handle==="rot" ? "rotate" : "scale",
+            handle, start:p, recorded:false,
+            startMatrices: objs.map((o)=>o.matrix.slice()),
+            box: unionBox(objs),
+            center: { x: unionBox(objs).x+unionBox(objs).w/2, y: unionBox(objs).y+unionBox(objs).h/2 },
           };
           return;
         }
         const hit = findObjectAt(evt);
         if (hit) {
-          if (hit.id !== state.selectedId) selectObject(hit.id);
-          state.gesture = { type: "move", start: p, startMatrix: selected().matrix.slice(), recorded: false };
+          const additive = evt.shiftKey;
+          if (!state.selectedIds.includes(hit.id)) selectObject(hit.id, additive);
+          else if (additive) selectIds(state.selectedIds.filter((id)=>id!==hit.id));
+          state.gesture = { type:"move", start:p, recorded:false, startMatrices: selectedObjects().map((o)=>o.matrix.slice()) };
         } else {
-          selectObject(null);
+          if (!evt.shiftKey) selectObject(null);
+          state.drawing = { mode:"marquee", start:p };
         }
         return;
       }
-
       if (state.tool === "pen") {
-        state.drawing = { mode: "pen", points: [p] };
-        showPreview({ type: "path", d: polylinePath([p]), fill: "none" });
+        state.drawing = { mode:"pen", points:[p] };
+        showPreview({ type:"path", d: polylinePath([p]), fill:"none" });
         return;
       }
-
-      state.drawing = { mode: "shape", start: p };
-      showPreview(objectFromPreview(p, p, evt.shiftKey));
+      state.drawing = { mode:"shape", start:p };
+      showPreview(objectFromPreview(p,p,evt.shiftKey));
     }
 
     function onPointerMove(evt) {
       if (!(evt.buttons & 1) && !state.drawing && !state.gesture) return;
       const p = svgPoint(evt);
-
       if (state.drawing?.mode === "erase") {
-        const changed = eraseAt(evt, !state.drawing.changed);
-        if (changed) state.drawing.changed = true;
+        const hit = findObjectAt(evt);
+        if (hit) { state.objects = state.objects.filter((o)=>o.id!==hit.id); renderObjects(); }
         return;
       }
-
-      if (state.gesture) {
-        const obj = selected();
+      if (state.drawing?.mode === "marquee") {
+        previewLayer.replaceChildren();
+        const x=Math.min(state.drawing.start.x,p.x), y=Math.min(state.drawing.start.y,p.y);
+        previewLayer.append(createEl("rect", { x, y, width:Math.abs(p.x-state.drawing.start.x), height:Math.abs(p.y-state.drawing.start.y), fill:"rgba(76,151,255,.15)", stroke:"#4c97ff", "stroke-width":1 }));
+        return;
+      }
+      if (state.gesture?.type === "reshape") {
+        const obj = state.objects.find((o)=>o.id===state.gesture.objId);
         if (!obj) return;
-        const dx = p.x - state.gesture.start.x;
-        const dy = p.y - state.gesture.start.y;
-        if (!state.gesture.recorded && Math.hypot(dx, dy) > 1.5) {
-          snapshot();
-          state.gesture.recorded = true;
-        }
-        if (state.gesture.type === "move") {
-          obj.matrix = multiply(mTranslate(dx, dy), state.gesture.startMatrix);
-        } else if (state.gesture.type === "rotate") {
-          const c = state.gesture.center;
-          const a0 = Math.atan2(state.gesture.start.y - c.y, state.gesture.start.x - c.x);
-          const a1 = Math.atan2(p.y - c.y, p.x - c.x);
-          let ang = a1 - a0;
-          if (evt.shiftKey) ang = Math.round(ang / (Math.PI / 12)) * (Math.PI / 12);
-          obj.matrix = multiply(multiply(mTranslate(c.x, c.y), multiply(mRotate(ang), mTranslate(-c.x, -c.y))), state.gesture.startMatrix);
-        } else if (state.gesture.type === "scale") {
-          handleScale(obj, state.gesture, p, evt.shiftKey);
-        }
-        renderObjects();
-        drawSelection();
+        const local = applyMat(invert(obj.matrix), p.x, p.y);
+        if (obj.type==="line") { if (state.gesture.index===0) { obj.x1=local.x; obj.y1=local.y; } else { obj.x2=local.x; obj.y2=local.y; } }
+        else if (obj.type==="rect") {
+          const pts = [{x:obj.x,y:obj.y},{x:obj.x+obj.width,y:obj.y},{x:obj.x+obj.width,y:obj.y+obj.height},{x:obj.x,y:obj.y+obj.height}];
+          pts[state.gesture.index] = local;
+          obj.x=Math.min(pts[0].x,pts[2].x); obj.y=Math.min(pts[0].y,pts[2].y);
+          obj.width=Math.abs(pts[2].x-pts[0].x)||1; obj.height=Math.abs(pts[2].y-pts[0].y)||1;
+        } else if (obj.type==="ellipse") {
+          if (state.gesture.index<2) obj.rx=Math.abs(local.x-obj.cx)||1;
+          else obj.ry=Math.abs(local.y-obj.cy)||1;
+        } else if (obj.type==="path") setPathCoord(obj, state.gesture.index, local.x, local.y);
+        renderObjects(); drawSelection();
         return;
       }
-
-      if (state.drawing?.mode === "pen") {
-        const last = state.drawing.points[state.drawing.points.length - 1];
-        if (Math.hypot(p.x - last.x, p.y - last.y) >= 1.2) state.drawing.points.push(p);
-        showPreview({ type: "path", d: polylinePath(state.drawing.points), fill: "none" });
+      if (state.gesture) {
+        const objs = selectedObjects();
+        const dx = p.x-state.gesture.start.x, dy=p.y-state.gesture.start.y;
+        if (!state.gesture.recorded && Math.hypot(dx,dy)>1.5) { snapshot(); state.gesture.recorded=true; }
+        if (state.gesture.type==="move") objs.forEach((o,i)=> { o.matrix = multiply(mTranslate(dx,dy), state.gesture.startMatrices[i]); });
+        else if (state.gesture.type==="rotate") {
+          const c=state.gesture.center;
+          let ang = Math.atan2(p.y-c.y,p.x-c.x) - Math.atan2(state.gesture.start.y-c.y, state.gesture.start.x-c.x);
+          if (evt.shiftKey) ang = Math.round(ang/(Math.PI/12))*(Math.PI/12);
+          const rot = multiply(mTranslate(c.x,c.y), multiply(mRotate(ang), mTranslate(-c.x,-c.y)));
+          objs.forEach((o,i)=> { o.matrix = multiply(rot, state.gesture.startMatrices[i]); });
+        } else if (state.gesture.type==="scale") handleScaleAll(objs, state.gesture, p, evt.shiftKey);
+        renderObjects(); drawSelection();
         return;
       }
-
-      if (state.drawing?.mode === "shape") {
-        showPreview({ ...objectFromPreview(state.drawing.start, p, evt.shiftKey), fill: state.tool === "line" ? "none" : currentFill() });
+      if (state.drawing?.mode==="pen") {
+        const last=state.drawing.points.at(-1);
+        if (Math.hypot(p.x-last.x,p.y-last.y)>=1.2) state.drawing.points.push(p);
+        showPreview({ type:"path", d:polylinePath(state.drawing.points), fill:"none" });
+        return;
       }
+      if (state.drawing?.mode==="shape") showPreview({ ...objectFromPreview(state.drawing.start,p,evt.shiftKey), fill: state.tool==="line"?"none":currentFill() });
     }
 
     function onPointerUp(evt) {
       const p = svgPoint(evt);
-      if (state.drawing?.mode === "pen") {
-        const pts = state.drawing.points;
-        previewLayer.replaceChildren();
-        if (pts.length) {
-          snapshot();
-          state.objects.push({
-            id: uid(),
-            type: "path",
-            d: pointsToSmoothPath(pts),
-            fill: "none",
-            stroke: state.stroke,
-            strokeWidth: state.strokeWidth,
-            matrix: identity(),
-          });
-          renderObjects();
-        }
-        state.drawing = null;
-        return;
+      if (state.drawing?.mode==="pen") {
+        const pts=state.drawing.points; previewLayer.replaceChildren();
+        if (pts.length) { snapshot(); state.objects.push({ id:uid(), type:"path", d:pointsToSmoothPath(pts), fill:"none", stroke:state.stroke, strokeWidth:state.strokeWidth, matrix:identity() }); renderObjects(); }
+        state.drawing=null; return;
       }
-
-      if (state.drawing?.mode === "shape") {
-        const geo = objectFromPreview(state.drawing.start, p, evt.shiftKey);
-        previewLayer.replaceChildren();
-        const tooSmall = (geo.width && geo.width < 2 && geo.height < 2) ||
-          (geo.rx && geo.rx < 1 && geo.ry < 1) ||
-          (geo.x1 !== undefined && Math.hypot(geo.x2 - geo.x1, geo.y2 - geo.y1) < 2);
-        if (!tooSmall) {
-          snapshot();
-          state.objects.push({
-            id: uid(),
-            ...geo,
-            fill: geo.type === "line" ? "none" : currentFill(),
-            stroke: state.stroke,
-            strokeWidth: state.strokeWidth,
-            matrix: identity(),
-          });
-          renderObjects();
-        }
-        state.drawing = null;
-        return;
+      if (state.drawing?.mode==="shape") {
+        const geo=objectFromPreview(state.drawing.start,p,evt.shiftKey); previewLayer.replaceChildren();
+        const tooSmall=(geo.width&&geo.width<2&&geo.height<2)||(geo.rx&&geo.rx<1)||(geo.x1!=null&&Math.hypot(geo.x2-geo.x1,geo.y2-geo.y1)<2);
+        if (!tooSmall) { snapshot(); state.objects.push({ id:uid(), ...geo, fill: geo.type==="line"?"none":currentFill(), stroke:state.stroke, strokeWidth:state.strokeWidth, matrix:identity() }); renderObjects(); }
+        state.drawing=null; return;
       }
+      if (state.drawing?.mode==="marquee") {
+        const x1=Math.min(state.drawing.start.x,p.x), y1=Math.min(state.drawing.start.y,p.y);
+        const x2=Math.max(state.drawing.start.x,p.x), y2=Math.max(state.drawing.start.y,p.y);
+        previewLayer.replaceChildren();
+        const ids = state.objects.filter((o) => {
+          const b=unionBox([o]);
+          return b.x<x2 && b.x+b.w>x1 && b.y<y2 && b.y+b.h>y1;
+        }).map((o)=>o.id);
+        if (ids.length) selectIds(ids, evt.shiftKey);
+        state.drawing=null; return;
+      }
+      state.drawing=null; state.gesture=null;
+    }
 
-      state.drawing = null;
-      state.gesture = null;
+    function serializeShape(obj) {
+      if (obj.type==="group") return obj.children.map(serializeShape).join("");
+      const f=`fill="${obj.fill}"`, s=`stroke="${obj.stroke}" stroke-width="${obj.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
+      if (obj.type==="path") return `<path d="${obj.d}" ${f} ${s}/>`;
+      if (obj.type==="rect") return `<rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" ${f} ${s}/>`;
+      if (obj.type==="ellipse") return `<ellipse cx="${obj.cx}" cy="${obj.cy}" rx="${obj.rx}" ry="${obj.ry}" ${f} ${s}/>`;
+      if (obj.type==="text") return `<text x="${obj.x}" y="${obj.y}" font-size="${obj.fontSize}" font-family="sans-serif" ${f} ${s}>${obj.text}</text>`;
+      return `<line x1="${obj.x1}" y1="${obj.y1}" x2="${obj.x2}" y2="${obj.y2}" fill="none" ${s}/>`;
+    }
+    function serializeObj(obj) {
+      return `<g transform="matrix(${obj.matrix.join(" ")})">${serializeShape(obj)}</g>`;
+    }
+    function exportSVG() {
+      const rect = canvas.getBoundingClientRect();
+      const w=Math.max(1,Math.round(rect.width)), h=Math.max(1,Math.round(rect.height));
+      const name = (document.getElementById("costume-name").value || "costume").replace(/[^\w\-]+/g,"_");
+      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${state.objects.map(serializeObj).join("\n")}\n</svg>`;
+      const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([markup],{type:"image/svg+xml"})); a.download=name+".svg"; a.click(); URL.revokeObjectURL(a.href);
+      toast("SVGを保存しました");
     }
 
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerup", onPointerUp);
     canvas.addEventListener("pointercancel", onPointerUp);
-    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-
-    document.querySelectorAll(".tool[data-tool]").forEach((btn) => {
-      btn.addEventListener("click", () => setTool(btn.dataset.tool));
+    canvas.addEventListener("contextmenu", (e)=>e.preventDefault());
+    canvas.addEventListener("dblclick", (e) => {
+      const hit = findObjectAt(e);
+      if (hit?.type==="text") { const t=prompt("テキスト", hit.text); if (t!=null) { snapshot(); hit.text=t; renderObjects(); } }
     });
 
-    document.getElementById("fill-color").addEventListener("input", (e) => {
-      state.fill = e.target.value;
-      state.fillNone = false;
-      updateChips();
-      if (selected()) {
-        snapshot();
-        applyStyleToSelected();
-      }
-    });
-
-    document.getElementById("stroke-color").addEventListener("input", (e) => {
-      state.stroke = e.target.value;
-      updateChips();
-      if (selected()) {
-        snapshot();
-        applyStyleToSelected();
-      }
-    });
-
-    document.getElementById("btn-no-fill").addEventListener("click", () => {
-      state.fillNone = !state.fillNone;
-      updateChips();
-      if (selected()) {
-        snapshot();
-        applyStyleToSelected();
-      }
-    });
-
-    let widthDragRecorded = false;
-    document.getElementById("stroke-width").addEventListener("pointerdown", () => {
-      widthDragRecorded = false;
-    });
-    document.getElementById("stroke-width").addEventListener("input", (e) => {
-      if (selected() && !widthDragRecorded) {
-        snapshot();
-        widthDragRecorded = true;
-      }
-      state.strokeWidth = Number(e.target.value);
-      document.getElementById("width-label").textContent = state.strokeWidth;
-      if (selected()) applyStyleToSelected();
-    });
-
+    document.querySelectorAll(".tool[data-tool]").forEach((btn)=>btn.addEventListener("click", ()=>setTool(btn.dataset.tool)));
+    document.getElementById("fill-color").addEventListener("input", (e)=>{ state.fill=e.target.value; state.fillNone=false; updateChips(); if (selected()) applyStyleToSelected(); });
+    document.getElementById("fill-color").addEventListener("change", ()=>{ if (selected()) snapshot(); });
+    document.getElementById("stroke-color").addEventListener("input", (e)=>{ state.stroke=e.target.value; updateChips(); if (selected()) applyStyleToSelected(); });
+    document.getElementById("stroke-color").addEventListener("change", ()=>{ if (selected()) snapshot(); });
+    document.getElementById("btn-no-fill").addEventListener("click", ()=>{ if (selected()) snapshot(); state.fillNone=!state.fillNone; updateChips(); if (selected()) applyStyleToSelected(); });
+    document.getElementById("stroke-width").addEventListener("change", (e)=>{ if (selected()) snapshot(); state.strokeWidth=Number(e.target.value)||0; if (selected()) applyStyleToSelected(); });
     document.getElementById("btn-undo").addEventListener("click", undo);
     document.getElementById("btn-redo").addEventListener("click", redo);
-    document.getElementById("btn-clear").addEventListener("click", clearCanvas);
     document.getElementById("btn-export").addEventListener("click", exportSVG);
     document.getElementById("btn-delete").addEventListener("click", deleteSelected);
     document.getElementById("btn-front").addEventListener("click", bringToFront);
     document.getElementById("btn-back").addEventListener("click", sendToBack);
+    document.getElementById("btn-forward").addEventListener("click", ()=>moveLayer(1));
+    document.getElementById("btn-backward").addEventListener("click", ()=>moveLayer(-1));
+    document.getElementById("btn-copy").addEventListener("click", copySelected);
+    document.getElementById("btn-paste").addEventListener("click", pasteClipboard);
+    document.getElementById("btn-flip-h").addEventListener("click", ()=>flipSelected("h"));
+    document.getElementById("btn-flip-v").addEventListener("click", ()=>flipSelected("v"));
+    document.getElementById("btn-group").addEventListener("click", groupSelected);
+    document.getElementById("btn-ungroup").addEventListener("click", ungroupSelected);
+    document.getElementById("zoom-in").addEventListener("click", ()=>{ state.zoom=Math.min(8, state.zoom*1.25); applyView(); drawSelection(); });
+    document.getElementById("zoom-out").addEventListener("click", ()=>{ state.zoom=Math.max(.2, state.zoom/1.25); applyView(); drawSelection(); });
+    document.getElementById("zoom-reset").addEventListener("click", ()=>{ state.zoom=1; state.panX=0; state.panY=0; applyView(); drawSelection(); });
 
     window.addEventListener("keydown", (e) => {
       const tag = document.activeElement?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (document.body.classList.contains("import-open")) {
-        if (e.key === "Escape") showCanvasView();
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        if (e.shiftKey) redo(); else undo();
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
-        e.preventDefault();
-        redo();
-        return;
-      }
-      if (e.key === "Delete" || e.key === "Backspace") {
-        e.preventDefault();
-        deleteSelected();
-        return;
-      }
-      const map = { v: "select", p: "pen", l: "line", r: "rect", o: "ellipse", e: "eraser" };
+      if (tag==="INPUT"||tag==="TEXTAREA") return;
+      if (document.body.classList.contains("import-open")) { if (e.key==="Escape") showCanvasView(); return; }
+      if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="z") { e.preventDefault(); e.shiftKey?redo():undo(); return; }
+      if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="y") { e.preventDefault(); redo(); return; }
+      if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="c") { e.preventDefault(); copySelected(); return; }
+      if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="v") { e.preventDefault(); pasteClipboard(); return; }
+      if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="g") { e.preventDefault(); e.shiftKey?ungroupSelected():groupSelected(); return; }
+      if (e.key==="Delete"||e.key==="Backspace") { e.preventDefault(); deleteSelected(); return; }
+      const map = { v:"select", a:"reshape", b:"pen", e:"eraser", f:"fill", t:"text", l:"line", o:"ellipse", r:"rect" };
       if (!e.ctrlKey && !e.metaKey && map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
-      if (e.key === "Escape") selectObject(null);
+      if (e.key==="Escape") selectObject(null);
     });
+    window.addEventListener("resize", applyView);
 
-    updateChips();
-    setTool("pen");
-    refreshHistoryButtons();
-    refreshSelectionButtons();
+    updateChips(); setTool("select"); refreshHistoryButtons(); refreshSelectionButtons(); applyView();
 
     const STORAGE_KEY = "svg-trace-gemini-api-key";
     const CONVERT_PROMPT = "この画像を解析し、形状や色を再現するSVGコードを作成してください。Scratch等のエディタで扱いやすいよう、単純なpathやpolygon、circle等を組み合わせて構成してください。解説やMarkdownの整形（```xmlなど）は一切含めず、純粋な <svg>...</svg> タグとその中身だけを出力してください。";
-    const ai = {
-      sourceDataUrl: null,
-      svgMarkup: null,
-      busy: false,
-    };
+    const ai = { sourceDataUrl:null, svgMarkup:null, busy:false };
     const apiKeyInput = document.getElementById("api-key");
     apiKeyInput.value = localStorage.getItem(STORAGE_KEY) || window.SVG_TRACE_API_KEY || "";
-
-    function aiStatus(text, err) {
-      const el = document.getElementById("ai-status");
-      el.textContent = text;
-      el.classList.toggle("err", !!err);
-    }
-
-    function showImportView() {
-      document.body.classList.add("import-open");
-      window.scrollTo(0, 0);
-      apiKeyInput.value = localStorage.getItem(STORAGE_KEY) || window.SVG_TRACE_API_KEY || apiKeyInput.value;
-    }
-    function showCanvasView() {
-      document.body.classList.remove("import-open");
-    }
-
+    function aiStatus(text, err) { const el=document.getElementById("ai-status"); el.textContent=text; el.classList.toggle("err", !!err); }
+    function showImportView() { document.body.classList.add("import-open"); window.scrollTo(0,0); apiKeyInput.value=localStorage.getItem(STORAGE_KEY)||window.SVG_TRACE_API_KEY||apiKeyInput.value; }
+    function showCanvasView() { document.body.classList.remove("import-open"); applyView(); }
     function showSource(dataUrl) {
-      ai.sourceDataUrl = dataUrl;
-      const frame = document.getElementById("source-frame");
-      frame.innerHTML = "";
-      const img = document.createElement("img");
-      img.alt = "入力画像";
-      img.src = dataUrl;
-      frame.append(img);
-      document.getElementById("btn-convert").disabled = ai.busy;
-      aiStatus("画像の準備ができました。変換できます");
+      ai.sourceDataUrl=dataUrl; const frame=document.getElementById("source-frame"); frame.innerHTML="";
+      const img=document.createElement("img"); img.src=dataUrl; frame.append(img);
+      document.getElementById("btn-convert").disabled=ai.busy; aiStatus("画像の準備ができました。変換できます");
     }
-
     function showSvgPreview(markup) {
-      const frame = document.getElementById("svg-frame");
-      frame.innerHTML = "";
-      const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
-      const svg = doc.documentElement;
-      if (svg && svg.nodeName.toLowerCase() === "svg" && !doc.querySelector("parsererror")) {
-        svg.querySelectorAll("script").forEach((n) => n.remove());
-        svg.style.maxWidth = "100%";
-        svg.style.maxHeight = "160px";
-        frame.append(document.importNode(svg, true));
-      } else {
-        frame.textContent = "解析失敗";
-      }
+      const frame=document.getElementById("svg-frame"); frame.innerHTML="";
+      const doc=new DOMParser().parseFromString(markup,"image/svg+xml"); const svg=doc.documentElement;
+      if (svg && svg.nodeName.toLowerCase()==="svg" && !doc.querySelector("parsererror")) { svg.querySelectorAll("script").forEach(n=>n.remove()); svg.style.maxWidth="100%"; svg.style.maxHeight="160px"; frame.append(document.importNode(svg,true)); }
+      else frame.textContent="解析失敗";
     }
-
-    function extractSvg(text) {
-      if (!text) return null;
-      const cleaned = text.replace(/```(?:xml|svg|html|markup)?/gi, "").replace(/```/g, "").trim();
-      const match = cleaned.match(/<svg\b[\s\S]*<\/svg>/i);
-      return match ? match[0].trim() : null;
+    function extractSvg(text) { if(!text) return null; const cleaned=text.replace(/```(?:xml|svg|html|markup)?/gi,"").replace(/```/g,"").trim(); const match=cleaned.match(/<svg\b[\s\S]*<\/svg>/i); return match?match[0].trim():null; }
+    function fileToDataUrl(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error("画像の読み込みに失敗しました")); r.readAsDataURL(file); }); }
+    function blobToDataUrl(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error("変換失敗")); r.readAsDataURL(blob); }); }
+    async function resizeDataUrl(dataUrl, maxSize=1024) {
+      const img=new Image(); img.src=dataUrl; await img.decode();
+      const scale=Math.min(1, maxSize/Math.max(img.width,img.height));
+      if (scale>=1 && dataUrl.length<1500000) return dataUrl;
+      const c=document.createElement("canvas"); c.width=Math.max(1,Math.round(img.width*scale)); c.height=Math.max(1,Math.round(img.height*scale));
+      const ctx=c.getContext("2d"); const png=dataUrl.startsWith("data:image/png");
+      if (!png) { ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); }
+      ctx.drawImage(img,0,0,c.width,c.height); return c.toDataURL(png?"image/png":"image/jpeg", .9);
     }
-
-    function fileToDataUrl(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function blobToDataUrl(blob) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error("画像データの変換に失敗しました"));
-        reader.readAsDataURL(blob);
-      });
-    }
-
-    async function resizeDataUrl(dataUrl, maxSize = 1024) {
-      const img = new Image();
-      img.src = dataUrl;
-      await img.decode();
-      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-      if (scale >= 1 && dataUrl.length < 1_500_000) return dataUrl;
-      const c = document.createElement("canvas");
-      c.width = Math.max(1, Math.round(img.width * scale));
-      c.height = Math.max(1, Math.round(img.height * scale));
-      const ctx = c.getContext("2d");
-      const png = dataUrl.startsWith("data:image/png");
-      if (!png) {
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, c.width, c.height);
-      }
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      return c.toDataURL(png ? "image/png" : "image/jpeg", 0.9);
-    }
-
-    function withTimeout(promise, ms, label) {
-      let timer;
-      const timeout = new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error(label)), ms);
-      });
-      return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-    }
-
+    function withTimeout(promise, ms, label) { let t; const timeout=new Promise((_,rej)=>t=setTimeout(()=>rej(new Error(label)),ms)); return Promise.race([promise,timeout]).finally(()=>clearTimeout(t)); }
     function urlToDataUrlViaImage(url) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          try {
-            const c = document.createElement("canvas");
-            c.width = img.naturalWidth || 768;
-            c.height = img.naturalHeight || 768;
-            c.getContext("2d").drawImage(img, 0, 0);
-            resolve(c.toDataURL("image/png"));
-          } catch (err) {
-            reject(new Error("生成画像の読み取りに失敗しました（CORS）"));
-          }
-        };
-        img.onerror = () => reject(new Error("生成画像の読み込みに失敗しました"));
-        img.src = url;
-      });
+      return new Promise((resolve,reject)=>{ const img=new Image(); img.crossOrigin="anonymous";
+        img.onload=()=>{ try{ const c=document.createElement("canvas"); c.width=img.naturalWidth||768; c.height=img.naturalHeight||768; c.getContext("2d").drawImage(img,0,0); resolve(c.toDataURL("image/png")); }catch{ reject(new Error("CORS")); } };
+        img.onerror=()=>reject(new Error("画像の読み込みに失敗しました")); img.src=url; });
     }
-
     async function loadGeneratedImage(prompt) {
-      const encoded = encodeURIComponent(prompt.trim());
-      const urls = [
-        `https://image.pollinations.ai/prompt/${encoded}?width=768&height=768&model=flux&nologo=true`,
-        `https://pollinations.ai/p/${encoded}`,
-      ];
-      let lastError = null;
+      const encoded=encodeURIComponent(prompt.trim());
+      const urls=[`https://image.pollinations.ai/prompt/${encoded}?width=768&height=768&model=flux&nologo=true`,`https://pollinations.ai/p/${encoded}`];
+      let lastError=null;
       for (const url of urls) {
-        try {
-          const res = await withTimeout(fetch(url, { mode: "cors" }), 90000, "画像生成がタイムアウトしました");
-          if (!res.ok) throw new Error(`生成APIが ${res.status} を返しました`);
-          const blob = await res.blob();
-          if (blob.size < 800) throw new Error("画像データが取得できませんでした");
-          return await blobToDataUrl(blob);
-        } catch (err) {
-          lastError = err;
-          try {
-            return await withTimeout(urlToDataUrlViaImage(url), 90000, "画像生成がタイムアウトしました");
-          } catch (imgErr) {
-            lastError = imgErr;
-          }
-        }
+        try { const res=await withTimeout(fetch(url,{mode:"cors"}),90000,"画像生成がタイムアウトしました"); if(!res.ok) throw new Error("生成APIエラー"); const blob=await res.blob(); if(blob.size<800) throw new Error("画像なし"); return await blobToDataUrl(blob); }
+        catch(err){ lastError=err; try{ return await withTimeout(urlToDataUrlViaImage(url),90000,"タイムアウト"); }catch(e){ lastError=e; } }
       }
-      throw lastError || new Error("画像生成に失敗しました");
+      throw lastError||new Error("画像生成に失敗しました");
     }
-
     async function convertWithGemini(dataUrl, apiKey) {
-      const resized = await resizeDataUrl(dataUrl);
-      const [meta, base64] = resized.split(",");
-      const mime = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
-      const res = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey,
-          },
-          body: JSON.stringify({
-            contents: [{
-              role: "user",
-              parts: [
-                { text: CONVERT_PROMPT },
-                { inlineData: { mimeType: mime, data: base64 } },
-              ],
-            }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 16384 },
-          }),
-        }
-      );
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error?.message || `Gemini APIエラー (${res.status})`);
-      const parts = body?.candidates?.[0]?.content?.parts || [];
-      const text = parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("\n").trim();
-      if (!text) throw new Error("Geminiからテキストが返りませんでした");
-      const svg = extractSvg(text);
-      if (!svg) throw new Error("応答からSVGを取り出せませんでした");
-      return svg;
+      const resized=await resizeDataUrl(dataUrl); const [meta,base64]=resized.split(","); const mime=(meta.match(/data:(.*?);/)||[])[1]||"image/jpeg";
+      const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",{ method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key":apiKey }, body: JSON.stringify({ contents:[{ role:"user", parts:[{ text:CONVERT_PROMPT }, { inlineData:{ mimeType:mime, data:base64 } }] }], generationConfig:{ temperature:0.2, maxOutputTokens:16384 } }) });
+      const body=await res.json().catch(()=>({})); if(!res.ok) throw new Error(body?.error?.message||`Gemini APIエラー (${res.status})`);
+      const parts=body?.candidates?.[0]?.content?.parts||[]; const text=parts.filter(p=>p.text&&!p.thought).map(p=>p.text).join("\n").trim();
+      if(!text) throw new Error("Geminiからテキストが返りませんでした"); const svg=extractSvg(text); if(!svg) throw new Error("SVGを取り出せませんでした"); return svg;
     }
-
     function parseTransform(str) {
-      if (!str) return identity();
-      let m = identity();
-      const re = /(matrix|translate|scale|rotate)\(([^)]+)\)/g;
-      let match;
-      while ((match = re.exec(str))) {
-        const args = match[2].trim().split(/[\s,]+/).map(Number);
-        if (match[1] === "matrix" && args.length >= 6) m = multiply(m, args.slice(0, 6));
-        if (match[1] === "translate") m = multiply(m, mTranslate(args[0] || 0, args[1] || 0));
-        if (match[1] === "scale") m = multiply(m, mScale(args[0] || 1, args[1] ?? args[0] ?? 1));
-        if (match[1] === "rotate") {
-          const rad = ((args[0] || 0) * Math.PI) / 180;
-          if (args.length >= 3) {
-            m = multiply(m, multiply(mTranslate(args[1], args[2]), multiply(mRotate(rad), mTranslate(-args[1], -args[2]))));
-          } else {
-            m = multiply(m, mRotate(rad));
-          }
-        }
+      if (!str) return identity(); let m=identity(); const re=/(matrix|translate|scale|rotate)\(([^)]+)\)/g; let match;
+      while ((match=re.exec(str))) { const args=match[2].trim().split(/[\s,]+/).map(Number);
+        if (match[1]==="matrix"&&args.length>=6) m=multiply(m,args.slice(0,6));
+        if (match[1]==="translate") m=multiply(m,mTranslate(args[0]||0,args[1]||0));
+        if (match[1]==="scale") m=multiply(m,mScale(args[0]||1, args[1]??args[0]??1));
+        if (match[1]==="rotate") { const rad=((args[0]||0)*Math.PI)/180; m = args.length>=3 ? multiply(m, multiply(mTranslate(args[1],args[2]), multiply(mRotate(rad), mTranslate(-args[1],-args[2])))) : multiply(m,mRotate(rad)); }
       }
       return m;
     }
-
     function readPaint(el, inherited) {
-      const style = {};
-      (el.getAttribute("style") || "").split(";").forEach((part) => {
-        const [k, v] = part.split(":");
-        if (k && v) style[k.trim()] = v.trim();
-      });
-      const fill = el.getAttribute("fill") || style.fill || inherited.fill;
-      const stroke = el.getAttribute("stroke") || style.stroke || inherited.stroke;
-      const swRaw = el.getAttribute("stroke-width") || style["stroke-width"];
-      const strokeWidth = swRaw ? parseFloat(swRaw) : inherited.strokeWidth;
-      return {
-        fill: fill || "#000000",
-        stroke: stroke || "none",
-        strokeWidth: Number.isFinite(strokeWidth) ? strokeWidth : 2,
-      };
+      const style={}; (el.getAttribute("style")||"").split(";").forEach(part=>{ const [k,v]=part.split(":"); if(k&&v) style[k.trim()]=v.trim(); });
+      const fill=el.getAttribute("fill")||style.fill||inherited.fill; const stroke=el.getAttribute("stroke")||style.stroke||inherited.stroke;
+      const swRaw=el.getAttribute("stroke-width")||style["stroke-width"]; const strokeWidth=swRaw?parseFloat(swRaw):inherited.strokeWidth;
+      return { fill: fill||"#000", stroke: stroke||"none", strokeWidth: Number.isFinite(strokeWidth)?strokeWidth:2 };
     }
-
     function polygonToPath(points, close) {
-      const nums = String(points || "").trim().split(/[\s,]+/).filter(Boolean);
-      if (nums.length < 4) return "";
-      let d = "";
-      for (let i = 0; i + 1 < nums.length; i += 2) {
-        d += `${i ? "L" : "M"} ${nums[i]} ${nums[i + 1]} `;
-      }
-      if (close) d += "Z";
-      return d.trim();
+      const nums=String(points||"").trim().split(/[\s,]+/).filter(Boolean); if(nums.length<4) return "";
+      let d=""; for(let i=0;i+1<nums.length;i+=2) d+=`${i?"L":"M"} ${nums[i]} ${nums[i+1]} `; if(close) d+="Z"; return d.trim();
     }
-
     function importSvgToCanvas(markup) {
-      const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
-      const root = doc.documentElement;
-      if (!root || root.nodeName.toLowerCase() !== "svg" || doc.querySelector("parsererror")) {
-        throw new Error("SVGを解析できませんでした");
-      }
-      const vb = (root.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number);
-      let minX = 0, minY = 0, srcW = parseFloat(root.getAttribute("width")) || 512, srcH = parseFloat(root.getAttribute("height")) || 512;
-      if (vb.length >= 4 && vb.every(Number.isFinite)) {
-        minX = vb[0]; minY = vb[1]; srcW = vb[2]; srcH = vb[3];
-      }
-      const rect = canvas.getBoundingClientRect();
-      const target = Math.min(rect.width, rect.height) * 0.55;
-      const scale = target / Math.max(srcW, srcH, 1);
-      const ox = (rect.width - srcW * scale) / 2 - minX * scale;
-      const oy = (rect.height - srcH * scale) / 2 - minY * scale;
-      const fit = multiply(mTranslate(ox, oy), mScale(scale, scale));
-      const imported = [];
-      const skip = new Set(["defs", "clippath", "mask", "filter", "style", "script", "title", "desc"]);
-
+      const doc=new DOMParser().parseFromString(markup,"image/svg+xml"); const root=doc.documentElement;
+      if (!root || root.nodeName.toLowerCase()!=="svg" || doc.querySelector("parsererror")) throw new Error("SVGを解析できませんでした");
+      const vb=(root.getAttribute("viewBox")||"").trim().split(/[\s,]+/).map(Number);
+      let minX=0,minY=0,srcW=parseFloat(root.getAttribute("width"))||512, srcH=parseFloat(root.getAttribute("height"))||512;
+      if (vb.length>=4 && vb.every(Number.isFinite)) { minX=vb[0]; minY=vb[1]; srcW=vb[2]; srcH=vb[3]; }
+      const rect=canvas.getBoundingClientRect(); const target=Math.min(rect.width,rect.height)*0.55; const scale=target/Math.max(srcW,srcH,1);
+      const ox=(rect.width-srcW*scale)/2-minX*scale, oy=(rect.height-srcH*scale)/2-minY*scale;
+      const fit=multiply(mTranslate(ox,oy), mScale(scale,scale)); const imported=[]; const skip=new Set(["defs","clippath","mask","filter","style","script","title","desc"]);
       function walk(el, inherited, parentMat) {
-        const tag = el.localName.toLowerCase();
-        if (skip.has(tag)) return;
-        const paint = readPaint(el, inherited);
-        const local = parseTransform(el.getAttribute("transform"));
-        const mat = multiply(parentMat, local);
-        let obj = null;
-        if (tag === "path" && el.getAttribute("d")) {
-          obj = { type: "path", d: el.getAttribute("d") };
-        } else if (tag === "rect") {
-          obj = {
-            type: "rect",
-            x: parseFloat(el.getAttribute("x") || 0),
-            y: parseFloat(el.getAttribute("y") || 0),
-            width: parseFloat(el.getAttribute("width") || 0),
-            height: parseFloat(el.getAttribute("height") || 0),
-          };
-        } else if (tag === "circle") {
-          const r = parseFloat(el.getAttribute("r") || 0);
-          obj = { type: "ellipse", cx: parseFloat(el.getAttribute("cx") || 0), cy: parseFloat(el.getAttribute("cy") || 0), rx: r, ry: r };
-        } else if (tag === "ellipse") {
-          obj = {
-            type: "ellipse",
-            cx: parseFloat(el.getAttribute("cx") || 0),
-            cy: parseFloat(el.getAttribute("cy") || 0),
-            rx: parseFloat(el.getAttribute("rx") || 0),
-            ry: parseFloat(el.getAttribute("ry") || 0),
-          };
-        } else if (tag === "line") {
-          obj = {
-            type: "line",
-            x1: parseFloat(el.getAttribute("x1") || 0),
-            y1: parseFloat(el.getAttribute("y1") || 0),
-            x2: parseFloat(el.getAttribute("x2") || 0),
-            y2: parseFloat(el.getAttribute("y2") || 0),
-          };
-        } else if (tag === "polygon" || tag === "polyline") {
-          const d = polygonToPath(el.getAttribute("points"), tag === "polygon");
-          if (d) obj = { type: "path", d };
-        }
-        if (obj) {
-          imported.push({
-            id: uid(),
-            ...obj,
-            fill: obj.type === "line" ? "none" : paint.fill,
-            stroke: paint.stroke === "none" && obj.type !== "line" ? "none" : paint.stroke,
-            strokeWidth: paint.strokeWidth,
-            matrix: mat,
-          });
-        }
-        [...el.children].forEach((child) => walk(child, paint, mat));
+        const tag=el.localName.toLowerCase(); if (skip.has(tag)) return;
+        const paint=readPaint(el,inherited); const mat=multiply(parentMat, parseTransform(el.getAttribute("transform"))); let obj=null;
+        if (tag==="path"&&el.getAttribute("d")) obj={ type:"path", d:el.getAttribute("d") };
+        else if (tag==="rect") obj={ type:"rect", x:+el.getAttribute("x")||0, y:+el.getAttribute("y")||0, width:+el.getAttribute("width")||0, height:+el.getAttribute("height")||0 };
+        else if (tag==="circle") { const r=+el.getAttribute("r")||0; obj={ type:"ellipse", cx:+el.getAttribute("cx")||0, cy:+el.getAttribute("cy")||0, rx:r, ry:r }; }
+        else if (tag==="ellipse") obj={ type:"ellipse", cx:+el.getAttribute("cx")||0, cy:+el.getAttribute("cy")||0, rx:+el.getAttribute("rx")||0, ry:+el.getAttribute("ry")||0 };
+        else if (tag==="line") obj={ type:"line", x1:+el.getAttribute("x1")||0, y1:+el.getAttribute("y1")||0, x2:+el.getAttribute("x2")||0, y2:+el.getAttribute("y2")||0 };
+        else if (tag==="polygon"||tag==="polyline") { const d=polygonToPath(el.getAttribute("points"), tag==="polygon"); if(d) obj={ type:"path", d }; }
+        else if (tag==="text") obj={ type:"text", x:+el.getAttribute("x")||0, y:+el.getAttribute("y")||0, text: el.textContent||"", fontSize: parseFloat(el.getAttribute("font-size")||28) };
+        if (obj) imported.push({ id:uid(), ...obj, fill: obj.type==="line"?"none":paint.fill, stroke:paint.stroke, strokeWidth:paint.strokeWidth, matrix:mat });
+        [...el.children].forEach((child)=>walk(child,paint,mat));
       }
-
-      [...root.children].forEach((child) => walk(child, { fill: "#000000", stroke: "none", strokeWidth: 2 }, fit));
+      [...root.children].forEach((child)=>walk(child,{fill:"#000",stroke:"none",strokeWidth:2},fit));
       if (!imported.length) throw new Error("取り込み可能な図形が見つかりませんでした");
-      snapshot();
-      state.objects.push(...imported);
-      renderObjects();
-      selectObject(imported[imported.length - 1].id);
-      setTool("select");
-      setStatus(`画像から ${imported.length} 個のパーツをキャンバスに取り込みました`);
-      toast("キャンバスに取り込みました");
+      snapshot(); state.objects.push(...imported); renderObjects(); selectIds(imported.map(o=>o.id)); setTool("select"); toast("キャンバスに取り込みました");
     }
 
     document.getElementById("btn-ai").addEventListener("click", showImportView);
     document.getElementById("btn-close-ai").addEventListener("click", showCanvasView);
-
-    document.querySelectorAll(".import-tabs button").forEach((tab) => {
-      tab.addEventListener("click", () => {
-        document.querySelectorAll(".import-tabs button").forEach((t) => t.classList.toggle("active", t === tab));
-        document.getElementById("panel-upload").classList.toggle("hidden", tab.dataset.tab !== "upload");
-        document.getElementById("panel-generate").classList.toggle("hidden", tab.dataset.tab !== "generate");
-      });
+    document.querySelectorAll(".import-tabs button").forEach((tab)=>tab.addEventListener("click", ()=>{
+      document.querySelectorAll(".import-tabs button").forEach((t)=>t.classList.toggle("active", t===tab));
+      document.getElementById("panel-upload").classList.toggle("hidden", tab.dataset.tab!=="upload");
+      document.getElementById("panel-generate").classList.toggle("hidden", tab.dataset.tab!=="generate");
+    }));
+    document.getElementById("toggle-key").addEventListener("click", ()=>{ const pass=apiKeyInput.type==="password"; apiKeyInput.type=pass?"text":"password"; document.getElementById("toggle-key").textContent=pass?"隠す":"表示"; });
+    document.getElementById("save-key").addEventListener("click", ()=>{ localStorage.setItem(STORAGE_KEY, apiKeyInput.value.trim()); aiStatus("APIキーを保存しました"); toast("APIキーを保存しました"); });
+    apiKeyInput.addEventListener("change", ()=>localStorage.setItem(STORAGE_KEY, apiKeyInput.value.trim()));
+    document.getElementById("file").addEventListener("change", async ()=>{ const file=document.getElementById("file").files?.[0]; if(!file) return; try{ showSource(await fileToDataUrl(file)); }catch(err){ aiStatus(err.message,true); } });
+    const dropzone=document.getElementById("dropzone");
+    ["dragenter","dragover"].forEach(ev=>dropzone.addEventListener(ev,e=>{ e.preventDefault(); dropzone.classList.add("drag"); }));
+    ["dragleave","drop"].forEach(ev=>dropzone.addEventListener(ev,e=>{ e.preventDefault(); dropzone.classList.remove("drag"); }));
+    dropzone.addEventListener("drop", async e=>{ const file=e.dataTransfer.files?.[0]; if(!file||!file.type.startsWith("image/")) return aiStatus("画像ファイルをドロップしてください",true); try{ showSource(await fileToDataUrl(file)); }catch(err){ aiStatus(err.message,true); } });
+    document.querySelectorAll(".ex").forEach(btn=>btn.addEventListener("click", ()=>{ document.getElementById("prompt").value=btn.dataset.prompt; }));
+    function setAiBusy(on,label){ ai.busy=on; const convert=document.getElementById("btn-convert"); const gen=document.getElementById("btn-generate"); convert.disabled=on||!ai.sourceDataUrl; gen.disabled=on; convert.innerHTML=on?`<span class="spinner"></span>${label||"処理中"}`:"ベクターに変換してキャンバスへ"; }
+    document.getElementById("btn-generate").addEventListener("click", async ()=>{
+      const prompt=document.getElementById("prompt").value.trim(); if(!prompt) return aiStatus("プロンプトを入力してください",true);
+      setAiBusy(true,"画像を生成中..."); aiStatus("画像を生成しています...");
+      try{ showSource(await loadGeneratedImage(prompt)); aiStatus("生成しました。続けて変換できます"); }catch(err){ aiStatus(err.message||"画像生成に失敗しました",true); } finally{ setAiBusy(false); }
     });
-
-    document.getElementById("toggle-key").addEventListener("click", () => {
-      const pass = apiKeyInput.type === "password";
-      apiKeyInput.type = pass ? "text" : "password";
-      document.getElementById("toggle-key").textContent = pass ? "隠す" : "表示";
-    });
-    document.getElementById("save-key").addEventListener("click", () => {
-      localStorage.setItem(STORAGE_KEY, apiKeyInput.value.trim());
-      aiStatus("APIキーを保存しました");
-      toast("APIキーを保存しました");
-    });
-    apiKeyInput.addEventListener("change", () => localStorage.setItem(STORAGE_KEY, apiKeyInput.value.trim()));
-
-    document.getElementById("file").addEventListener("change", async () => {
-      const file = document.getElementById("file").files?.[0];
-      if (!file) return;
-      try { showSource(await fileToDataUrl(file)); }
-      catch (err) { aiStatus(err.message, true); }
-    });
-    const dropzone = document.getElementById("dropzone");
-    ["dragenter", "dragover"].forEach((ev) => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.add("drag"); }));
-    ["dragleave", "drop"].forEach((ev) => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.remove("drag"); }));
-    dropzone.addEventListener("drop", async (e) => {
-      const file = e.dataTransfer.files?.[0];
-      if (!file || !file.type.startsWith("image/")) return aiStatus("画像ファイルをドロップしてください", true);
-      try { showSource(await fileToDataUrl(file)); }
-      catch (err) { aiStatus(err.message, true); }
-    });
-    document.querySelectorAll(".ex").forEach((btn) => {
-      btn.addEventListener("click", () => { document.getElementById("prompt").value = btn.dataset.prompt; });
-    });
-
-    function setAiBusy(on, label) {
-      ai.busy = on;
-      const convert = document.getElementById("btn-convert");
-      const gen = document.getElementById("btn-generate");
-      convert.disabled = on || !ai.sourceDataUrl;
-      gen.disabled = on;
-      convert.innerHTML = on ? `<span class="spinner"></span>${label || "処理中"}` : "ベクターに変換してキャンバスへ";
-    }
-
-    document.getElementById("btn-generate").addEventListener("click", async () => {
-      const prompt = document.getElementById("prompt").value.trim();
-      if (!prompt) return aiStatus("プロンプトを入力してください", true);
-      setAiBusy(true, "画像を生成中...");
-      aiStatus("Pollinations.ai で画像を生成しています...");
-      try {
-        showSource(await loadGeneratedImage(prompt));
-        aiStatus("生成しました。続けてベクターに変換できます");
-      } catch (err) {
-        aiStatus(err.message || "画像生成に失敗しました", true);
-      } finally {
-        setAiBusy(false);
-      }
-    });
-
-    document.getElementById("btn-convert").addEventListener("click", async () => {
-      const apiKey = apiKeyInput.value.trim();
-      if (!apiKey) return aiStatus("Gemini APIキーを入力してください", true);
-      if (!ai.sourceDataUrl) return aiStatus("先に画像を用意してください", true);
-      localStorage.setItem(STORAGE_KEY, apiKey);
-      setAiBusy(true, "Geminiで変換中...");
-      aiStatus("gemini-3.6-flash がSVGを作成しています...");
-      try {
-        const svg = await convertWithGemini(ai.sourceDataUrl, apiKey);
-        ai.svgMarkup = svg;
-        showSvgPreview(svg);
-        importSvgToCanvas(svg);
-        showCanvasView();
-      } catch (err) {
-        aiStatus(err.message || "変換に失敗しました", true);
-      } finally {
-        setAiBusy(false);
-      }
+    document.getElementById("btn-convert").addEventListener("click", async ()=>{
+      const apiKey=apiKeyInput.value.trim(); if(!apiKey) return aiStatus("Gemini APIキーを入力してください",true); if(!ai.sourceDataUrl) return aiStatus("先に画像を用意してください",true);
+      localStorage.setItem(STORAGE_KEY, apiKey); setAiBusy(true,"Geminiで変換中..."); aiStatus("gemini-3.6-flash がSVGを作成しています...");
+      try{ const svg=await convertWithGemini(ai.sourceDataUrl, apiKey); ai.svgMarkup=svg; showSvgPreview(svg); importSvgToCanvas(svg); showCanvasView(); }catch(err){ aiStatus(err.message||"変換に失敗しました",true); } finally{ setAiBusy(false); }
     });
   </script>
 </body>
