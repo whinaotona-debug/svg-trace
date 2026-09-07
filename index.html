@@ -103,6 +103,16 @@
     body.import-open .app { display: none; }
     body.import-open .import-view { display: block; }
     .import-bar { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+    .import-bar .back-btn, .import-actions .back-btn {
+      background: #575e75;
+      color: #fff;
+      height: 36px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+    }
     .import-wrap { width: min(860px, calc(100% - 32px)); margin: 24px auto 48px; background: #fff; border-radius: 12px; padding: 22px; }
     .import-wrap h2 { color: var(--ink); margin-bottom: 6px; }
     .import-wrap .lead, .import-wrap label { color: #667; font-size: 13px; margin-bottom: 10px; }
@@ -203,18 +213,11 @@
   <div class="import-view" id="view-import">
     <header class="import-bar">
       <strong>画像から取込</strong>
-      <button class="ghost" id="btn-close-ai" type="button">キャンバスへ戻る</button>
+      <button class="back-btn" id="btn-close-ai" type="button">キャンバスへ戻る</button>
     </header>
     <div class="import-wrap">
-      <h2>画像 / AI からキャンバスへ</h2>
-      <p class="lead">変換するとキャンバスに戻って、Scratchと同じように編集できます。</p>
-      <label>Gemini APIキー
-        <div class="key-row">
-          <input id="api-key" type="password" placeholder="APIキーを入力" autocomplete="off" />
-          <button class="ghost" id="toggle-key" type="button">表示</button>
-          <button class="ghost" id="save-key" type="button">保存</button>
-        </div>
-      </label>
+      <h2>画像からキャンバスへ</h2>
+      <p class="lead">トレースボットが色面をたどってSVGにします。変換後はキャンバス中央に置かれ、選択して動かせます。</p>
       <div class="import-tabs">
         <button type="button" class="active" data-tab="upload">画像をアップロード</button>
         <button type="button" data-tab="generate">AIで画像を生成</button>
@@ -236,7 +239,10 @@
         <div><div class="lead">変換プレビュー</div><div class="pv" id="svg-frame">まだありません</div></div>
       </div>
       <div class="import-status" id="ai-status">画像を用意してから変換してください</div>
-      <div class="import-actions"><button class="go" id="btn-convert" type="button" disabled>ベクターに変換してキャンバスへ</button></div>
+      <div class="import-actions">
+        <button class="go" id="btn-convert" type="button" disabled>トレースしてキャンバスへ</button>
+        <button class="back-btn" id="btn-close-ai-2" type="button">キャンバスへ戻る</button>
+      </div>
     </div>
   </div>
 
@@ -369,7 +375,7 @@
 
     function shapeNode(obj) {
       const common = { class:"shape", fill:obj.fill, stroke:obj.stroke, "stroke-width":obj.strokeWidth, "stroke-linecap":"round", "stroke-linejoin":"round" };
-      if (obj.type === "path") return createEl("path", { ...common, d: obj.d });
+      if (obj.type === "path") return createEl("path", { ...common, d: obj.d, "fill-rule": obj.fillRule || "evenodd" });
       if (obj.type === "rect") return createEl("rect", { ...common, x:obj.x, y:obj.y, width:obj.width, height:obj.height });
       if (obj.type === "ellipse") return createEl("ellipse", { ...common, cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry });
       if (obj.type === "text") return createEl("text", { ...common, x:obj.x, y:obj.y, "font-size":obj.fontSize, "font-family":"sans-serif" });
@@ -377,7 +383,7 @@
     }
     function hitNode(obj) {
       const hitWidth = Math.max(14, (obj.strokeWidth||0)+10);
-      if (obj.type === "path") return createEl("path", { d:obj.d, fill: obj.fill==="none"?"none":"transparent", stroke:"transparent", "stroke-width":hitWidth, class:"hit", "pointer-events": obj.fill==="none"?"stroke":"all" });
+      if (obj.type === "path") return createEl("path", { d:obj.d, fill: obj.fill==="none"?"none":"transparent", stroke:"transparent", "stroke-width":hitWidth, class:"hit", "fill-rule": obj.fillRule || "evenodd", "pointer-events": obj.fill==="none"?"stroke":"all" });
       if (obj.type === "rect") return createEl("rect", { x:obj.x, y:obj.y, width:obj.width, height:obj.height, fill:"transparent", class:"hit", "pointer-events":"all" });
       if (obj.type === "ellipse") return createEl("ellipse", { cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry, fill:"transparent", class:"hit", "pointer-events":"all" });
       if (obj.type === "text") return createEl("rect", { x:obj.x, y:obj.y-obj.fontSize, width:Math.max(20,(obj.text||"").length*obj.fontSize*.6), height:obj.fontSize*1.3, fill:"transparent", class:"hit", "pointer-events":"all" });
@@ -857,9 +863,10 @@
     }
 
     function serializeShape(obj) {
-      if (obj.type==="group") return obj.children.map(serializeShape).join("");
+      if (obj.type==="group") return obj.children.map(serializeObj).join("");
       const f=`fill="${obj.fill}"`, s=`stroke="${obj.stroke}" stroke-width="${obj.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
-      if (obj.type==="path") return `<path d="${obj.d}" ${f} ${s}/>`;
+      const rule = obj.fillRule ? ` fill-rule="${obj.fillRule}"` : "";
+      if (obj.type==="path") return `<path d="${obj.d}" ${f} ${s}${rule}/>`;
       if (obj.type==="rect") return `<rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" ${f} ${s}/>`;
       if (obj.type==="ellipse") return `<ellipse cx="${obj.cx}" cy="${obj.cy}" rx="${obj.rx}" ry="${obj.ry}" ${f} ${s}/>`;
       if (obj.type==="text") return `<text x="${obj.x}" y="${obj.y}" font-size="${obj.fontSize}" font-family="sans-serif" ${f} ${s}>${obj.text}</text>`;
@@ -930,18 +937,14 @@
 
     updateChips(); setTool("select"); refreshHistoryButtons(); refreshSelectionButtons(); applyView();
 
-    const STORAGE_KEY = "svg-trace-gemini-api-key";
-    const CONVERT_PROMPT = "この画像を解析し、形状や色を再現するSVGコードを作成してください。Scratch等のエディタで扱いやすいよう、単純なpathやpolygon、circle等を組み合わせて構成してください。解説やMarkdownの整形（```xmlなど）は一切含めず、純粋な <svg>...</svg> タグとその中身だけを出力してください。";
     const ai = { sourceDataUrl:null, svgMarkup:null, busy:false };
-    const apiKeyInput = document.getElementById("api-key");
-    apiKeyInput.value = localStorage.getItem(STORAGE_KEY) || window.SVG_TRACE_API_KEY || "";
     function aiStatus(text, err) { const el=document.getElementById("ai-status"); el.textContent=text; el.classList.toggle("err", !!err); }
-    function showImportView() { document.body.classList.add("import-open"); window.scrollTo(0,0); apiKeyInput.value=localStorage.getItem(STORAGE_KEY)||window.SVG_TRACE_API_KEY||apiKeyInput.value; }
+    function showImportView() { document.body.classList.add("import-open"); window.scrollTo(0,0); }
     function showCanvasView() { document.body.classList.remove("import-open"); applyView(); }
     function showSource(dataUrl) {
       ai.sourceDataUrl=dataUrl; const frame=document.getElementById("source-frame"); frame.innerHTML="";
       const img=document.createElement("img"); img.src=dataUrl; frame.append(img);
-      document.getElementById("btn-convert").disabled=ai.busy; aiStatus("画像の準備ができました。変換できます");
+      document.getElementById("btn-convert").disabled=ai.busy; aiStatus("画像の準備ができました。トレースできます");
     }
     function showSvgPreview(markup) {
       const frame=document.getElementById("svg-frame"); frame.innerHTML="";
@@ -949,18 +952,8 @@
       if (svg && svg.nodeName.toLowerCase()==="svg" && !doc.querySelector("parsererror")) { svg.querySelectorAll("script").forEach(n=>n.remove()); svg.style.maxWidth="100%"; svg.style.maxHeight="160px"; frame.append(document.importNode(svg,true)); }
       else frame.textContent="解析失敗";
     }
-    function extractSvg(text) { if(!text) return null; const cleaned=text.replace(/```(?:xml|svg|html|markup)?/gi,"").replace(/```/g,"").trim(); const match=cleaned.match(/<svg\b[\s\S]*<\/svg>/i); return match?match[0].trim():null; }
     function fileToDataUrl(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error("画像の読み込みに失敗しました")); r.readAsDataURL(file); }); }
     function blobToDataUrl(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error("変換失敗")); r.readAsDataURL(blob); }); }
-    async function resizeDataUrl(dataUrl, maxSize=1024) {
-      const img=new Image(); img.src=dataUrl; await img.decode();
-      const scale=Math.min(1, maxSize/Math.max(img.width,img.height));
-      if (scale>=1 && dataUrl.length<1500000) return dataUrl;
-      const c=document.createElement("canvas"); c.width=Math.max(1,Math.round(img.width*scale)); c.height=Math.max(1,Math.round(img.height*scale));
-      const ctx=c.getContext("2d"); const png=dataUrl.startsWith("data:image/png");
-      if (!png) { ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); }
-      ctx.drawImage(img,0,0,c.width,c.height); return c.toDataURL(png?"image/png":"image/jpeg", .9);
-    }
     function withTimeout(promise, ms, label) { let t; const timeout=new Promise((_,rej)=>t=setTimeout(()=>rej(new Error(label)),ms)); return Promise.race([promise,timeout]).finally(()=>clearTimeout(t)); }
     function urlToDataUrlViaImage(url) {
       return new Promise((resolve,reject)=>{ const img=new Image(); img.crossOrigin="anonymous";
@@ -977,13 +970,288 @@
       }
       throw lastError||new Error("画像生成に失敗しました");
     }
-    async function convertWithGemini(dataUrl, apiKey) {
-      const resized=await resizeDataUrl(dataUrl); const [meta,base64]=resized.split(","); const mime=(meta.match(/data:(.*?);/)||[])[1]||"image/jpeg";
-      const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",{ method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key":apiKey }, body: JSON.stringify({ contents:[{ role:"user", parts:[{ text:CONVERT_PROMPT }, { inlineData:{ mimeType:mime, data:base64 } }] }], generationConfig:{ temperature:0.2, maxOutputTokens:16384 } }) });
-      const body=await res.json().catch(()=>({})); if(!res.ok) throw new Error(body?.error?.message||`Gemini APIエラー (${res.status})`);
-      const parts=body?.candidates?.[0]?.content?.parts||[]; const text=parts.filter(p=>p.text&&!p.thought).map(p=>p.text).join("\n").trim();
-      if(!text) throw new Error("Geminiからテキストが返りませんでした"); const svg=extractSvg(text); if(!svg) throw new Error("SVGを取り出せませんでした"); return svg;
+
+    const tick = () => new Promise((r) => setTimeout(r, 0));
+    function rgbHex(r, g, b) {
+      return "#" + [r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("");
     }
+    async function loadImageData(dataUrl, maxSize) {
+      const img = new Image(); img.src = dataUrl; await img.decode();
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, w, h);
+      return { imgData: ctx.getImageData(0, 0, w, h), w, h };
+    }
+    function sampleBg(data, w, h) {
+      const idx = (x, y) => (y * w + x) * 4;
+      const samples = [[0,0],[w-1,0],[0,h-1],[w-1,h-1],[w>>1,0],[w>>1,h-1],[0,h>>1],[w-1,h>>1]];
+      let r=0,g=0,b=0,a=0;
+      samples.forEach(([x,y]) => { const i=idx(x,y); r+=data[i]; g+=data[i+1]; b+=data[i+2]; a+=data[i+3]; });
+      const n = samples.length;
+      return [r/n, g/n, b/n, a/n];
+    }
+    function knockBackground(imgData, bg, thresh) {
+      const d = imgData.data;
+      const w = imgData.width, h = imgData.height;
+      const t2 = thresh * thresh;
+      const similar = (i) => {
+        if (d[i+3] < 40) return true;
+        const dr=d[i]-bg[0], dg=d[i+1]-bg[1], db=d[i+2]-bg[2];
+        return dr*dr+dg*dg+db*db < t2;
+      };
+      const seen = new Uint8Array(w * h);
+      const stack = [];
+      const trySeed = (x, y) => {
+        const idx = y * w + x;
+        if (seen[idx] || !similar(idx * 4)) return;
+        seen[idx] = 1;
+        stack.push(idx);
+      };
+      for (let x=0;x<w;x++) { trySeed(x,0); trySeed(x,h-1); }
+      for (let y=0;y<h;y++) { trySeed(0,y); trySeed(w-1,y); }
+      while (stack.length) {
+        const p = stack.pop();
+        d[p*4+3] = 0;
+        const x = p % w, y = (p / w) | 0;
+        const nbs = [[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+        for (const [nx, ny] of nbs) {
+          if (nx<0||ny<0||nx>=w||ny>=h) continue;
+          const ni = ny * w + nx;
+          if (seen[ni] || !similar(ni * 4)) continue;
+          seen[ni] = 1;
+          stack.push(ni);
+        }
+      }
+    }
+    function medianCutPalette(imgData, maxColors) {
+      const d = imgData.data;
+      const pixels = [];
+      for (let i=0;i<d.length;i+=4) if (d[i+3] >= 32) pixels.push([d[i], d[i+1], d[i+2]]);
+      if (!pixels.length) return [];
+      let pts = pixels;
+      if (pts.length > 48000) {
+        const step = Math.ceil(pts.length / 48000);
+        pts = pts.filter((_, i) => i % step === 0);
+      }
+      const boxes = [{ pts }];
+      function longestChannel(box) {
+        let minR=255,minG=255,minB=255,maxR=0,maxG=0,maxB=0;
+        box.pts.forEach((p) => {
+          minR=Math.min(minR,p[0]); maxR=Math.max(maxR,p[0]);
+          minG=Math.min(minG,p[1]); maxG=Math.max(maxG,p[1]);
+          minB=Math.min(minB,p[2]); maxB=Math.max(maxB,p[2]);
+        });
+        const ranges=[maxR-minR, maxG-minG, maxB-minB];
+        const ch = ranges[0]>=ranges[1] && ranges[0]>=ranges[2] ? 0 : ranges[1]>=ranges[2] ? 1 : 2;
+        return { ch, range: ranges[ch] };
+      }
+      while (boxes.length < maxColors) {
+        boxes.sort((a,b) => longestChannel(b).range - longestChannel(a).range);
+        const box = boxes.shift();
+        if (!box || box.pts.length < 10) { if (box) boxes.push(box); break; }
+        const { ch } = longestChannel(box);
+        box.pts.sort((a,b) => a[ch]-b[ch]);
+        const mid = box.pts.length >> 1;
+        boxes.push({ pts: box.pts.slice(0, mid) }, { pts: box.pts.slice(mid) });
+      }
+      return boxes.map((box) => {
+        let r=0,g=0,b=0, n=box.pts.length;
+        box.pts.forEach((p) => { r+=p[0]; g+=p[1]; b+=p[2]; });
+        return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
+      });
+    }
+    function quantize(imgData, palette) {
+      const d = imgData.data, w = imgData.width, h = imgData.height;
+      const labels = new Int16Array(w * h);
+      labels.fill(-1);
+      for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
+        const i = (y*w+x)*4;
+        if (d[i+3] < 32) continue;
+        let best=0, bestD=1e12;
+        for (let p=0;p<palette.length;p++) {
+          const pal=palette[p];
+          const dr=d[i]-pal[0], dg=d[i+1]-pal[1], db=d[i+2]-pal[2];
+          const dist=dr*dr+dg*dg+db*db;
+          if (dist<bestD) { bestD=dist; best=p; }
+        }
+        labels[y*w+x]=best;
+      }
+      return labels;
+    }
+    function colorMask(labels, colorIndex, w, h, minPixels) {
+      const mask = new Uint8Array(w * h);
+      let count = 0;
+      for (let i=0;i<labels.length;i++) if (labels[i]===colorIndex) { mask[i]=1; count++; }
+      return count >= minPixels ? mask : null;
+    }
+    function removeSpeckles(mask, w, h, minSize) {
+      const seen = new Uint8Array(w * h);
+      for (let i=0;i<w*h;i++) {
+        if (!mask[i] || seen[i]) continue;
+        const stack=[i], cells=[i];
+        seen[i]=1;
+        while (stack.length) {
+          const p=stack.pop();
+          const x=p%w, y=(p/w)|0;
+          const nbs=[[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+          for (const [nx,ny] of nbs) {
+            if (nx<0||ny<0||nx>=w||ny>=h) continue;
+            const ni=ny*w+nx;
+            if (!mask[ni] || seen[ni]) continue;
+            seen[ni]=1; stack.push(ni); cells.push(ni);
+          }
+        }
+        if (cells.length < minSize) cells.forEach((ci) => { mask[ci]=0; });
+      }
+    }
+    function extractSegments(mask, w, h) {
+      const segs = [];
+      const on = (x,y) => x>=0 && y>=0 && x<w && y<h && mask[y*w+x];
+      for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
+        if (!mask[y*w+x]) continue;
+        if (!on(x,y-1)) segs.push({ a:[x,y], b:[x+1,y] });
+        if (!on(x+1,y)) segs.push({ a:[x+1,y], b:[x+1,y+1] });
+        if (!on(x,y+1)) segs.push({ a:[x+1,y+1], b:[x,y+1] });
+        if (!on(x-1,y)) segs.push({ a:[x,y+1], b:[x,y] });
+      }
+      return segs;
+    }
+    function stitchLoops(segs) {
+      const key = (x,y) => x + "," + y;
+      const map = new Map();
+      for (const s of segs) {
+        const k = key(s.a[0], s.a[1]);
+        if (!map.has(k)) map.set(k, []);
+        map.get(k).push(s.b);
+      }
+      const loops = [];
+      while (map.size) {
+        let startKey = null;
+        for (const k of map.keys()) { startKey = k; break; }
+        const start = startKey.split(",").map(Number);
+        const loop = [[start[0], start[1]]];
+        let cur = start;
+        for (let guard=0; guard<250000; guard++) {
+          const ck = key(cur[0], cur[1]);
+          const nexts = map.get(ck);
+          if (!nexts || !nexts.length) break;
+          const nxt = nexts.pop();
+          if (!nexts.length) map.delete(ck);
+          loop.push([nxt[0], nxt[1]]);
+          if (nxt[0]===start[0] && nxt[1]===start[1]) break;
+          cur = nxt;
+        }
+        if (loop.length >= 4) loops.push(loop);
+      }
+      return loops;
+    }
+    function distPointSeg(p, a, b) {
+      const vx=b[0]-a[0], vy=b[1]-a[1];
+      const wx=p[0]-a[0], wy=p[1]-a[1];
+      const c2=vx*vx+vy*vy;
+      const t = c2 ? Math.max(0, Math.min(1, (wx*vx+wy*vy)/c2)) : 0;
+      return Math.hypot(p[0]-(a[0]+t*vx), p[1]-(a[1]+t*vy));
+    }
+    function rdpOpen(pts, eps) {
+      if (pts.length <= 2) return pts;
+      const keep = new Uint8Array(pts.length);
+      keep[0] = 1;
+      keep[pts.length - 1] = 1;
+      const stack = [[0, pts.length - 1]];
+      while (stack.length) {
+        const [s, e] = stack.pop();
+        let maxD = 0, idx = -1;
+        const a = pts[s], b = pts[e];
+        for (let i = s + 1; i < e; i++) {
+          const dist = distPointSeg(pts[i], a, b);
+          if (dist > maxD) { maxD = dist; idx = i; }
+        }
+        if (idx >= 0 && maxD > eps) {
+          keep[idx] = 1;
+          stack.push([s, idx], [idx, e]);
+        }
+      }
+      return pts.filter((_, i) => keep[i]);
+    }
+    function simplifyClosed(pts, eps) {
+      let p = pts;
+      if (p.length>1 && p[0][0]===p[p.length-1][0] && p[0][1]===p[p.length-1][1]) p = p.slice(0,-1);
+      if (p.length < 3) return pts;
+      const open = rdpOpen(p.concat([p[0]]), eps);
+      const out = open.slice(0,-1);
+      if (out.length < 3) return pts;
+      out.push([out[0][0], out[0][1]]);
+      return out;
+    }
+    function chaikinClosed(pts, times) {
+      let p = pts;
+      if (p.length>1 && p[0][0]===p[p.length-1][0] && p[0][1]===p[p.length-1][1]) p = p.slice(0,-1);
+      for (let t=0;t<times;t++) {
+        const n=[], len=p.length;
+        for (let i=0;i<len;i++) {
+          const a=p[i], b=p[(i+1)%len];
+          n.push([0.75*a[0]+0.25*b[0], 0.75*a[1]+0.25*b[1]]);
+          n.push([0.25*a[0]+0.75*b[0], 0.25*a[1]+0.75*b[1]]);
+        }
+        p = n;
+      }
+      p.push([p[0][0], p[0][1]]);
+      return p;
+    }
+    function loopArea(pts) {
+      let a=0;
+      for (let i=0;i<pts.length-1;i++) a += pts[i][0]*pts[i+1][1] - pts[i+1][0]*pts[i][1];
+      return a/2;
+    }
+    function loopToPath(pts) {
+      let d = `M ${pts[0][0].toFixed(2)} ${pts[0][1].toFixed(2)}`;
+      for (let i=1;i<pts.length;i++) d += ` L ${pts[i][0].toFixed(2)} ${pts[i][1].toFixed(2)}`;
+      return d + " Z";
+    }
+    async function traceBitmapToSvg(dataUrl) {
+      aiStatus("トレースボット: 画像を読み込んでいます...");
+      await tick();
+      const { imgData, w, h } = await loadImageData(dataUrl, 480);
+      const bg = sampleBg(imgData.data, w, h);
+      knockBackground(imgData, bg, 42);
+      aiStatus("トレースボット: 色をまとめています...");
+      await tick();
+      const palette = medianCutPalette(imgData, 16);
+      if (!palette.length) throw new Error("トレーできる色が見つかりませんでした");
+      const labels = quantize(imgData, palette);
+      const minPixels = Math.max(20, Math.round(w * h * 0.0007));
+      const layers = [];
+      for (let pi=0; pi<palette.length; pi++) {
+        if (pi % 2 === 0) {
+          aiStatus(`トレースボット: 輪郭をたどっています (${pi+1}/${palette.length})...`);
+          await tick();
+        }
+        const mask = colorMask(labels, pi, w, h, minPixels);
+        if (!mask) continue;
+        removeSpeckles(mask, w, h, 10);
+        const segs = extractSegments(mask, w, h);
+        if (!segs.length) continue;
+        let loops = stitchLoops(segs).map((loop) => {
+          let s = simplifyClosed(loop, 1.05);
+          s = chaikinClosed(s, 2);
+          return simplifyClosed(s, 0.5);
+        }).filter((loop) => Math.abs(loopArea(loop)) >= 8);
+        if (!loops.length) continue;
+        loops.sort((a,b) => Math.abs(loopArea(b)) - Math.abs(loopArea(a)));
+        const d = loops.map(loopToPath).join(" ");
+        const [r,g,b] = palette[pi];
+        const area = loops.reduce((sum, loop) => sum + Math.abs(loopArea(loop)), 0);
+        layers.push({ d, fill: rgbHex(r,g,b), area });
+      }
+      if (!layers.length) throw new Error("輪郭を取り出せませんでした");
+      layers.sort((a,b) => b.area - a.area);
+      const paths = layers.map((l) => `<path fill="${l.fill}" stroke="none" fill-rule="evenodd" d="${l.d}"/>`).join("");
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${paths}</svg>`;
+    }
+
     function parseTransform(str) {
       if (!str) return identity(); let m=identity(); const re=/(matrix|translate|scale|rotate)\(([^)]+)\)/g; let match;
       while ((match=re.exec(str))) { const args=match[2].trim().split(/[\s,]+/).map(Number);
@@ -998,65 +1266,103 @@
       const style={}; (el.getAttribute("style")||"").split(";").forEach(part=>{ const [k,v]=part.split(":"); if(k&&v) style[k.trim()]=v.trim(); });
       const fill=el.getAttribute("fill")||style.fill||inherited.fill; const stroke=el.getAttribute("stroke")||style.stroke||inherited.stroke;
       const swRaw=el.getAttribute("stroke-width")||style["stroke-width"]; const strokeWidth=swRaw?parseFloat(swRaw):inherited.strokeWidth;
-      return { fill: fill||"#000", stroke: stroke||"none", strokeWidth: Number.isFinite(strokeWidth)?strokeWidth:2 };
+      const rule=el.getAttribute("fill-rule")||style["fill-rule"]||inherited.fillRule;
+      return { fill: fill||"#000", stroke: stroke||"none", strokeWidth: Number.isFinite(strokeWidth)?strokeWidth:0, fillRule: rule||"evenodd" };
     }
     function polygonToPath(points, close) {
       const nums=String(points||"").trim().split(/[\s,]+/).filter(Boolean); if(nums.length<4) return "";
       let d=""; for(let i=0;i+1<nums.length;i+=2) d+=`${i?"L":"M"} ${nums[i]} ${nums[i+1]} `; if(close) d+="Z"; return d.trim();
     }
-    function importSvgToCanvas(markup) {
+    function parseSvgObjects(markup) {
       const doc=new DOMParser().parseFromString(markup,"image/svg+xml"); const root=doc.documentElement;
       if (!root || root.nodeName.toLowerCase()!=="svg" || doc.querySelector("parsererror")) throw new Error("SVGを解析できませんでした");
-      const vb=(root.getAttribute("viewBox")||"").trim().split(/[\s,]+/).map(Number);
-      let minX=0,minY=0,srcW=parseFloat(root.getAttribute("width"))||512, srcH=parseFloat(root.getAttribute("height"))||512;
-      if (vb.length>=4 && vb.every(Number.isFinite)) { minX=vb[0]; minY=vb[1]; srcW=vb[2]; srcH=vb[3]; }
-      const rect=canvas.getBoundingClientRect(); const target=Math.min(rect.width,rect.height)*0.55; const scale=target/Math.max(srcW,srcH,1);
-      const ox=(rect.width-srcW*scale)/2-minX*scale, oy=(rect.height-srcH*scale)/2-minY*scale;
-      const fit=multiply(mTranslate(ox,oy), mScale(scale,scale)); const imported=[]; const skip=new Set(["defs","clippath","mask","filter","style","script","title","desc"]);
+      const imported=[]; const skip=new Set(["defs","clippath","mask","filter","style","script","title","desc"]);
       function walk(el, inherited, parentMat) {
         const tag=el.localName.toLowerCase(); if (skip.has(tag)) return;
         const paint=readPaint(el,inherited); const mat=multiply(parentMat, parseTransform(el.getAttribute("transform"))); let obj=null;
-        if (tag==="path"&&el.getAttribute("d")) obj={ type:"path", d:el.getAttribute("d") };
+        if (tag==="path"&&el.getAttribute("d")) obj={ type:"path", d:el.getAttribute("d"), fillRule: paint.fillRule };
         else if (tag==="rect") obj={ type:"rect", x:+el.getAttribute("x")||0, y:+el.getAttribute("y")||0, width:+el.getAttribute("width")||0, height:+el.getAttribute("height")||0 };
         else if (tag==="circle") { const r=+el.getAttribute("r")||0; obj={ type:"ellipse", cx:+el.getAttribute("cx")||0, cy:+el.getAttribute("cy")||0, rx:r, ry:r }; }
         else if (tag==="ellipse") obj={ type:"ellipse", cx:+el.getAttribute("cx")||0, cy:+el.getAttribute("cy")||0, rx:+el.getAttribute("rx")||0, ry:+el.getAttribute("ry")||0 };
         else if (tag==="line") obj={ type:"line", x1:+el.getAttribute("x1")||0, y1:+el.getAttribute("y1")||0, x2:+el.getAttribute("x2")||0, y2:+el.getAttribute("y2")||0 };
-        else if (tag==="polygon"||tag==="polyline") { const d=polygonToPath(el.getAttribute("points"), tag==="polygon"); if(d) obj={ type:"path", d }; }
+        else if (tag==="polygon"||tag==="polyline") { const d=polygonToPath(el.getAttribute("points"), tag==="polygon"); if(d) obj={ type:"path", d, fillRule: paint.fillRule }; }
         else if (tag==="text") obj={ type:"text", x:+el.getAttribute("x")||0, y:+el.getAttribute("y")||0, text: el.textContent||"", fontSize: parseFloat(el.getAttribute("font-size")||28) };
         if (obj) imported.push({ id:uid(), ...obj, fill: obj.type==="line"?"none":paint.fill, stroke:paint.stroke, strokeWidth:paint.strokeWidth, matrix:mat });
         [...el.children].forEach((child)=>walk(child,paint,mat));
       }
-      [...root.children].forEach((child)=>walk(child,{fill:"#000",stroke:"none",strokeWidth:2},fit));
+      [...root.children].forEach((child)=>walk(child,{fill:"#000",stroke:"none",strokeWidth:0,fillRule:"evenodd"},identity()));
       if (!imported.length) throw new Error("取り込み可能な図形が見つかりませんでした");
-      snapshot(); state.objects.push(...imported); renderObjects(); selectIds(imported.map(o=>o.id)); setTool("select"); toast("キャンバスに取り込みました");
+      return imported;
+    }
+    function placeImportedGroup(group) {
+      applyView();
+      const el = document.getElementById(group.id);
+      const r = canvas.getBoundingClientRect();
+      if (!el || r.width < 8 || r.height < 8) return;
+      const bbox = el.getBBox();
+      const vw = r.width / state.zoom;
+      const vh = r.height / state.zoom;
+      const target = Math.min(vw, vh) * 0.62;
+      const scale = target / Math.max(bbox.width || 1, bbox.height || 1, 1);
+      const cx = state.panX + vw / 2;
+      const cy = state.panY + vh / 2;
+      const bx = bbox.x + (bbox.width || 0) / 2;
+      const by = bbox.y + (bbox.height || 0) / 2;
+      group.matrix = multiply(multiply(mTranslate(cx, cy), mScale(scale, scale)), mTranslate(-bx, -by));
+    }
+    function afterLayout(fn) {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (canvas.getBoundingClientRect().width < 8) setTimeout(fn, 50);
+        else fn();
+      }));
+    }
+    function importSvgToCanvas(markup) {
+      const imported = parseSvgObjects(markup);
+      snapshot();
+      const group = { id: uid(), type:"group", children: imported, fill:"none", stroke:"none", strokeWidth:0, matrix: identity() };
+      state.objects.push(group);
+      showCanvasView();
+      applyView();
+      renderObjects();
+      afterLayout(() => {
+        placeImportedGroup(group);
+        renderObjects();
+        selectIds([group.id]);
+        setTool("select");
+        drawSelection();
+        toast("キャンバス中央に取り込みました");
+      });
     }
 
     document.getElementById("btn-ai").addEventListener("click", showImportView);
     document.getElementById("btn-close-ai").addEventListener("click", showCanvasView);
+    document.getElementById("btn-close-ai-2").addEventListener("click", showCanvasView);
     document.querySelectorAll(".import-tabs button").forEach((tab)=>tab.addEventListener("click", ()=>{
       document.querySelectorAll(".import-tabs button").forEach((t)=>t.classList.toggle("active", t===tab));
       document.getElementById("panel-upload").classList.toggle("hidden", tab.dataset.tab!=="upload");
       document.getElementById("panel-generate").classList.toggle("hidden", tab.dataset.tab!=="generate");
     }));
-    document.getElementById("toggle-key").addEventListener("click", ()=>{ const pass=apiKeyInput.type==="password"; apiKeyInput.type=pass?"text":"password"; document.getElementById("toggle-key").textContent=pass?"隠す":"表示"; });
-    document.getElementById("save-key").addEventListener("click", ()=>{ localStorage.setItem(STORAGE_KEY, apiKeyInput.value.trim()); aiStatus("APIキーを保存しました"); toast("APIキーを保存しました"); });
-    apiKeyInput.addEventListener("change", ()=>localStorage.setItem(STORAGE_KEY, apiKeyInput.value.trim()));
     document.getElementById("file").addEventListener("change", async ()=>{ const file=document.getElementById("file").files?.[0]; if(!file) return; try{ showSource(await fileToDataUrl(file)); }catch(err){ aiStatus(err.message,true); } });
     const dropzone=document.getElementById("dropzone");
     ["dragenter","dragover"].forEach(ev=>dropzone.addEventListener(ev,e=>{ e.preventDefault(); dropzone.classList.add("drag"); }));
     ["dragleave","drop"].forEach(ev=>dropzone.addEventListener(ev,e=>{ e.preventDefault(); dropzone.classList.remove("drag"); }));
     dropzone.addEventListener("drop", async e=>{ const file=e.dataTransfer.files?.[0]; if(!file||!file.type.startsWith("image/")) return aiStatus("画像ファイルをドロップしてください",true); try{ showSource(await fileToDataUrl(file)); }catch(err){ aiStatus(err.message,true); } });
     document.querySelectorAll(".ex").forEach(btn=>btn.addEventListener("click", ()=>{ document.getElementById("prompt").value=btn.dataset.prompt; }));
-    function setAiBusy(on,label){ ai.busy=on; const convert=document.getElementById("btn-convert"); const gen=document.getElementById("btn-generate"); convert.disabled=on||!ai.sourceDataUrl; gen.disabled=on; convert.innerHTML=on?`<span class="spinner"></span>${label||"処理中"}`:"ベクターに変換してキャンバスへ"; }
+    function setAiBusy(on,label){ ai.busy=on; const convert=document.getElementById("btn-convert"); const gen=document.getElementById("btn-generate"); convert.disabled=on||!ai.sourceDataUrl; gen.disabled=on; convert.innerHTML=on?`<span class="spinner"></span>${label||"処理中"}`:"トレースしてキャンバスへ"; }
     document.getElementById("btn-generate").addEventListener("click", async ()=>{
       const prompt=document.getElementById("prompt").value.trim(); if(!prompt) return aiStatus("プロンプトを入力してください",true);
       setAiBusy(true,"画像を生成中..."); aiStatus("画像を生成しています...");
-      try{ showSource(await loadGeneratedImage(prompt)); aiStatus("生成しました。続けて変換できます"); }catch(err){ aiStatus(err.message||"画像生成に失敗しました",true); } finally{ setAiBusy(false); }
+      try{ showSource(await loadGeneratedImage(prompt)); aiStatus("生成しました。続けてトレースできます"); }catch(err){ aiStatus(err.message||"画像生成に失敗しました",true); } finally{ setAiBusy(false); }
     });
     document.getElementById("btn-convert").addEventListener("click", async ()=>{
-      const apiKey=apiKeyInput.value.trim(); if(!apiKey) return aiStatus("Gemini APIキーを入力してください",true); if(!ai.sourceDataUrl) return aiStatus("先に画像を用意してください",true);
-      localStorage.setItem(STORAGE_KEY, apiKey); setAiBusy(true,"Geminiで変換中..."); aiStatus("gemini-3.6-flash がSVGを作成しています...");
-      try{ const svg=await convertWithGemini(ai.sourceDataUrl, apiKey); ai.svgMarkup=svg; showSvgPreview(svg); importSvgToCanvas(svg); showCanvasView(); }catch(err){ aiStatus(err.message||"変換に失敗しました",true); } finally{ setAiBusy(false); }
+      if(!ai.sourceDataUrl) return aiStatus("先に画像を用意してください",true);
+      setAiBusy(true,"トレースボットで変換中...");
+      try{
+        const svg=await traceBitmapToSvg(ai.sourceDataUrl);
+        ai.svgMarkup=svg;
+        showSvgPreview(svg);
+        importSvgToCanvas(svg);
+      }catch(err){ aiStatus(err.message||"変換に失敗しました",true); } finally{ setAiBusy(false); }
     });
   </script>
 </body>
