@@ -186,6 +186,7 @@
       <div class="sep"></div>
       <button class="ibtn" id="btn-group" title="グループ化"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="10" height="8"/><rect x="10" y="11" width="10" height="8"/></svg></button>
       <button class="ibtn" id="btn-ungroup" title="グループ解除"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="8" height="7"/><rect x="13" y="11" width="8" height="7"/></svg></button>
+      <button class="ibtn" id="btn-clean-junk" title="周りのゴミを消す"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="1.15" fill="currentColor" stroke="none"/><circle cx="10.5" cy="5.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="8" cy="11" r="0.8" fill="currentColor" stroke="none"/><path d="M14 6l2.2 2.2L9 15.4 6.8 13.2z"/><path d="M16.6 8.6l1.8 1.8-2.1 2.1-1.8-1.8z"/><path d="M6.2 13.8L5 19l5.2-1.2"/></svg></button>
       <div class="sep"></div>
       <button class="ibtn" id="btn-forward" title="ひとつ前面へ"><svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></button>
       <button class="ibtn" id="btn-backward" title="ひとつ背面へ"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></button>
@@ -308,7 +309,7 @@
     </header>
     <div class="import-wrap">
       <h2>画像からキャンバスへ</h2>
-      <p class="lead">トレースボットが色面をたどってSVGにします。変換後はキャンバス中央に置かれ、選択して動かせます。</p>
+      <p class="lead">トレースボットが色面をたどってSVGにします。本体から離れた細かいゴミは自動で捨てます。変換後はキャンバス中央に置かれ、選択して動かせます。</p>
       <div class="import-tabs">
         <button type="button" class="active" data-tab="upload">画像をアップロード</button>
         <button type="button" data-tab="generate">AIで画像を生成</button>
@@ -671,7 +672,7 @@
     }
     function refreshSelectionButtons() {
       const on = state.selectedIds.length > 0;
-      ["btn-front","btn-back","btn-forward","btn-backward","btn-delete","btn-copy","btn-flip-h","btn-flip-v","btn-group","btn-ungroup"].forEach((id) => {
+      ["btn-front","btn-back","btn-forward","btn-backward","btn-delete","btn-copy","btn-flip-h","btn-flip-v","btn-group","btn-ungroup","btn-clean-junk"].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.disabled = !on;
       });
@@ -1220,6 +1221,102 @@
       if (obj.type === "path") return splitDetachedPaths(obj).length > 1;
       return false;
     }
+    function fillLuma(fill) {
+      const s = String(fill || "#000");
+      let r = 0, g = 0, b = 0;
+      const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(s);
+      if (hex) {
+        let h = hex[1];
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        const n = parseInt(h, 16);
+        r = (n >> 16) & 255; g = (n >> 8) & 255; b = n & 255;
+      } else {
+        const m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(s);
+        if (m) { r = +m[1]; g = +m[2]; b = +m[3]; }
+      }
+      return 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+    function pathObjToLayer(obj) {
+      const cmds = parsePathCommands(obj.d || "");
+      const pts = [];
+      cmds.forEach((c) => {
+        if (c.c === "M" || c.c === "L" || c.c === "C" || c.c === "Q") pts.push([c.x, c.y]);
+      });
+      if (pts.length < 3) return null;
+      if (pts[0][0] !== pts[pts.length - 1][0] || pts[0][1] !== pts[pts.length - 1][1]) {
+        pts.push([pts[0][0], pts[0][1]]);
+      }
+      return { ref: obj, area: Math.abs(loopArea(pts)), box: loopBBox(pts), dark: fillLuma(obj.fill) < 48 };
+    }
+    function pruneObjectList(list) {
+      if (!list || list.length < 3) return 0;
+      const layers = [];
+      list.forEach((o) => {
+        if (o.type !== "path") return;
+        const layer = pathObjToLayer(o);
+        if (layer) layers.push(layer);
+      });
+      if (layers.length < 3) return 0;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      layers.forEach((l) => {
+        minX = Math.min(minX, l.box.minX); minY = Math.min(minY, l.box.minY);
+        maxX = Math.max(maxX, l.box.maxX); maxY = Math.max(maxY, l.box.maxY);
+      });
+      const keepSet = new Set(pruneHaloJunk(layers, Math.max(1, maxX - minX), Math.max(1, maxY - minY)));
+      let removed = 0;
+      for (let i = list.length - 1; i >= 0; i--) {
+        const o = list[i];
+        if (o.type !== "path") continue;
+        const layer = layers.find((l) => l.ref === o);
+        if (layer && !keepSet.has(layer)) { list.splice(i, 1); removed++; }
+      }
+      return removed;
+    }
+    function cleanHaloJunkSelected() {
+      const sel = selectedObjects();
+      if (!sel.length) return;
+      snapshot();
+      let removed = 0;
+      const pruneTree = (obj) => {
+        if (obj.type !== "group" || !obj.children) return 0;
+        let n = pruneObjectList(obj.children);
+        obj.children.forEach((ch) => { n += pruneTree(ch); });
+        return n;
+      };
+      sel.forEach((obj) => { removed += pruneTree(obj); });
+      const topPaths = sel.filter((o) => o.type === "path");
+      if (topPaths.length >= 3) {
+        const layers = [];
+        topPaths.forEach((o) => { const l = pathObjToLayer(o); if (l) layers.push(l); });
+        if (layers.length >= 3) {
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          layers.forEach((l) => {
+            minX = Math.min(minX, l.box.minX); minY = Math.min(minY, l.box.minY);
+            maxX = Math.max(maxX, l.box.maxX); maxY = Math.max(maxY, l.box.maxY);
+          });
+          const keepSet = new Set(pruneHaloJunk(layers, Math.max(1, maxX - minX), Math.max(1, maxY - minY)));
+          const drop = new Set(layers.filter((l) => !keepSet.has(l)).map((l) => l.ref.id));
+          if (drop.size) {
+            state.objects = state.objects.filter((o) => !drop.has(o.id));
+            state.selectedIds = state.selectedIds.filter((id) => !drop.has(id));
+            removed += drop.size;
+          }
+        }
+      }
+      if (!removed) {
+        const prev = state.history.pop();
+        if (prev) {
+          state.objects = clone(prev.objects);
+          state.selectedIds = prev.selectedIds || [];
+        }
+        refreshHistoryButtons();
+        toast("消せるゴミは見つかりませんでした");
+        return;
+      }
+      renderObjects();
+      syncSelectionUI();
+      toast(`周りのゴミを ${removed} 個消しました`);
+    }
     function ungroupSelected() {
       const targets = selectedObjects().filter(canUngroup);
       if (!targets.length) return;
@@ -1720,6 +1817,7 @@
     document.getElementById("btn-flip-v").addEventListener("click", ()=>flipSelected("v"));
     document.getElementById("btn-group").addEventListener("click", groupSelected);
     document.getElementById("btn-ungroup").addEventListener("click", ungroupSelected);
+    document.getElementById("btn-clean-junk").addEventListener("click", cleanHaloJunkSelected);
     document.getElementById("zoom-in").addEventListener("click", ()=>{ state.zoom=Math.min(8, state.zoom*1.25); applyView(); drawSelection(); });
     document.getElementById("zoom-out").addEventListener("click", ()=>{ state.zoom=Math.max(.2, state.zoom/1.25); applyView(); drawSelection(); });
     document.getElementById("zoom-reset").addEventListener("click", ()=>{ state.zoom=1; state.panX=0; state.panY=0; applyView(); drawSelection(); });
@@ -2024,6 +2122,42 @@
       for (let i=1;i<pts.length;i++) d += ` L ${pts[i][0].toFixed(2)} ${pts[i][1].toFixed(2)}`;
       return d + " Z";
     }
+    function loopBBox(pts) {
+      let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+      for (const p of pts) {
+        if (p[0]<minX) minX=p[0]; if (p[0]>maxX) maxX=p[0];
+        if (p[1]<minY) minY=p[1]; if (p[1]>maxY) maxY=p[1];
+      }
+      return { minX, minY, maxX, maxY, cx:(minX+maxX)/2, cy:(minY+maxY)/2 };
+    }
+    function inflateBox(b, p) {
+      return { minX:b.minX-p, minY:b.minY-p, maxX:b.maxX+p, maxY:b.maxY+p };
+    }
+    function boxesOverlap(a, b) {
+      return a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
+    }
+    function pointInBox(b, x, y) {
+      return x >= b.minX && x <= b.maxX && y >= b.minY && y <= b.maxY;
+    }
+    function pruneHaloJunk(layers, imgW, imgH) {
+      if (!layers.length || layers.length < 3) return layers;
+      const maxA = layers.reduce((m, l) => Math.max(m, l.area), 0);
+      const imgA = Math.max(1, imgW * imgH);
+      const coreMin = Math.max(maxA * 0.035, imgA * 0.002, 60);
+      const bodyCore = layers.filter((l) => !l.dark && l.area >= coreMin);
+      const cores = bodyCore.length ? bodyCore : layers.filter((l) => l.area >= coreMin);
+      if (!cores.length) return layers;
+      const pad = Math.max(16, Math.round(Math.min(imgW, imgH) * 0.045));
+      const coreBoxes = cores.map((l) => inflateBox(l.box, pad));
+      const onFigure = (l) => coreBoxes.some((b) => pointInBox(b, l.box.cx, l.box.cy) || boxesOverlap(b, inflateBox(l.box, 2)));
+      const kept = layers.filter((l) => {
+        if (l.area >= coreMin) return true;
+        if (!onFigure(l)) return false;
+        if (!l.dark && l.area < 8) return false;
+        return true;
+      });
+      return kept.length ? kept : layers;
+    }
     async function traceBitmapToSvg(dataUrl) {
       aiStatus("トレースボット: 画像を読み込んでいます...");
       await tick();
@@ -2063,17 +2197,18 @@
           const outer = loops[0];
           const d = loopToPath(outer);
           const area = Math.abs(loopArea(outer));
-          layers.push({ d, fill, area, dark });
+          layers.push({ d, fill, area, dark, box: loopBBox(outer) });
         }
       }
       if (!layers.length) throw new Error("輪郭を取り出せませんでした");
-      layers.sort((a,b) => {
+      const cleaned = pruneHaloJunk(layers, w, h);
+      cleaned.sort((a,b) => {
         const aDetail = a.dark && a.area < 1200;
         const bDetail = b.dark && b.area < 1200;
         if (aDetail !== bDetail) return aDetail ? 1 : -1;
         return b.area - a.area;
       });
-      const paths = layers.map((l) => `<path fill="${l.fill}" stroke="none" fill-rule="nonzero" d="${l.d}"/>`).join("");
+      const paths = cleaned.map((l) => `<path fill="${l.fill}" stroke="none" fill-rule="nonzero" d="${l.d}"/>`).join("");
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${paths}</svg>`;
     }
 
