@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scratch SVG Paint</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Dela+Gothic+One&family=DotGothic16&family=Fredoka:wght@600&family=Hachi+Maru+Pop&family=Kosugi+Maru&family=M+PLUS+Rounded+1c:wght@700&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@500;700&family=Pacifico&family=Rampart+One&family=Reggae+One&family=RocknRoll+One&family=Stick&family=Yusei+Magic&display=swap" rel="stylesheet" />
   <style>
     :root {
       --purple: #855cd6;
@@ -18,7 +21,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Helvetica Neue", "Segoe UI", sans-serif; user-select: none; }
-    button, input { font-family: inherit; }
+    button, input, select { font-family: inherit; }
     .app { height: 100%; display: grid; grid-template-rows: 48px 1fr 42px; }
     .topbar {
       display: flex; align-items: center; gap: 8px; padding: 0 10px;
@@ -34,12 +37,22 @@
     .ibtn:hover { background: #e6eef5; }
     .ibtn:disabled { opacity: .35; cursor: default; }
     .ibtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-    .color-field { display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
-    .swatch { position: relative; width: 22px; height: 22px; }
+    .color-field { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+    .swatch { position: relative; width: 28px; height: 28px; flex: 0 0 auto; }
     .swatch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-    .chip { width: 100%; height: 100%; border-radius: 4px; border: 1px solid #9aaebb; pointer-events: none; }
+    .chip { width: 100%; height: 100%; border-radius: 6px; border: 1px solid #9aaebb; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
     .none .chip { background: linear-gradient(135deg, transparent 46%, #d0021b 46% 54%, transparent 54%), #fff; }
+    .palette { display: flex; flex-wrap: wrap; gap: 3px; width: 92px; }
+    .palette button {
+      width: 14px; height: 14px; border: 1px solid #9aaebb; border-radius: 3px;
+      padding: 0; cursor: pointer; background: var(--c);
+    }
+    .palette button.active { outline: 2px solid #855cd6; outline-offset: 0; }
     .width-num { width: 42px; height: 26px; border: 1px solid var(--line); border-radius: 4px; text-align: center; }
+    .font-select {
+      height: 26px; max-width: 148px; border: 1px solid var(--line); border-radius: 4px;
+      background: #fff; color: var(--ink); font-size: 12px; padding: 0 4px;
+    }
     .grow { flex: 1; }
     .ai-btn, .save-btn {
       height: 30px; padding: 0 10px; border: 0; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 700;
@@ -137,7 +150,9 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     #selection-ui { pointer-events: none; }
     svg.canvas.select #selection-ui .handle, svg.canvas.select #selection-ui .rot-handle,
-    svg.canvas.reshape #selection-ui .node { pointer-events: auto; cursor: pointer; }
+    svg.canvas.reshape #selection-ui .node,
+    svg.canvas.reshape #selection-ui .mid { pointer-events: auto; cursor: pointer; }
+    svg.canvas.reshape #selection-ui .mid { cursor: copy; }
     .hidden { display: none !important; }
     @media (max-width: 640px) { .preview-row { grid-template-columns: 1fr; } }
   </style>
@@ -159,12 +174,42 @@
       <button class="ibtn" id="btn-back" title="最背面へ"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="10"/><rect x="7" y="8" width="11" height="10"/></svg></button>
       <div class="sep"></div>
       <div class="color-field">塗りつぶし
-        <label class="swatch" id="fill-wrap"><span id="fill-chip" class="chip" style="background:#cf63cf"></span><input id="fill-color" type="color" value="#cf63cf" /></label>
+        <label class="swatch" id="fill-wrap" title="塗りつぶしの色"><span id="fill-chip" class="chip" style="background:#cf63cf"></span><input id="fill-color" type="color" value="#cf63cf" /></label>
+        <div class="palette" id="fill-palette"></div>
         <button class="ibtn" id="btn-no-fill" title="塗りなし"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M6 18L18 6"/></svg></button>
       </div>
       <div class="color-field">枠線
-        <label class="swatch" id="stroke-wrap"><span id="stroke-chip" class="chip" style="background:#111111"></span><input id="stroke-color" type="color" value="#111111" /></label>
+        <label class="swatch" id="stroke-wrap" title="枠線の色"><span id="stroke-chip" class="chip" style="background:#111111"></span><input id="stroke-color" type="color" value="#111111" /></label>
+        <div class="palette" id="stroke-palette"></div>
         <input class="width-num" id="stroke-width" type="number" min="0" max="80" value="4" />
+      </div>
+      <div class="sep"></div>
+      <div class="color-field">フォント
+        <select class="font-select" id="font-family">
+          <option value="Noto Sans JP, Yu Gothic, Meiryo, sans-serif" style="font-family:Noto Sans JP,sans-serif">ゴシック</option>
+          <option value="Noto Serif JP, Yu Mincho, serif" style="font-family:Noto Serif JP,serif">明朝</option>
+          <option value="M PLUS Rounded 1c, Yu Gothic, sans-serif" style="font-family:M PLUS Rounded 1c,sans-serif">丸ゴシック</option>
+          <option value="Kosugi Maru, Yu Gothic, sans-serif" style="font-family:Kosugi Maru,sans-serif">こすぎ丸</option>
+          <option value="Hachi Maru Pop, Yu Gothic, cursive" style="font-family:Hachi Maru Pop,cursive">はちまるポップ</option>
+          <option value="Yusei Magic, Yu Gothic, sans-serif" style="font-family:Yusei Magic,sans-serif">マジック</option>
+          <option value="Reggae One, Yu Gothic, cursive" style="font-family:Reggae One,cursive">レゲエ</option>
+          <option value="Dela Gothic One, Impact, sans-serif" style="font-family:Dela Gothic One,sans-serif">デラゴシック</option>
+          <option value="DotGothic16, MS Gothic, monospace" style="font-family:DotGothic16,monospace">ドット</option>
+          <option value="Rampart One, Impact, sans-serif" style="font-family:Rampart One,sans-serif">ランパート</option>
+          <option value="RocknRoll One, Yu Gothic, sans-serif" style="font-family:RocknRoll One,sans-serif">ロックンロール</option>
+          <option value="Stick, Yu Gothic, sans-serif" style="font-family:Stick,sans-serif">スティック</option>
+          <option value="Arial, Helvetica, sans-serif" style="font-family:Arial,sans-serif">Arial</option>
+          <option value="Verdana, Geneva, sans-serif" style="font-family:Verdana,sans-serif">Verdana</option>
+          <option value="Georgia, serif" style="font-family:Georgia,serif">Georgia</option>
+          <option value="Times New Roman, Times, serif" style="font-family:Times New Roman,serif">Times</option>
+          <option value="Courier New, Courier, monospace" style="font-family:Courier New,monospace">Courier</option>
+          <option value="Comic Sans MS, Comic Sans, cursive" style="font-family:Comic Sans MS,cursive">Comic Sans</option>
+          <option value="Impact, Haettenschweiler, sans-serif" style="font-family:Impact,sans-serif">Impact</option>
+          <option value="Pacifico, cursive" style="font-family:Pacifico,cursive">Pacifico</option>
+          <option value="Bangers, Impact, cursive" style="font-family:Bangers,cursive">Bangers</option>
+          <option value="Fredoka, Arial Rounded MT Bold, sans-serif" style="font-family:Fredoka,sans-serif">Fredoka</option>
+        </select>
+        <input class="width-num" id="font-size" type="number" min="8" max="240" value="28" title="サイズ" />
       </div>
       <div class="sep"></div>
       <button class="ibtn" id="btn-copy" title="コピー"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg></button>
@@ -272,6 +317,8 @@
       zoom: 1,
       panX: 0,
       panY: 0,
+      fontFamily: "Noto Sans JP, Yu Gothic, Meiryo, sans-serif",
+      fontSize: 28,
     };
 
     const uid = () => "o" + Math.random().toString(36).slice(2, 10);
@@ -351,7 +398,10 @@
       }
       if (obj.type === "rect") return { x:obj.x, y:obj.y, w:obj.width, h:obj.height };
       if (obj.type === "ellipse") return { x:obj.cx-obj.rx, y:obj.cy-obj.ry, w:obj.rx*2, h:obj.ry*2 };
-      if (obj.type === "text") return { x:obj.x, y:obj.y-obj.fontSize, w: Math.max(20, (obj.text||"").length * obj.fontSize * 0.6), h: obj.fontSize * 1.3 };
+      if (obj.type === "text") {
+        const s = measureText(obj);
+        return { x:obj.x, y:obj.y-obj.fontSize, w: s.w, h: s.h };
+      }
       if (obj.type === "line") {
         const x = Math.min(obj.x1,obj.x2), y = Math.min(obj.y1,obj.y2);
         return { x, y, w: Math.abs(obj.x2-obj.x1)||1, h: Math.abs(obj.y2-obj.y1)||1 };
@@ -378,7 +428,7 @@
       if (obj.type === "path") return createEl("path", { ...common, d: obj.d, "fill-rule": obj.fillRule || "evenodd" });
       if (obj.type === "rect") return createEl("rect", { ...common, x:obj.x, y:obj.y, width:obj.width, height:obj.height });
       if (obj.type === "ellipse") return createEl("ellipse", { ...common, cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry });
-      if (obj.type === "text") return createEl("text", { ...common, x:obj.x, y:obj.y, "font-size":obj.fontSize, "font-family":"sans-serif" });
+      if (obj.type === "text") return createEl("text", { ...common, x:obj.x, y:obj.y, "font-size":obj.fontSize, "font-family": obj.fontFamily || "sans-serif" });
       return createEl("line", { ...common, x1:obj.x1, y1:obj.y1, x2:obj.x2, y2:obj.y2, fill:"none" });
     }
     function hitNode(obj) {
@@ -386,7 +436,10 @@
       if (obj.type === "path") return createEl("path", { d:obj.d, fill: obj.fill==="none"?"none":"transparent", stroke:"transparent", "stroke-width":hitWidth, class:"hit", "fill-rule": obj.fillRule || "evenodd", "pointer-events": obj.fill==="none"?"stroke":"all" });
       if (obj.type === "rect") return createEl("rect", { x:obj.x, y:obj.y, width:obj.width, height:obj.height, fill:"transparent", class:"hit", "pointer-events":"all" });
       if (obj.type === "ellipse") return createEl("ellipse", { cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry, fill:"transparent", class:"hit", "pointer-events":"all" });
-      if (obj.type === "text") return createEl("rect", { x:obj.x, y:obj.y-obj.fontSize, width:Math.max(20,(obj.text||"").length*obj.fontSize*.6), height:obj.fontSize*1.3, fill:"transparent", class:"hit", "pointer-events":"all" });
+      if (obj.type === "text") {
+        const s = measureText(obj);
+        return createEl("rect", { x:obj.x, y:obj.y-obj.fontSize, width:s.w, height:s.h, fill:"transparent", class:"hit", "pointer-events":"all" });
+      }
       return createEl("line", { x1:obj.x1, y1:obj.y1, x2:obj.x2, y2:obj.y2, stroke:"transparent", "stroke-width":hitWidth, class:"hit", "pointer-events":"stroke" });
     }
     function renderOne(obj) {
@@ -404,6 +457,28 @@
       state.objects.forEach((obj) => objectsLayer.append(renderOne(obj)));
     }
 
+    function measureText(obj) {
+      const ctx = measureText._c || (measureText._c = document.createElement("canvas").getContext("2d"));
+      ctx.font = `${obj.fontSize || 28}px ${obj.fontFamily || "sans-serif"}`;
+      return { w: Math.max(20, ctx.measureText(obj.text || "").width), h: (obj.fontSize || 28) * 1.3 };
+    }
+    function updateFontUI() {
+      const sel = document.getElementById("font-family");
+      const size = document.getElementById("font-size");
+      if ([...sel.options].some((o) => o.value === state.fontFamily)) sel.value = state.fontFamily;
+      size.value = state.fontSize;
+    }
+    function applyFontToSelected() {
+      if (state.applyingUI) return;
+      const apply = (obj) => {
+        if (obj.type === "text") { obj.fontFamily = state.fontFamily; obj.fontSize = state.fontSize; }
+        if (obj.type === "group" && obj.children) obj.children.forEach(apply);
+      };
+      if (selectedObjects().length) {
+        selectedObjects().forEach(apply);
+        renderObjects(); drawSelection();
+      }
+    }
     function toHex(color) {
       if (!color || color === "none") return "#000000";
       if (color.startsWith("#") && color.length === 7) return color;
@@ -417,6 +492,26 @@
       fillChip.style.background = state.fillNone ? "" : state.fill;
       document.getElementById("fill-wrap").classList.toggle("none", state.fillNone);
       document.getElementById("stroke-width").value = state.strokeWidth;
+      document.querySelectorAll("#fill-palette button").forEach((btn) => {
+        btn.classList.toggle("active", !state.fillNone && toHex(btn.dataset.color) === toHex(state.fill));
+      });
+      document.querySelectorAll("#stroke-palette button").forEach((btn) => {
+        btn.classList.toggle("active", toHex(btn.dataset.color) === toHex(state.stroke));
+      });
+    }
+    function styleTargets() {
+      return selectedObjects().filter((o) => o.type !== "group");
+    }
+    function applyStyleToSelected() {
+      if (state.applyingUI) return;
+      const objs = styleTargets();
+      if (!objs.length) return;
+      objs.forEach((obj) => {
+        if (obj.type !== "line") obj.fill = currentFill();
+        obj.stroke = state.stroke;
+        obj.strokeWidth = state.strokeWidth;
+      });
+      renderObjects(); drawSelection();
     }
     function loadPropertiesFrom(obj) {
       if (!obj || obj.type === "group") return;
@@ -426,21 +521,13 @@
       if (obj.fill === "none") state.fillNone = true;
       else { state.fillNone = false; state.fill = obj.fill; document.getElementById("fill-color").value = toHex(obj.fill); }
       if (obj.stroke !== "none") document.getElementById("stroke-color").value = toHex(obj.stroke);
+      if (obj.type === "text") {
+        if (obj.fontFamily) state.fontFamily = obj.fontFamily;
+        if (obj.fontSize) state.fontSize = obj.fontSize;
+        updateFontUI();
+      }
       updateChips();
       state.applyingUI = false;
-    }
-    function applyStyleToSelected() {
-      if (state.applyingUI || !selectedObjects().length) return;
-      selectedObjects().forEach((obj) => {
-        if (obj.type === "group") {
-          obj.children.forEach((ch) => { ch.fill = currentFill(); ch.stroke = state.stroke; ch.strokeWidth = state.strokeWidth; });
-        } else {
-          if (obj.type !== "line") obj.fill = currentFill();
-          obj.stroke = obj.type === "line" ? state.stroke : state.stroke;
-          obj.strokeWidth = state.strokeWidth;
-        }
-      });
-      renderObjects(); drawSelection();
     }
     function refreshSelectionButtons() {
       const on = state.selectedIds.length > 0;
@@ -449,7 +536,7 @@
         if (el) el.disabled = !on;
       });
       document.getElementById("btn-group").disabled = state.selectedIds.length < 2;
-      document.getElementById("btn-ungroup").disabled = !selectedObjects().some((o) => o.type === "group");
+      document.getElementById("btn-ungroup").disabled = !selectedObjects().some(canUngroup);
     }
 
     function selectIds(ids, additive) {
@@ -465,7 +552,7 @@
       selectionLayer.replaceChildren();
       const objs = selectedObjects();
       if (!objs.length) return;
-      if (state.tool === "reshape" && objs.length === 1) { drawReshape(objs[0]); return; }
+      if (state.tool === "reshape" && objs.length) { drawReshape(); return; }
       const box = unionBox(objs);
       const corners = [
         {x:box.x,y:box.y},{x:box.x+box.w,y:box.y},{x:box.x+box.w,y:box.y+box.h},{x:box.x,y:box.y+box.h}
@@ -483,46 +570,346 @@
         selectionLayer.append(createEl("rect", { class:"handle", x:p.x-s/2, y:p.y-s/2, width:s, height:s, fill:"#fff", stroke:"#4c97ff", "stroke-width": 1.5 / state.zoom, "data-handle":name }));
       }
     }
-    function drawReshape(obj) {
-      const pts = reshapePoints(obj);
-      pts.forEach((p, i) => {
-        const wp = applyMat(obj.matrix, p.x, p.y);
-        selectionLayer.append(createEl("circle", { class:"node", cx:wp.x, cy:wp.y, r: 6 / state.zoom, fill:"#fff", stroke:"#855cd6", "stroke-width": 2 / state.zoom, "data-node": String(i) }));
-      });
+    function eventEl(evt, selector) {
+      const path = typeof evt.composedPath === "function" ? evt.composedPath() : [evt.target];
+      for (const n of path) {
+        if (n && n.matches && n.matches(selector)) return n;
+      }
+      return evt.target?.closest?.(selector) || null;
     }
-    function reshapePoints(obj) {
-      if (obj.type === "line") return [{x:obj.x1,y:obj.y1},{x:obj.x2,y:obj.y2}];
-      if (obj.type === "rect") return [{x:obj.x,y:obj.y},{x:obj.x+obj.width,y:obj.y},{x:obj.x+obj.width,y:obj.y+obj.height},{x:obj.x,y:obj.y+obj.height}];
-      if (obj.type === "ellipse") return [{x:obj.cx-obj.rx,y:obj.cy},{x:obj.cx+obj.rx,y:obj.cy},{x:obj.cx,y:obj.cy-obj.ry},{x:obj.cx,y:obj.cy+obj.ry}];
-      if (obj.type === "path") return pathCoords(obj.d);
-      return [];
-    }
-    function pathCoords(d) {
-      const out = [];
-      const re = /([MLHVCSQTAZmlhvcsqtaz])([^MLHVCSQTAZmlhvcsqtaz]*)/g;
-      let x=0,y=0, m;
-      while ((m = re.exec(d || ""))) {
-        const cmd = m[1], nums = m[2].trim().split(/[\s,]+/).filter(Boolean).map(Number);
-        const abs = cmd === cmd.toUpperCase();
-        const c = cmd.toUpperCase();
-        if (c === "Z") continue;
-        if (c === "H") { nums.forEach((n) => { x = abs ? n : x+n; out.push({x,y}); }); }
-        else if (c === "V") { nums.forEach((n) => { y = abs ? n : y+n; out.push({x,y}); }); }
-        else {
-          for (let i=0;i+1<nums.length;i+=2) {
-            x = abs ? nums[i] : x+nums[i];
-            y = abs ? nums[i+1] : y+nums[i+1];
-            out.push({x,y});
-          }
+    function findById(list, id) {
+      for (const o of list || []) {
+        if (o.id === id) return o;
+        if (o.children) {
+          const hit = findById(o.children, id);
+          if (hit) return hit;
         }
       }
+      return null;
+    }
+    function listReshapeItems() {
+      const out = [];
+      const walk = (obj, parentMat) => {
+        const mat = multiply(parentMat, obj.matrix || identity());
+        if (obj.type === "group") (obj.children || []).forEach((ch) => walk(ch, mat));
+        else if (obj.type === "path" || obj.type === "line" || obj.type === "rect" || obj.type === "ellipse") out.push({ obj, mat });
+      };
+      selectedObjects().forEach((o) => walk(o, identity()));
       return out;
     }
-    function setPathCoord(obj, index, x, y) {
-      const pts = pathCoords(obj.d);
-      if (!pts[index]) return;
-      pts[index] = {x,y};
-      obj.d = pts.map((p,i) => `${i?"L":"M"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
+    function parsePathCommands(d) {
+      const cmds = [];
+      const re = /([MLHVCSQTAZmlhvcsqtaz])([^MLHVCSQTAZmlhvcsqtaz]*)/g;
+      let x=0, y=0, startX=0, startY=0, prev=null, match;
+      while ((match = re.exec(d || ""))) {
+        const type = match[1];
+        const nums = match[2].trim().split(/[\s,]+/).filter(Boolean).map(Number);
+        const abs = type === type.toUpperCase();
+        const c = type.toUpperCase();
+        const nx = (v) => abs ? v : x + v;
+        const ny = (v) => abs ? v : y + v;
+        if (c === "Z") {
+          cmds.push({ c: "Z" });
+          x = startX; y = startY; prev = cmds[cmds.length-1];
+          continue;
+        }
+        let i = 0;
+        const push = (cmd) => { cmds.push(cmd); prev = cmd; };
+        while (i < nums.length) {
+          if (c === "M") {
+            x = nx(nums[i]); y = ny(nums[i+1]); i += 2;
+            startX = x; startY = y;
+            push({ c: "M", x, y });
+            while (i + 1 < nums.length) {
+              x = nx(nums[i]); y = ny(nums[i+1]); i += 2;
+              push({ c: "L", x, y });
+            }
+            break;
+          }
+          if (c === "L") { x = nx(nums[i]); y = ny(nums[i+1]); i += 2; push({ c: "L", x, y }); continue; }
+          if (c === "H") { x = abs ? nums[i] : x + nums[i]; i += 1; push({ c: "L", x, y }); continue; }
+          if (c === "V") { y = abs ? nums[i] : y + nums[i]; i += 1; push({ c: "L", x, y }); continue; }
+          if (c === "C") {
+            const x1=nx(nums[i]), y1=ny(nums[i+1]), x2=nx(nums[i+2]), y2=ny(nums[i+3]);
+            x=nx(nums[i+4]); y=ny(nums[i+5]); i += 6;
+            push({ c: "C", x1, y1, x2, y2, x, y }); continue;
+          }
+          if (c === "Q") {
+            const x1=nx(nums[i]), y1=ny(nums[i+1]);
+            x=nx(nums[i+2]); y=ny(nums[i+3]); i += 4;
+            push({ c: "Q", x1, y1, x, y }); continue;
+          }
+          if (c === "S") {
+            let x1=x, y1=y;
+            if (prev && prev.c === "C") { x1 = 2*x - prev.x2; y1 = 2*y - prev.y2; }
+            const x2=nx(nums[i]), y2=ny(nums[i+1]);
+            x=nx(nums[i+2]); y=ny(nums[i+3]); i += 4;
+            push({ c: "C", x1, y1, x2, y2, x, y }); continue;
+          }
+          if (c === "T") {
+            let x1=x, y1=y;
+            if (prev && prev.c === "Q") { x1 = 2*x - prev.x1; y1 = 2*y - prev.y1; }
+            x=nx(nums[i]); y=ny(nums[i+1]); i += 2;
+            push({ c: "Q", x1, y1, x, y }); continue;
+          }
+          if (c === "A" && i + 6 < nums.length) {
+            x = nx(nums[i+5]); y = ny(nums[i+6]); i += 7;
+            push({ c: "L", x, y }); continue;
+          }
+          i += 1;
+        }
+      }
+      return cmds;
+    }
+    function serializePathCommands(cmds) {
+      return cmds.map((cmd) => {
+        if (cmd.c === "Z") return "Z";
+        if (cmd.c === "M") return `M ${cmd.x.toFixed(2)} ${cmd.y.toFixed(2)}`;
+        if (cmd.c === "L") return `L ${cmd.x.toFixed(2)} ${cmd.y.toFixed(2)}`;
+        if (cmd.c === "C") return `C ${cmd.x1.toFixed(2)} ${cmd.y1.toFixed(2)} ${cmd.x2.toFixed(2)} ${cmd.y2.toFixed(2)} ${cmd.x.toFixed(2)} ${cmd.y.toFixed(2)}`;
+        if (cmd.c === "Q") return `Q ${cmd.x1.toFixed(2)} ${cmd.y1.toFixed(2)} ${cmd.x.toFixed(2)} ${cmd.y.toFixed(2)}`;
+        return "";
+      }).join(" ");
+    }
+    function reshapeAnchors(obj) {
+      if (obj.type === "line") return [{ x:obj.x1, y:obj.y1, cmd:0 }, { x:obj.x2, y:obj.y2, cmd:1 }];
+      if (obj.type === "rect") return [
+        { x:obj.x, y:obj.y, cmd:0 }, { x:obj.x+obj.width, y:obj.y, cmd:1 },
+        { x:obj.x+obj.width, y:obj.y+obj.height, cmd:2 }, { x:obj.x, y:obj.y+obj.height, cmd:3 },
+      ];
+      if (obj.type === "ellipse") return [
+        { x:obj.cx-obj.rx, y:obj.cy, cmd:0 }, { x:obj.cx+obj.rx, y:obj.cy, cmd:1 },
+        { x:obj.cx, y:obj.cy-obj.ry, cmd:2 }, { x:obj.cx, y:obj.cy+obj.ry, cmd:3 },
+      ];
+      if (obj.type === "path") {
+        return parsePathCommands(obj.d).map((cmd, i) => cmd.c === "Z" ? null : { x:cmd.x, y:cmd.y, cmd:i }).filter(Boolean);
+      }
+      return [];
+    }
+    function subpathStart(cmds, index) {
+      for (let i = index; i >= 0; i--) if (cmds[i].c === "M") return cmds[i];
+      return cmds[0];
+    }
+    function lerpPt(a, b, t) { return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; }
+    function splitCubic(p0, p1, p2, p3, t) {
+      const a=lerpPt(p0,p1,t), b=lerpPt(p1,p2,t), c=lerpPt(p2,p3,t);
+      const d=lerpPt(a,b,t), e=lerpPt(b,c,t), p=lerpPt(d,e,t);
+      return [
+        { c:"C", x1:a.x, y1:a.y, x2:d.x, y2:d.y, x:p.x, y:p.y },
+        { c:"C", x1:e.x, y1:e.y, x2:c.x, y2:c.y, x:p3.x, y:p3.y },
+      ];
+    }
+    function splitQuad(p0, p1, p2, t) {
+      const a=lerpPt(p0,p1,t), b=lerpPt(p1,p2,t), p=lerpPt(a,b,t);
+      return [
+        { c:"Q", x1:a.x, y1:a.y, x:p.x, y:p.y },
+        { c:"Q", x1:b.x, y1:b.y, x:p2.x, y:p2.y },
+      ];
+    }
+    function ensurePath(obj) {
+      if (obj.type === "path") return obj;
+      if (obj.type === "line") {
+        obj.d = `M ${obj.x1} ${obj.y1} L ${obj.x2} ${obj.y2}`;
+        obj.type = "path";
+      } else if (obj.type === "rect") {
+        const x=obj.x, y=obj.y, w=obj.width, h=obj.height;
+        obj.d = `M ${x} ${y} L ${x+w} ${y} L ${x+w} ${y+h} L ${x} ${y+h} Z`;
+        obj.type = "path";
+      } else if (obj.type === "ellipse") {
+        const { cx, cy, rx, ry } = obj;
+        const k = 0.5522847498;
+        obj.d = [
+          `M ${cx-rx} ${cy}`,
+          `C ${cx-rx} ${cy-k*ry} ${cx-k*rx} ${cy-ry} ${cx} ${cy-ry}`,
+          `C ${cx+k*rx} ${cy-ry} ${cx+rx} ${cy-k*ry} ${cx+rx} ${cy}`,
+          `C ${cx+rx} ${cy+k*ry} ${cx+k*rx} ${cy+ry} ${cx} ${cy+ry}`,
+          `C ${cx-k*rx} ${cy+ry} ${cx-rx} ${cy+k*ry} ${cx-rx} ${cy} Z`,
+        ].join(" ");
+        obj.type = "path";
+      }
+      return obj;
+    }
+    function insertPathPoint(obj, fromCmd, t) {
+      ensurePath(obj);
+      const cmds = parsePathCommands(obj.d);
+      if (!cmds[fromCmd] || cmds[fromCmd].c === "Z") return fromCmd;
+      const from = cmds[fromCmd];
+      const next = cmds[fromCmd + 1];
+      const p0 = { x: from.x, y: from.y };
+      let insertAt = fromCmd + 1;
+      if (!next || next.c === "Z" || next.c === "M") {
+        const start = subpathStart(cmds, fromCmd);
+        const x = from.x + (start.x - from.x) * t;
+        const y = from.y + (start.y - from.y) * t;
+        cmds.splice(insertAt, 0, { c: "L", x, y });
+      } else if (next.c === "C") {
+        const [a, b] = splitCubic(p0, { x:next.x1, y:next.y1 }, { x:next.x2, y:next.y2 }, { x:next.x, y:next.y }, t);
+        cmds.splice(insertAt, 1, a, b);
+      } else if (next.c === "Q") {
+        const [a, b] = splitQuad(p0, { x:next.x1, y:next.y1 }, { x:next.x, y:next.y }, t);
+        cmds.splice(insertAt, 1, a, b);
+      } else {
+        cmds.splice(insertAt, 0, { c: "L", x: from.x + (next.x - from.x) * t, y: from.y + (next.y - from.y) * t });
+      }
+      obj.d = serializePathCommands(cmds);
+      return insertAt;
+    }
+    function movePathAnchor(obj, cmdIndex, x, y) {
+      const cmds = parsePathCommands(obj.d);
+      const cmd = cmds[cmdIndex];
+      if (!cmd || cmd.c === "Z") return;
+      const dx = x - cmd.x, dy = y - cmd.y;
+      cmd.x = x; cmd.y = y;
+      if (cmd.c === "C") { cmd.x2 += dx; cmd.y2 += dy; }
+      if (cmd.c === "Q") { cmd.x1 += dx * 0.5; cmd.y1 += dy * 0.5; }
+      const next = cmds[cmdIndex + 1];
+      if (next?.c === "C") { next.x1 += dx; next.y1 += dy; }
+      if (next?.c === "Q") { next.x1 += dx * 0.5; next.y1 += dy * 0.5; }
+      obj.d = serializePathCommands(cmds);
+    }
+    function deletePathAnchor(obj, cmdIndex) {
+      ensurePath(obj);
+      const cmds = parsePathCommands(obj.d);
+      const anchors = cmds.filter((c) => c.c !== "Z");
+      if (anchors.length <= 2) return false;
+      if (!cmds[cmdIndex] || cmds[cmdIndex].c === "Z") return false;
+      if (cmds[cmdIndex].c === "M") {
+        const next = cmds[cmdIndex + 1];
+        if (next && next.c !== "Z" && next.c !== "M") {
+          cmds[cmdIndex + 1] = { c: "M", x: next.x, y: next.y };
+        }
+      }
+      cmds.splice(cmdIndex, 1);
+      obj.d = serializePathCommands(cmds);
+      return true;
+    }
+    function segmentMids(obj) {
+      if (obj.type === "line") return [{ x:(obj.x1+obj.x2)/2, y:(obj.y1+obj.y2)/2, after:0, t:0.5 }];
+      if (obj.type === "rect") return [
+        { x:obj.x+obj.width/2, y:obj.y, after:0, t:0.5 },
+        { x:obj.x+obj.width, y:obj.y+obj.height/2, after:1, t:0.5 },
+        { x:obj.x+obj.width/2, y:obj.y+obj.height, after:2, t:0.5 },
+        { x:obj.x, y:obj.y+obj.height/2, after:3, t:0.5 },
+      ];
+      if (obj.type !== "path") return [];
+      const cmds = parsePathCommands(obj.d);
+      const mids = [];
+      cmds.forEach((cmd, i) => {
+        if (cmd.c === "M" || cmd.c === "Z") return;
+        const prev = cmds[i - 1];
+        if (!prev || prev.c === "Z") return;
+        const a = prev.c === "M" || prev.c === "L" || prev.c === "C" || prev.c === "Q" ? prev : null;
+        if (!a) return;
+        mids.push({ x:(a.x+cmd.x)/2, y:(a.y+cmd.y)/2, after:i-1, t:0.5 });
+      });
+      cmds.forEach((cmd, i) => {
+        if (cmd.c !== "Z") return;
+        const prev = cmds[i - 1];
+        const start = subpathStart(cmds, i - 1);
+        if (prev && start && prev !== start) mids.push({ x:(prev.x+start.x)/2, y:(prev.y+start.y)/2, after:i-1, t:0.5 });
+      });
+      return mids;
+    }
+    function closestSegment(items, p, threshold) {
+      let best = null, bestD = threshold;
+      const sampleDist = (p0, p1, obj, mat, after) => {
+        const a = applyMat(mat, p0.x, p0.y), b = applyMat(mat, p1.x, p1.y);
+        const dx=b.x-a.x, dy=b.y-a.y, len2=dx*dx+dy*dy;
+        let t = len2 ? ((p.x-a.x)*dx+(p.y-a.y)*dy)/len2 : 0;
+        t = Math.max(0.08, Math.min(0.92, t));
+        const hx=a.x+t*dx, hy=a.y+t*dy;
+        const d = Math.hypot(p.x-hx, p.y-hy);
+        if (d < bestD) { bestD = d; best = { obj, after, t }; }
+      };
+      items.forEach(({ obj, mat }) => {
+        if (obj.type === "line") sampleDist({x:obj.x1,y:obj.y1},{x:obj.x2,y:obj.y2}, obj, mat, 0);
+        else if (obj.type === "rect") {
+          const pts = [{x:obj.x,y:obj.y},{x:obj.x+obj.width,y:obj.y},{x:obj.x+obj.width,y:obj.y+obj.height},{x:obj.x,y:obj.y+obj.height}];
+          pts.forEach((pt, i) => sampleDist(pt, pts[(i+1)%4], obj, mat, i));
+        }         else if (obj.type === "path") {
+          const cmds = parsePathCommands(obj.d);
+          cmds.forEach((cmd, i) => {
+            if (cmd.c === "M" || cmd.c === "Z") return;
+            const prev = cmds[i-1];
+            if (!prev || prev.c === "Z") return;
+            sampleDist(prev, cmd, obj, mat, i-1);
+          });
+          cmds.forEach((cmd, i) => {
+            if (cmd.c !== "Z") return;
+            const prev = cmds[i-1], start = subpathStart(cmds, i-1);
+            if (prev && start) sampleDist(prev, start, obj, mat, i-1);
+          });
+        } else if (obj.type === "ellipse") {
+          let prev = null;
+          for (let i=0;i<=16;i++) {
+            const a = (i/16)*Math.PI*2;
+            const pt = { x: obj.cx + obj.rx*Math.cos(a), y: obj.cy + obj.ry*Math.sin(a) };
+            if (prev) sampleDist(prev, pt, obj, mat, 0);
+            prev = pt;
+          }
+        }
+      });
+      return best;
+    }
+    function insertAtWorldPoint(obj, after, t, worldPt) {
+      const was = obj.type;
+      const mat = worldMatrixOf(obj.id);
+      ensurePath(obj);
+      if (was !== "path") {
+        const hit = closestSegment([{ obj, mat }], worldPt, 48 / state.zoom);
+        if (hit) return insertPathPoint(obj, hit.after, hit.t);
+      }
+      return insertPathPoint(obj, after, t);
+    }
+    function drawReshape() {
+      const items = listReshapeItems();
+      const r = 7 / state.zoom;
+      const hitR = 12 / state.zoom;
+      const midS = 8 / state.zoom;
+      const total = items.reduce((n, it) => n + reshapeAnchors(it.obj).length, 0);
+      const showMids = total <= 180;
+      items.forEach(({ obj, mat }) => {
+        reshapeAnchors(obj).forEach((a) => {
+          const wp = applyMat(mat, a.x, a.y);
+          selectionLayer.append(createEl("circle", {
+            class:"node", cx:wp.x, cy:wp.y, r:hitR, fill:"transparent", stroke:"none",
+            "data-node":"1", "data-obj": obj.id, "data-cmd": String(a.cmd), "pointer-events":"all",
+          }));
+          selectionLayer.append(createEl("circle", {
+            cx:wp.x, cy:wp.y, r, fill:"#fff", stroke:"#855cd6", "stroke-width": 2 / state.zoom, "pointer-events":"none",
+          }));
+        });
+        if (!showMids) return;
+        segmentMids(obj).forEach((m) => {
+          const wp = applyMat(mat, m.x, m.y);
+          selectionLayer.append(createEl("rect", {
+            class:"mid", x:wp.x-midS/2, y:wp.y-midS/2, width:midS, height:midS,
+            fill:"#fff", stroke:"#4c97ff", "stroke-width": 1.4 / state.zoom,
+            transform:`rotate(45 ${wp.x} ${wp.y})`,
+            "data-mid":"1", "data-obj": obj.id, "data-after": String(m.after), "data-t": String(m.t),
+            "pointer-events":"all",
+          }));
+        });
+      });
+    }
+    function reshapePoints(obj) { return reshapeAnchors(obj); }
+    function worldMatrixOf(objId) {
+      const item = listReshapeItems().find((it) => it.obj.id === objId);
+      return item ? item.mat : identity();
+    }
+    function applyReshapeMove(obj, gesture, local) {
+      if (obj.type === "line") {
+        if (gesture.cmd === 0) { obj.x1=local.x; obj.y1=local.y; }
+        else { obj.x2=local.x; obj.y2=local.y; }
+      } else if (obj.type === "rect") {
+        const pts = [{x:obj.x,y:obj.y},{x:obj.x+obj.width,y:obj.y},{x:obj.x+obj.width,y:obj.y+obj.height},{x:obj.x,y:obj.y+obj.height}];
+        pts[gesture.cmd] = local;
+        obj.x=Math.min(pts[0].x,pts[2].x); obj.y=Math.min(pts[0].y,pts[2].y);
+        obj.width=Math.abs(pts[2].x-pts[0].x)||1; obj.height=Math.abs(pts[2].y-pts[0].y)||1;
+      } else if (obj.type === "ellipse") {
+        if (gesture.cmd < 2) obj.rx=Math.abs(local.x-obj.cx)||1;
+        else obj.ry=Math.abs(local.y-obj.cy)||1;
+      } else if (obj.type === "path") movePathAnchor(obj, gesture.cmd, local.x, local.y);
     }
     function syncSelectionUI() { refreshSelectionButtons(); drawSelection(); }
 
@@ -577,13 +964,17 @@
       state.clipboard = clone(selectedObjects());
       toast("コピーしました");
     }
+    function reIdTree(obj) {
+      obj.id = uid();
+      (obj.children || []).forEach(reIdTree);
+    }
     function pasteClipboard() {
       if (!state.clipboard.length) return;
       snapshot();
       const pasted = state.clipboard.map((o) => {
-        const n = clone(o); n.id = uid();
+        const n = clone(o);
+        reIdTree(n);
         n.matrix = multiply(mTranslate(20, 20), n.matrix);
-        if (n.children) n.children.forEach((c) => c.id = uid());
         return n;
       });
       state.objects.push(...pasted);
@@ -602,38 +993,118 @@
       renderObjects(); drawSelection();
     }
     function groupSelected() {
-      const sel = selectedObjects();
-      if (sel.length < 2) return;
-      snapshot();
       const ids = new Set(state.selectedIds);
-      const children = [];
-      state.objects = state.objects.filter((o) => {
-        if (ids.has(o.id)) { children.push(o); return false; }
-        return true;
-      });
-      const g = { id: uid(), type:"group", children, fill:"none", stroke:"none", strokeWidth:0, matrix: identity() };
-      state.objects.push(g);
-      selectIds([g.id]);
+      const ordered = state.objects.filter((o) => ids.has(o.id));
+      if (ordered.length < 2) return;
+      snapshot();
+      let lastIndex = 0;
+      state.objects.forEach((o, i) => { if (ids.has(o.id)) lastIndex = i; });
+      state.objects = state.objects.filter((o) => !ids.has(o.id));
+      const g = { id: uid(), type:"group", children: ordered, fill:"none", stroke:"none", strokeWidth:0, matrix: identity() };
+      const insertAt = Math.max(0, lastIndex - (ordered.length - 1));
+      state.objects.splice(Math.min(insertAt, state.objects.length), 0, g);
       renderObjects();
+      selectIds([g.id]);
+    }
+    function pathSubpaths(d) {
+      const cmds = parsePathCommands(d);
+      const parts = [];
+      let cur = [];
+      cmds.forEach((cmd) => {
+        if (cmd.c === "M" && cur.length) { parts.push(cur); cur = [cmd]; }
+        else cur.push(cmd);
+      });
+      if (cur.length) parts.push(cur);
+      return parts;
+    }
+    function subpathPoly(cmds) {
+      return cmds.filter((c) => c.c !== "Z" && c.x != null).map((c) => ({ x:c.x, y:c.y }));
+    }
+    function polyBBox(pts) {
+      let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+      pts.forEach((p) => { minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y); });
+      return { minX, minY, maxX, maxY };
+    }
+    function pointInPoly(pt, poly) {
+      let inside = false;
+      for (let i=0, j=poly.length-1; i<poly.length; j=i++) {
+        const xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y;
+        if (((yi > pt.y) !== (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / ((yj - yi) || 1e-12) + xi)) inside = !inside;
+      }
+      return inside;
+    }
+    function splitDetachedPaths(obj) {
+      if (obj.type !== "path") return [obj];
+      const parts = pathSubpaths(obj.d);
+      if (parts.length <= 1) return [obj];
+      const polys = parts.map(subpathPoly);
+      const boxes = polys.map(polyBBox);
+      const parent = parts.map(() => -1);
+      for (let i = 0; i < parts.length; i++) {
+        if (!polys[i].length) continue;
+        const test = { x: (boxes[i].minX + boxes[i].maxX) / 2, y: (boxes[i].minY + boxes[i].maxY) / 2 };
+        let best = -1, bestArea = Infinity;
+        for (let j = 0; j < parts.length; j++) {
+          if (i === j || polys[j].length < 3) continue;
+          const b = boxes[j];
+          const insideBox = boxes[i].minX >= b.minX - 0.2 && boxes[i].maxX <= b.maxX + 0.2 && boxes[i].minY >= b.minY - 0.2 && boxes[i].maxY <= b.maxY + 0.2;
+          if (!insideBox && !pointInPoly(test, polys[j]) && !pointInPoly(polys[i][0], polys[j])) continue;
+          if (!pointInPoly(polys[i][0], polys[j]) && !pointInPoly(test, polys[j])) continue;
+          const area = Math.max(1, (b.maxX - b.minX) * (b.maxY - b.minY));
+          if (area < bestArea) { bestArea = area; best = j; }
+        }
+        parent[i] = best;
+      }
+      const roots = [];
+      parts.forEach((_, i) => { if (parent[i] < 0) roots.push(i); });
+      if (roots.length <= 1) return [obj];
+      return roots.map((root) => {
+        const cmds = [];
+        const seen = new Set();
+        const add = (i) => {
+          if (seen.has(i)) return;
+          seen.add(i);
+          cmds.push(...parts[i]);
+          parts.forEach((_, k) => { if (parent[k] === i) add(k); });
+        };
+        add(root);
+        const piece = clone(obj);
+        piece.id = uid();
+        piece.d = serializePathCommands(cmds);
+        return piece;
+      });
+    }
+    function canUngroup(obj) {
+      if (!obj) return false;
+      if (obj.type === "group" && (obj.children || []).length) return true;
+      if (obj.type === "path") return splitDetachedPaths(obj).length > 1;
+      return false;
     }
     function ungroupSelected() {
-      const groups = selectedObjects().filter((o) => o.type === "group");
-      if (!groups.length) return;
+      const targets = selectedObjects().filter(canUngroup);
+      if (!targets.length) return;
       snapshot();
-      const ids = new Set(groups.map((g) => g.id));
+      const ids = new Set(targets.map((g) => g.id));
       const next = [];
       const newSel = [];
       state.objects.forEach((o) => {
-        if (ids.has(o.id)) {
-          o.children.forEach((ch) => {
+        if (!ids.has(o.id)) { next.push(o); return; }
+        if (o.type === "group") {
+          (o.children || []).forEach((ch) => {
             ch.matrix = multiply(o.matrix, ch.matrix);
-            next.push(ch); newSel.push(ch.id);
+            next.push(ch);
+            newSel.push(ch.id);
           });
-        } else next.push(o);
+        } else {
+          splitDetachedPaths(o).forEach((piece) => {
+            next.push(piece);
+            newSel.push(piece.id);
+          });
+        }
       });
       state.objects = next;
-      selectIds(newSel);
       renderObjects();
+      selectIds(newSel);
     }
 
     function constrainedRect(a,b,square) {
@@ -724,7 +1195,7 @@
         const text = prompt("テキスト", "Hello") || "";
         if (!text) return;
         snapshot();
-        const obj = { id:uid(), type:"text", x:p.x, y:p.y, text, fontSize:28, fill: currentFill(), stroke:"none", strokeWidth:0, matrix:identity() };
+        const obj = { id:uid(), type:"text", x:p.x, y:p.y, text, fontSize:state.fontSize, fontFamily:state.fontFamily, fill: currentFill(), stroke:"none", strokeWidth:0, matrix:identity() };
         state.objects.push(obj); renderObjects(); selectObject(obj.id); setTool("select");
         return;
       }
@@ -735,14 +1206,40 @@
         return;
       }
       if (state.tool === "reshape") {
-        const node = evt.target.closest?.("[data-node]");
-        const obj = selected();
-        if (node && obj) {
-          snapshot();
-          state.gesture = { type:"reshape", index:+node.dataset.node, objId:obj.id };
+        const node = eventEl(evt, "[data-node]");
+        const mid = eventEl(evt, "[data-mid]");
+        if (node) {
+          const obj = findById(state.objects, node.getAttribute("data-obj"));
+          if (obj) {
+            if (evt.altKey && obj.type === "path") {
+              snapshot();
+              deletePathAnchor(obj, +node.getAttribute("data-cmd"));
+              renderObjects(); drawSelection();
+              return;
+            }
+            snapshot();
+            state.gesture = { type:"reshape", objId: obj.id, cmd: +node.getAttribute("data-cmd") };
+          }
+        } else if (mid) {
+          const obj = findById(state.objects, mid.getAttribute("data-obj"));
+          if (obj) {
+            snapshot();
+            const cmd = insertAtWorldPoint(obj, +mid.getAttribute("data-after"), Number(mid.getAttribute("data-t")) || 0.5, p);
+            renderObjects(); drawSelection();
+            state.gesture = { type:"reshape", objId: obj.id, cmd };
+          }
         } else {
-          const hit = findObjectAt(evt);
-          selectObject(hit?.id || null);
+          const items = listReshapeItems();
+          const hitSeg = items.length ? closestSegment(items, p, 12 / state.zoom) : null;
+          if (hitSeg) {
+            snapshot();
+            const cmd = insertAtWorldPoint(hitSeg.obj, hitSeg.after, hitSeg.t, p);
+            renderObjects(); drawSelection();
+            state.gesture = { type:"reshape", objId: hitSeg.obj.id, cmd };
+          } else {
+            const hit = findObjectAt(evt);
+            selectObject(hit?.id || null);
+          }
         }
         return;
       }
@@ -795,19 +1292,10 @@
         return;
       }
       if (state.gesture?.type === "reshape") {
-        const obj = state.objects.find((o)=>o.id===state.gesture.objId);
+        const obj = findById(state.objects, state.gesture.objId);
         if (!obj) return;
-        const local = applyMat(invert(obj.matrix), p.x, p.y);
-        if (obj.type==="line") { if (state.gesture.index===0) { obj.x1=local.x; obj.y1=local.y; } else { obj.x2=local.x; obj.y2=local.y; } }
-        else if (obj.type==="rect") {
-          const pts = [{x:obj.x,y:obj.y},{x:obj.x+obj.width,y:obj.y},{x:obj.x+obj.width,y:obj.y+obj.height},{x:obj.x,y:obj.y+obj.height}];
-          pts[state.gesture.index] = local;
-          obj.x=Math.min(pts[0].x,pts[2].x); obj.y=Math.min(pts[0].y,pts[2].y);
-          obj.width=Math.abs(pts[2].x-pts[0].x)||1; obj.height=Math.abs(pts[2].y-pts[0].y)||1;
-        } else if (obj.type==="ellipse") {
-          if (state.gesture.index<2) obj.rx=Math.abs(local.x-obj.cx)||1;
-          else obj.ry=Math.abs(local.y-obj.cy)||1;
-        } else if (obj.type==="path") setPathCoord(obj, state.gesture.index, local.x, local.y);
+        const local = applyMat(invert(worldMatrixOf(obj.id)), p.x, p.y);
+        applyReshapeMove(obj, state.gesture, local);
         renderObjects(); drawSelection();
         return;
       }
@@ -869,7 +1357,7 @@
       if (obj.type==="path") return `<path d="${obj.d}" ${f} ${s}${rule}/>`;
       if (obj.type==="rect") return `<rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" ${f} ${s}/>`;
       if (obj.type==="ellipse") return `<ellipse cx="${obj.cx}" cy="${obj.cy}" rx="${obj.rx}" ry="${obj.ry}" ${f} ${s}/>`;
-      if (obj.type==="text") return `<text x="${obj.x}" y="${obj.y}" font-size="${obj.fontSize}" font-family="sans-serif" ${f} ${s}>${obj.text}</text>`;
+      if (obj.type==="text") return `<text x="${obj.x}" y="${obj.y}" font-size="${obj.fontSize}" font-family="${(obj.fontFamily||"sans-serif").replace(/"/g,"'")}" ${f} ${s}>${obj.text}</text>`;
       return `<line x1="${obj.x1}" y1="${obj.y1}" x2="${obj.x2}" y2="${obj.y2}" fill="none" ${s}/>`;
     }
     function serializeObj(obj) {
@@ -890,17 +1378,61 @@
     canvas.addEventListener("pointercancel", onPointerUp);
     canvas.addEventListener("contextmenu", (e)=>e.preventDefault());
     canvas.addEventListener("dblclick", (e) => {
+      if (state.tool === "reshape") {
+        const node = eventEl(e, "[data-node]");
+        if (node) {
+          const obj = findById(state.objects, node.getAttribute("data-obj"));
+          if (obj && obj.type === "path") {
+            snapshot();
+            deletePathAnchor(obj, +node.getAttribute("data-cmd"));
+            renderObjects(); drawSelection();
+          }
+          return;
+        }
+      }
       const hit = findObjectAt(e);
       if (hit?.type==="text") { const t=prompt("テキスト", hit.text); if (t!=null) { snapshot(); hit.text=t; renderObjects(); } }
     });
 
     document.querySelectorAll(".tool[data-tool]").forEach((btn)=>btn.addEventListener("click", ()=>setTool(btn.dataset.tool)));
-    document.getElementById("fill-color").addEventListener("input", (e)=>{ state.fill=e.target.value; state.fillNone=false; updateChips(); if (selected()) applyStyleToSelected(); });
-    document.getElementById("fill-color").addEventListener("change", ()=>{ if (selected()) snapshot(); });
-    document.getElementById("stroke-color").addEventListener("input", (e)=>{ state.stroke=e.target.value; updateChips(); if (selected()) applyStyleToSelected(); });
-    document.getElementById("stroke-color").addEventListener("change", ()=>{ if (selected()) snapshot(); });
-    document.getElementById("btn-no-fill").addEventListener("click", ()=>{ if (selected()) snapshot(); state.fillNone=!state.fillNone; updateChips(); if (selected()) applyStyleToSelected(); });
-    document.getElementById("stroke-width").addEventListener("change", (e)=>{ if (selected()) snapshot(); state.strokeWidth=Number(e.target.value)||0; if (selected()) applyStyleToSelected(); });
+    const COLOR_PALETTE = ["#000000","#575e75","#ffffff","#d0021b","#ff8c1a","#ffbf00","#59c059","#4c97ff","#855cd6","#cf63cf","#ff6680","#00c2a8"];
+    function paintPalette(el, onPick) {
+      el.replaceChildren();
+      COLOR_PALETTE.forEach((color) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.color = color;
+        btn.style.setProperty("--c", color);
+        btn.title = color;
+        btn.addEventListener("click", () => onPick(color));
+        el.append(btn);
+      });
+    }
+    function commitDrawingStyle() {
+      if (styleTargets().length) snapshot();
+      applyStyleToSelected();
+    }
+    paintPalette(document.getElementById("fill-palette"), (color) => {
+      state.fill = color;
+      state.fillNone = false;
+      document.getElementById("fill-color").value = toHex(color);
+      updateChips();
+      commitDrawingStyle();
+    });
+    paintPalette(document.getElementById("stroke-palette"), (color) => {
+      state.stroke = color;
+      document.getElementById("stroke-color").value = toHex(color);
+      updateChips();
+      commitDrawingStyle();
+    });
+    document.getElementById("fill-color").addEventListener("input", (e)=>{ state.fill=e.target.value; state.fillNone=false; updateChips(); applyStyleToSelected(); });
+    document.getElementById("fill-color").addEventListener("change", ()=>{ if (styleTargets().length) snapshot(); });
+    document.getElementById("stroke-color").addEventListener("input", (e)=>{ state.stroke=e.target.value; updateChips(); applyStyleToSelected(); });
+    document.getElementById("stroke-color").addEventListener("change", ()=>{ if (styleTargets().length) snapshot(); });
+    document.getElementById("btn-no-fill").addEventListener("click", ()=>{ if (styleTargets().length) snapshot(); state.fillNone=!state.fillNone; updateChips(); applyStyleToSelected(); });
+    document.getElementById("stroke-width").addEventListener("change", (e)=>{ if (styleTargets().length) snapshot(); state.strokeWidth=Number(e.target.value)||0; applyStyleToSelected(); });
+    document.getElementById("font-family").addEventListener("change", (e)=>{ if (selected()) snapshot(); state.fontFamily=e.target.value; applyFontToSelected(); });
+    document.getElementById("font-size").addEventListener("change", (e)=>{ if (selected()) snapshot(); state.fontSize=Math.max(8, Number(e.target.value)||28); applyFontToSelected(); });
     document.getElementById("btn-undo").addEventListener("click", undo);
     document.getElementById("btn-redo").addEventListener("click", redo);
     document.getElementById("btn-export").addEventListener("click", exportSVG);
@@ -921,7 +1453,7 @@
 
     window.addEventListener("keydown", (e) => {
       const tag = document.activeElement?.tagName;
-      if (tag==="INPUT"||tag==="TEXTAREA") return;
+      if (tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
       if (document.body.classList.contains("import-open")) { if (e.key==="Escape") showCanvasView(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="z") { e.preventDefault(); e.shiftKey?redo():undo(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="y") { e.preventDefault(); redo(); return; }
@@ -935,7 +1467,7 @@
     });
     window.addEventListener("resize", applyView);
 
-    updateChips(); setTool("select"); refreshHistoryButtons(); refreshSelectionButtons(); applyView();
+    updateChips(); updateFontUI(); setTool("select"); refreshHistoryButtons(); refreshSelectionButtons(); applyView();
 
     const ai = { sourceDataUrl:null, svgMarkup:null, busy:false };
     function aiStatus(text, err) { const el=document.getElementById("ai-status"); el.textContent=text; el.classList.toggle("err", !!err); }
@@ -984,47 +1516,6 @@
       const ctx = c.getContext("2d", { willReadFrequently: true });
       ctx.drawImage(img, 0, 0, w, h);
       return { imgData: ctx.getImageData(0, 0, w, h), w, h };
-    }
-    function sampleBg(data, w, h) {
-      const idx = (x, y) => (y * w + x) * 4;
-      const samples = [[0,0],[w-1,0],[0,h-1],[w-1,h-1],[w>>1,0],[w>>1,h-1],[0,h>>1],[w-1,h>>1]];
-      let r=0,g=0,b=0,a=0;
-      samples.forEach(([x,y]) => { const i=idx(x,y); r+=data[i]; g+=data[i+1]; b+=data[i+2]; a+=data[i+3]; });
-      const n = samples.length;
-      return [r/n, g/n, b/n, a/n];
-    }
-    function knockBackground(imgData, bg, thresh) {
-      const d = imgData.data;
-      const w = imgData.width, h = imgData.height;
-      const t2 = thresh * thresh;
-      const similar = (i) => {
-        if (d[i+3] < 40) return true;
-        const dr=d[i]-bg[0], dg=d[i+1]-bg[1], db=d[i+2]-bg[2];
-        return dr*dr+dg*dg+db*db < t2;
-      };
-      const seen = new Uint8Array(w * h);
-      const stack = [];
-      const trySeed = (x, y) => {
-        const idx = y * w + x;
-        if (seen[idx] || !similar(idx * 4)) return;
-        seen[idx] = 1;
-        stack.push(idx);
-      };
-      for (let x=0;x<w;x++) { trySeed(x,0); trySeed(x,h-1); }
-      for (let y=0;y<h;y++) { trySeed(0,y); trySeed(w-1,y); }
-      while (stack.length) {
-        const p = stack.pop();
-        d[p*4+3] = 0;
-        const x = p % w, y = (p / w) | 0;
-        const nbs = [[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
-        for (const [nx, ny] of nbs) {
-          if (nx<0||ny<0||nx>=w||ny>=h) continue;
-          const ni = ny * w + nx;
-          if (seen[ni] || !similar(ni * 4)) continue;
-          seen[ni] = 1;
-          stack.push(ni);
-        }
-      }
     }
     function medianCutPalette(imgData, maxColors) {
       const d = imgData.data;
@@ -1106,6 +1597,39 @@
         }
         if (cells.length < minSize) cells.forEach((ci) => { mask[ci]=0; });
       }
+    }
+    function connectedComponents(mask, w, h, minSize) {
+      const seen = new Uint8Array(w * h);
+      const comps = [];
+      for (let i=0;i<w*h;i++) {
+        if (!mask[i] || seen[i]) continue;
+        const stack=[i], cells=[];
+        seen[i]=1;
+        let minX=w, minY=h, maxX=0, maxY=0;
+        while (stack.length) {
+          const p=stack.pop();
+          cells.push(p);
+          const x=p%w, y=(p/w)|0;
+          if (x<minX) minX=x; if (x>maxX) maxX=x;
+          if (y<minY) minY=y; if (y>maxY) maxY=y;
+          const nbs=[[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+          for (const [nx,ny] of nbs) {
+            if (nx<0||ny<0||nx>=w||ny>=h) continue;
+            const ni=ny*w+nx;
+            if (!mask[ni] || seen[ni]) continue;
+            seen[ni]=1; stack.push(ni);
+          }
+        }
+        if (cells.length < minSize) continue;
+        const cw=maxX-minX+1, ch=maxY-minY+1;
+        const local=new Uint8Array(cw*ch);
+        cells.forEach((p) => {
+          const x=p%w, y=(p/w)|0;
+          local[(y-minY)*cw+(x-minX)]=1;
+        });
+        comps.push({ mask: local, w: cw, h: ch, ox: minX, oy: minY, count: cells.length });
+      }
+      return comps;
     }
     function extractSegments(mask, w, h) {
       const segs = [];
@@ -1215,8 +1739,6 @@
       aiStatus("トレースボット: 画像を読み込んでいます...");
       await tick();
       const { imgData, w, h } = await loadImageData(dataUrl, 480);
-      const bg = sampleBg(imgData.data, w, h);
-      knockBackground(imgData, bg, 42);
       aiStatus("トレースボット: 色をまとめています...");
       await tick();
       const palette = medianCutPalette(imgData, 16);
@@ -1232,19 +1754,24 @@
         const mask = colorMask(labels, pi, w, h, minPixels);
         if (!mask) continue;
         removeSpeckles(mask, w, h, 10);
-        const segs = extractSegments(mask, w, h);
-        if (!segs.length) continue;
-        let loops = stitchLoops(segs).map((loop) => {
-          let s = simplifyClosed(loop, 1.05);
-          s = chaikinClosed(s, 2);
-          return simplifyClosed(s, 0.5);
-        }).filter((loop) => Math.abs(loopArea(loop)) >= 8);
-        if (!loops.length) continue;
-        loops.sort((a,b) => Math.abs(loopArea(b)) - Math.abs(loopArea(a)));
-        const d = loops.map(loopToPath).join(" ");
+        const comps = connectedComponents(mask, w, h, 10);
         const [r,g,b] = palette[pi];
-        const area = loops.reduce((sum, loop) => sum + Math.abs(loopArea(loop)), 0);
-        layers.push({ d, fill: rgbHex(r,g,b), area });
+        const fill = rgbHex(r,g,b);
+        for (const comp of comps) {
+          const segs = extractSegments(comp.mask, comp.w, comp.h);
+          if (!segs.length) continue;
+          let loops = stitchLoops(segs).map((loop) => {
+            let s = simplifyClosed(loop, 1.05);
+            s = chaikinClosed(s, 2);
+            s = simplifyClosed(s, 0.5);
+            return s.map((pt) => [pt[0] + comp.ox, pt[1] + comp.oy]);
+          }).filter((loop) => Math.abs(loopArea(loop)) >= 8);
+          if (!loops.length) continue;
+          loops.sort((a,b) => Math.abs(loopArea(b)) - Math.abs(loopArea(a)));
+          const d = loops.map(loopToPath).join(" ");
+          const area = loops.reduce((sum, loop) => sum + Math.abs(loopArea(loop)), 0);
+          layers.push({ d, fill, area });
+        }
       }
       if (!layers.length) throw new Error("輪郭を取り出せませんでした");
       layers.sort((a,b) => b.area - a.area);
@@ -1286,7 +1813,7 @@
         else if (tag==="ellipse") obj={ type:"ellipse", cx:+el.getAttribute("cx")||0, cy:+el.getAttribute("cy")||0, rx:+el.getAttribute("rx")||0, ry:+el.getAttribute("ry")||0 };
         else if (tag==="line") obj={ type:"line", x1:+el.getAttribute("x1")||0, y1:+el.getAttribute("y1")||0, x2:+el.getAttribute("x2")||0, y2:+el.getAttribute("y2")||0 };
         else if (tag==="polygon"||tag==="polyline") { const d=polygonToPath(el.getAttribute("points"), tag==="polygon"); if(d) obj={ type:"path", d, fillRule: paint.fillRule }; }
-        else if (tag==="text") obj={ type:"text", x:+el.getAttribute("x")||0, y:+el.getAttribute("y")||0, text: el.textContent||"", fontSize: parseFloat(el.getAttribute("font-size")||28) };
+        else if (tag==="text") obj={ type:"text", x:+el.getAttribute("x")||0, y:+el.getAttribute("y")||0, text: el.textContent||"", fontSize: parseFloat(el.getAttribute("font-size")||28), fontFamily: el.getAttribute("font-family") || "sans-serif" };
         if (obj) imported.push({ id:uid(), ...obj, fill: obj.type==="line"?"none":paint.fill, stroke:paint.stroke, strokeWidth:paint.strokeWidth, matrix:mat });
         [...el.children].forEach((child)=>walk(child,paint,mat));
       }
