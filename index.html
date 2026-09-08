@@ -38,16 +38,35 @@
     .ibtn:disabled { opacity: .35; cursor: default; }
     .ibtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .color-field { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
-    .swatch { position: relative; width: 28px; height: 28px; flex: 0 0 auto; }
-    .swatch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-    .chip { width: 100%; height: 100%; border-radius: 6px; border: 1px solid #9aaebb; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
-    .none .chip { background: linear-gradient(135deg, transparent 46%, #d0021b 46% 54%, transparent 54%), #fff; }
-    .palette { display: flex; flex-wrap: wrap; gap: 3px; width: 92px; }
-    .palette button {
-      width: 14px; height: 14px; border: 1px solid #9aaebb; border-radius: 3px;
-      padding: 0; cursor: pointer; background: var(--c);
+    .swatch { position: relative; width: 28px; height: 28px; flex: 0 0 auto; border: 0; padding: 0; background: transparent; cursor: pointer; }
+    .chip { width: 100%; height: 100%; border-radius: 6px; border: 1px solid #9aaebb; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); display: block; }
+    .none .chip { background: linear-gradient(135deg, transparent 46%, #d0021b 46% 54%, transparent 54%), #fff !important; }
+    .color-pop {
+      position: fixed; z-index: 80; width: 168px; background: #fff; border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 10px; color: #575e75; font-size: 12px;
     }
-    .palette button.active { outline: 2px solid #855cd6; outline-offset: 0; }
+    .fill-modes { display: flex; gap: 6px; justify-content: space-between; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px solid #e6edf2; }
+    .fill-modes button {
+      width: 32px; height: 32px; border-radius: 6px; border: 1px solid #c2d0db; padding: 0; cursor: pointer; background: #fff;
+    }
+    .fill-modes button.active { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #4c97ff; }
+    .slider-block { margin: 8px 0 10px; }
+    .slider-lab { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .color-pop input[type="range"] {
+      -webkit-appearance: none; appearance: none; width: 100%; height: 12px; border-radius: 8px;
+      border: 1px solid #c2d0db; outline: none; background: #ddd;
+    }
+    .color-pop input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; border: 1px solid #b9c4ce; box-shadow: 0 1px 2px rgba(0,0,0,.2); cursor: pointer;
+    }
+    .pop-foot { display: flex; justify-content: space-between; margin-top: 4px; }
+    .pop-foot button {
+      width: 32px; height: 32px; border-radius: 6px; border: 1px solid #c2d0db; background: #fff; cursor: pointer;
+      display: grid; place-items: center; padding: 0;
+    }
+    .pop-foot svg { width: 18px; height: 18px; }
+    svg.canvas.eyedrop { cursor: crosshair; }
     .width-num { width: 42px; height: 26px; border: 1px solid var(--line); border-radius: 4px; text-align: center; }
     .font-select {
       height: 26px; max-width: 148px; border: 1px solid var(--line); border-radius: 4px;
@@ -174,13 +193,11 @@
       <button class="ibtn" id="btn-back" title="最背面へ"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="10"/><rect x="7" y="8" width="11" height="10"/></svg></button>
       <div class="sep"></div>
       <div class="color-field">塗りつぶし
-        <label class="swatch" id="fill-wrap" title="塗りつぶしの色"><span id="fill-chip" class="chip" style="background:#cf63cf"></span><input id="fill-color" type="color" value="#cf63cf" /></label>
-        <div class="palette" id="fill-palette"></div>
+        <button class="swatch" id="fill-wrap" type="button" title="塗りつぶしの色"><span id="fill-chip" class="chip" style="background:#cf63cf"></span></button>
         <button class="ibtn" id="btn-no-fill" title="塗りなし"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M6 18L18 6"/></svg></button>
       </div>
       <div class="color-field">枠線
-        <label class="swatch" id="stroke-wrap" title="枠線の色"><span id="stroke-chip" class="chip" style="background:#111111"></span><input id="stroke-color" type="color" value="#111111" /></label>
-        <div class="palette" id="stroke-palette"></div>
+        <button class="swatch" id="stroke-wrap" type="button" title="枠線の色"><span id="stroke-chip" class="chip" style="background:#111111"></span></button>
         <input class="width-num" id="stroke-width" type="number" min="0" max="80" value="4" />
       </div>
       <div class="sep"></div>
@@ -238,6 +255,7 @@
       <main class="stage">
         <div class="paper">
           <svg class="canvas select" id="canvas" xmlns="http://www.w3.org/2000/svg">
+            <defs id="paint-defs"></defs>
             <g id="objects"></g>
             <g id="preview"></g>
             <g id="selection-ui"></g>
@@ -254,6 +272,34 @@
     </footer>
   </div>
   <div class="toast" id="toast"></div>
+  <div class="color-pop hidden" id="color-pop">
+    <div class="fill-modes" id="fill-modes">
+      <button type="button" data-mode="solid" title="単色"></button>
+      <button type="button" data-mode="linear" title="線形グラデーション"></button>
+      <button type="button" data-mode="radial" title="円形グラデーション"></button>
+      <button type="button" data-mode="soft" title="やわらかい円形"></button>
+    </div>
+    <div class="slider-block">
+      <div class="slider-lab"><span>色</span><span id="hsv-h-val">0</span></div>
+      <input id="hsv-h" type="range" min="0" max="100" value="83" />
+    </div>
+    <div class="slider-block">
+      <div class="slider-lab"><span>鮮やかさ</span><span id="hsv-s-val">60</span></div>
+      <input id="hsv-s" type="range" min="0" max="100" value="60" />
+    </div>
+    <div class="slider-block">
+      <div class="slider-lab"><span>明るさ</span><span id="hsv-v-val">100</span></div>
+      <input id="hsv-v" type="range" min="0" max="100" value="100" />
+    </div>
+    <div class="pop-foot">
+      <button type="button" id="pop-none" title="塗りなし">
+        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="#c2d0db"/><path d="M5 19L19 5" stroke="#ff8c1a" stroke-width="2"/></svg>
+      </button>
+      <button type="button" id="pop-eyedrop" title="スポイト">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#575e75" stroke-width="1.8" stroke-linecap="round"><path d="M14 4l6 6"/><path d="M13 7l4 4"/><path d="M14 10L7 17l-2 2-1-1 2-2 7-7z"/></svg>
+      </button>
+    </div>
+  </div>
 
   <div class="import-view" id="view-import">
     <header class="import-bar">
@@ -295,6 +341,7 @@
   <script>
     const svgNS = "http://www.w3.org/2000/svg";
     const canvas = document.getElementById("canvas");
+    const defsLayer = document.getElementById("paint-defs");
     const objectsLayer = document.getElementById("objects");
     const previewLayer = document.getElementById("preview");
     const selectionLayer = document.getElementById("selection-ui");
@@ -303,9 +350,17 @@
     const state = {
       tool: "select",
       fill: "#cf63cf",
+      fill2: "#ffffff",
+      fillStyle: "solid",
       fillNone: false,
       stroke: "#111111",
+      stroke2: "#ffffff",
+      strokeStyle: "solid",
+      strokeNone: false,
       strokeWidth: 4,
+      hsv: { h: 83, s: 52, v: 81 },
+      colorTarget: "fill",
+      eyedrop: null,
       objects: [],
       selectedIds: [],
       history: [],
@@ -325,8 +380,84 @@
     const identity = () => [1, 0, 0, 1, 0, 0];
     const clone = (v) => JSON.parse(JSON.stringify(v));
     const currentFill = () => (state.fillNone ? "none" : state.fill);
+    const currentStroke = () => (state.strokeNone ? "none" : state.stroke);
     const selectedObjects = () => state.objects.filter((o) => state.selectedIds.includes(o.id));
     const selected = () => selectedObjects()[0] || null;
+
+    function hsvToHex(h, s, v) {
+      h = ((h % 100) + 100) % 100 / 100 * 6;
+      s = Math.max(0, Math.min(1, s / 100));
+      v = Math.max(0, Math.min(1, v / 100));
+      const i = Math.floor(h), f = h - i;
+      const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+      const rgb = [[v,t,p],[q,v,p],[p,v,t],[p,q,v],[t,p,v],[v,p,q]][i % 6];
+      return "#" + rgb.map((x) => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+    }
+    function hexToHsv(hex) {
+      const h = toHex(hex);
+      const r = parseInt(h.slice(1,3),16)/255, g = parseInt(h.slice(3,5),16)/255, b = parseInt(h.slice(5,7),16)/255;
+      const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+      let hue = 0;
+      if (d) {
+        if (max === r) hue = ((g - b) / d) % 6;
+        else if (max === g) hue = (b - r) / d + 2;
+        else hue = (r - g) / d + 4;
+        hue /= 6; if (hue < 0) hue += 1;
+      }
+      return { h: Math.round(hue * 100), s: Math.round(max ? (d / max) * 100 : 0), v: Math.round(max * 100) };
+    }
+    function gradientCss(style, c1, c2) {
+      const a = c1 || "#888", b = c2 || "#fff";
+      if (style === "linear") return `linear-gradient(90deg, ${a}, ${b})`;
+      if (style === "radial") return `radial-gradient(circle at 50% 50%, ${a} 0%, ${b} 70%)`;
+      if (style === "soft") return `radial-gradient(circle at 50% 50%, ${a} 0%, ${a} 18%, ${b} 78%)`;
+      return a;
+    }
+    function isGrad(style) { return style && style !== "solid"; }
+    function paintFor(obj, kind) {
+      const color = kind === "stroke" ? obj.stroke : obj.fill;
+      const style = kind === "stroke" ? (obj.strokeStyle || "solid") : (obj.fillStyle || "solid");
+      if (!color || color === "none") return "none";
+      if (!isGrad(style)) return color;
+      return `url(#g-${kind}-${obj.id})`;
+    }
+    function makeGradient(id, style, c1, c2) {
+      const a = c1 || "#888", b = c2 || "#ffffff";
+      let g;
+      if (style === "linear") {
+        g = createEl("linearGradient", { id, x1:"0", y1:"0", x2:"1", y2:"0", gradientUnits:"objectBoundingBox" });
+        g.append(createEl("stop", { offset:"0%", "stop-color": a }), createEl("stop", { offset:"100%", "stop-color": b }));
+      } else if (style === "radial") {
+        g = createEl("radialGradient", { id, cx:"0.5", cy:"0.5", r:"0.55", gradientUnits:"objectBoundingBox" });
+        g.append(createEl("stop", { offset:"0%", "stop-color": a }), createEl("stop", { offset:"100%", "stop-color": b }));
+      } else {
+        g = createEl("radialGradient", { id, cx:"0.5", cy:"0.5", r:"0.85", fx:"0.5", fy:"0.5", gradientUnits:"objectBoundingBox" });
+        g.append(createEl("stop", { offset:"0%", "stop-color": a }), createEl("stop", { offset:"35%", "stop-color": a }), createEl("stop", { offset:"100%", "stop-color": b }));
+      }
+      return g;
+    }
+    function collectGradients(obj) {
+      if (obj.type === "group") { (obj.children || []).forEach(collectGradients); return; }
+      if (isGrad(obj.fillStyle) && obj.fill && obj.fill !== "none") defsLayer.append(makeGradient(`g-fill-${obj.id}`, obj.fillStyle, obj.fill, obj.fill2));
+      if (isGrad(obj.strokeStyle) && obj.stroke && obj.stroke !== "none") defsLayer.append(makeGradient(`g-stroke-${obj.id}`, obj.strokeStyle, obj.stroke, obj.stroke2));
+    }
+    function applyFillOnly(obj) {
+      if (!obj || obj.type === "line") return;
+      obj.fill = currentFill();
+      obj.fillStyle = state.fillNone ? "solid" : state.fillStyle;
+      obj.fill2 = state.fill2;
+    }
+    function applyCurrentPaint(obj) {
+      if (obj.type !== "line") {
+        obj.fill = currentFill();
+        obj.fillStyle = state.fillNone ? "solid" : state.fillStyle;
+        obj.fill2 = state.fill2;
+      }
+      obj.stroke = currentStroke();
+      obj.strokeStyle = state.strokeNone ? "solid" : state.strokeStyle;
+      obj.stroke2 = state.stroke2;
+      obj.strokeWidth = state.strokeWidth;
+    }
 
     function multiply(a, b) {
       return [a[0]*b[0]+a[2]*b[1], a[1]*b[0]+a[3]*b[1], a[0]*b[2]+a[2]*b[3], a[1]*b[2]+a[3]*b[3], a[0]*b[4]+a[2]*b[5]+a[4], a[1]*b[4]+a[3]*b[5]+a[5]];
@@ -424,7 +555,7 @@
     }
 
     function shapeNode(obj) {
-      const common = { class:"shape", fill:obj.fill, stroke:obj.stroke, "stroke-width":obj.strokeWidth, "stroke-linecap":"round", "stroke-linejoin":"round" };
+      const common = { class:"shape", fill: paintFor(obj, "fill"), stroke: paintFor(obj, "stroke"), "stroke-width":obj.strokeWidth, "stroke-linecap":"round", "stroke-linejoin":"round" };
       if (obj.type === "path") return createEl("path", { ...common, d: obj.d, "fill-rule": obj.fillRule || "evenodd" });
       if (obj.type === "rect") return createEl("rect", { ...common, x:obj.x, y:obj.y, width:obj.width, height:obj.height });
       if (obj.type === "ellipse") return createEl("ellipse", { ...common, cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry });
@@ -433,7 +564,8 @@
     }
     function hitNode(obj) {
       const hitWidth = Math.max(14, (obj.strokeWidth||0)+10);
-      if (obj.type === "path") return createEl("path", { d:obj.d, fill: obj.fill==="none"?"none":"transparent", stroke:"transparent", "stroke-width":hitWidth, class:"hit", "fill-rule": obj.fillRule || "evenodd", "pointer-events": obj.fill==="none"?"stroke":"all" });
+      const filled = obj.fill && obj.fill !== "none";
+      if (obj.type === "path") return createEl("path", { d:obj.d, fill: filled?"transparent":"none", stroke:"transparent", "stroke-width":hitWidth, class:"hit", "fill-rule": obj.fillRule || "evenodd", "pointer-events": filled?"all":"stroke" });
       if (obj.type === "rect") return createEl("rect", { x:obj.x, y:obj.y, width:obj.width, height:obj.height, fill:"transparent", class:"hit", "pointer-events":"all" });
       if (obj.type === "ellipse") return createEl("ellipse", { cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry, fill:"transparent", class:"hit", "pointer-events":"all" });
       if (obj.type === "text") {
@@ -453,7 +585,9 @@
       return g;
     }
     function renderObjects() {
+      defsLayer.replaceChildren();
       objectsLayer.replaceChildren();
+      state.objects.forEach((obj) => collectGradients(obj));
       state.objects.forEach((obj) => objectsLayer.append(renderOne(obj)));
     }
 
@@ -487,17 +621,22 @@
       return ctx.fillStyle.length === 7 ? ctx.fillStyle : "#000000";
     }
     function updateChips() {
-      document.getElementById("stroke-chip").style.background = state.stroke;
       const fillChip = document.getElementById("fill-chip");
-      fillChip.style.background = state.fillNone ? "" : state.fill;
+      if (state.fillNone) {
+        fillChip.style.background = "";
+      } else {
+        fillChip.style.background = gradientCss(state.fillStyle, state.fill, state.fill2);
+      }
       document.getElementById("fill-wrap").classList.toggle("none", state.fillNone);
+      const strokeChip = document.getElementById("stroke-chip");
+      if (state.strokeNone) {
+        strokeChip.style.background = "";
+        document.getElementById("stroke-wrap").classList.add("none");
+      } else {
+        strokeChip.style.background = gradientCss(state.strokeStyle, state.stroke, state.stroke2);
+        document.getElementById("stroke-wrap").classList.remove("none");
+      }
       document.getElementById("stroke-width").value = state.strokeWidth;
-      document.querySelectorAll("#fill-palette button").forEach((btn) => {
-        btn.classList.toggle("active", !state.fillNone && toHex(btn.dataset.color) === toHex(state.fill));
-      });
-      document.querySelectorAll("#stroke-palette button").forEach((btn) => {
-        btn.classList.toggle("active", toHex(btn.dataset.color) === toHex(state.stroke));
-      });
     }
     function styleTargets() {
       return selectedObjects().filter((o) => o.type !== "group");
@@ -506,21 +645,22 @@
       if (state.applyingUI) return;
       const objs = styleTargets();
       if (!objs.length) return;
-      objs.forEach((obj) => {
-        if (obj.type !== "line") obj.fill = currentFill();
-        obj.stroke = state.stroke;
-        obj.strokeWidth = state.strokeWidth;
-      });
+      objs.forEach(applyCurrentPaint);
       renderObjects(); drawSelection();
     }
     function loadPropertiesFrom(obj) {
       if (!obj || obj.type === "group") return;
       state.applyingUI = true;
-      state.stroke = obj.stroke === "none" ? state.stroke : obj.stroke;
+      if (obj.stroke === "none") state.strokeNone = true;
+      else { state.strokeNone = false; state.stroke = obj.stroke; state.strokeStyle = obj.strokeStyle || "solid"; if (obj.stroke2) state.stroke2 = obj.stroke2; }
       state.strokeWidth = obj.strokeWidth;
       if (obj.fill === "none") state.fillNone = true;
-      else { state.fillNone = false; state.fill = obj.fill; document.getElementById("fill-color").value = toHex(obj.fill); }
-      if (obj.stroke !== "none") document.getElementById("stroke-color").value = toHex(obj.stroke);
+      else {
+        state.fillNone = false;
+        if (obj.fill && !String(obj.fill).startsWith("url")) state.fill = obj.fill;
+        state.fillStyle = obj.fillStyle || "solid";
+        if (obj.fill2) state.fill2 = obj.fill2;
+      }
       if (obj.type === "text") {
         if (obj.fontFamily) state.fontFamily = obj.fontFamily;
         if (obj.fontSize) state.fontSize = obj.fontSize;
@@ -1157,8 +1297,11 @@
     }
     function showPreview(objLike) {
       previewLayer.replaceChildren();
-      const dummy = { ...objLike, fill: objLike.fill ?? currentFill(), stroke: state.stroke, strokeWidth: state.strokeWidth, matrix: identity() };
+      const dummy = { ...objLike, fill: objLike.fill ?? currentFill(), fillStyle: objLike.fillStyle ?? state.fillStyle, fill2: objLike.fill2 ?? state.fill2, stroke: objLike.stroke ?? currentStroke(), strokeStyle: state.strokeStyle, stroke2: state.stroke2, strokeWidth: state.strokeWidth, matrix: identity() };
       if (dummy.type === "line") dummy.fill = "none";
+      dummy.id = "preview";
+      [...defsLayer.querySelectorAll("[id^='g-fill-preview'], [id^='g-stroke-preview']")].forEach((n) => n.remove());
+      collectGradients(dummy);
       const n = shapeNode(dummy);
       if (dummy.type === "text") n.textContent = dummy.text || "";
       previewLayer.append(n);
@@ -1178,6 +1321,12 @@
 
     function onPointerDown(evt) {
       if (evt.button !== 0) return;
+      if (state.eyedrop) {
+        evt.preventDefault();
+        const hit = findObjectAt(evt);
+        applyEyedrop(hit);
+        return;
+      }
       const p = svgPoint(evt);
       canvas.setPointerCapture(evt.pointerId);
 
@@ -1185,8 +1334,8 @@
         const hit = findObjectAt(evt);
         if (hit) {
           snapshot();
-          if (hit.type === "group") hit.children.forEach((c) => { if (c.type !== "line") c.fill = currentFill(); });
-          else if (hit.type !== "line") hit.fill = currentFill();
+          if (hit.type === "group") hit.children.forEach(applyFillOnly);
+          else applyFillOnly(hit);
           renderObjects();
         }
         return;
@@ -1195,7 +1344,8 @@
         const text = prompt("テキスト", "Hello") || "";
         if (!text) return;
         snapshot();
-        const obj = { id:uid(), type:"text", x:p.x, y:p.y, text, fontSize:state.fontSize, fontFamily:state.fontFamily, fill: currentFill(), stroke:"none", strokeWidth:0, matrix:identity() };
+        const obj = { id:uid(), type:"text", x:p.x, y:p.y, text, fontSize:state.fontSize, fontFamily:state.fontFamily, matrix:identity() };
+        applyCurrentPaint(obj); obj.stroke = "none"; obj.strokeWidth = 0;
         state.objects.push(obj); renderObjects(); selectObject(obj.id); setTool("select");
         return;
       }
@@ -1327,13 +1477,24 @@
       const p = svgPoint(evt);
       if (state.drawing?.mode==="pen") {
         const pts=state.drawing.points; previewLayer.replaceChildren();
-        if (pts.length) { snapshot(); state.objects.push({ id:uid(), type:"path", d:pointsToSmoothPath(pts), fill:"none", stroke:state.stroke, strokeWidth:state.strokeWidth, matrix:identity() }); renderObjects(); }
+        if (pts.length) {
+          snapshot();
+          const obj = { id:uid(), type:"path", d:pointsToSmoothPath(pts), matrix:identity() };
+          applyCurrentPaint(obj); obj.fill = "none";
+          state.objects.push(obj); renderObjects();
+        }
         state.drawing=null; return;
       }
       if (state.drawing?.mode==="shape") {
         const geo=objectFromPreview(state.drawing.start,p,evt.shiftKey); previewLayer.replaceChildren();
         const tooSmall=(geo.width&&geo.width<2&&geo.height<2)||(geo.rx&&geo.rx<1)||(geo.x1!=null&&Math.hypot(geo.x2-geo.x1,geo.y2-geo.y1)<2);
-        if (!tooSmall) { snapshot(); state.objects.push({ id:uid(), ...geo, fill: geo.type==="line"?"none":currentFill(), stroke:state.stroke, strokeWidth:state.strokeWidth, matrix:identity() }); renderObjects(); }
+        if (!tooSmall) {
+          snapshot();
+          const obj = { id:uid(), ...geo, matrix:identity() };
+          applyCurrentPaint(obj);
+          if (geo.type === "line") obj.fill = "none";
+          state.objects.push(obj); renderObjects();
+        }
         state.drawing=null; return;
       }
       if (state.drawing?.mode==="marquee") {
@@ -1350,9 +1511,20 @@
       state.drawing=null; state.gesture=null;
     }
 
+    function serializeGradient(id, style, c1, c2) {
+      const a = c1 || "#888", b = c2 || "#ffffff";
+      if (style === "linear") return `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="${a}"/><stop offset="100%" stop-color="${b}"/></linearGradient>`;
+      if (style === "radial") return `<radialGradient id="${id}" cx="0.5" cy="0.5" r="0.55" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="${a}"/><stop offset="100%" stop-color="${b}"/></radialGradient>`;
+      return `<radialGradient id="${id}" cx="0.5" cy="0.5" r="0.85" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="${a}"/><stop offset="35%" stop-color="${a}"/><stop offset="100%" stop-color="${b}"/></radialGradient>`;
+    }
+    function collectSerializeDefs(obj, out) {
+      if (obj.type === "group") { (obj.children || []).forEach((ch) => collectSerializeDefs(ch, out)); return; }
+      if (isGrad(obj.fillStyle) && obj.fill && obj.fill !== "none") out.push(serializeGradient(`g-fill-${obj.id}`, obj.fillStyle, obj.fill, obj.fill2));
+      if (isGrad(obj.strokeStyle) && obj.stroke && obj.stroke !== "none") out.push(serializeGradient(`g-stroke-${obj.id}`, obj.strokeStyle, obj.stroke, obj.stroke2));
+    }
     function serializeShape(obj) {
       if (obj.type==="group") return obj.children.map(serializeObj).join("");
-      const f=`fill="${obj.fill}"`, s=`stroke="${obj.stroke}" stroke-width="${obj.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
+      const f=`fill="${paintFor(obj,"fill")}"`, s=`stroke="${paintFor(obj,"stroke")}" stroke-width="${obj.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
       const rule = obj.fillRule ? ` fill-rule="${obj.fillRule}"` : "";
       if (obj.type==="path") return `<path d="${obj.d}" ${f} ${s}${rule}/>`;
       if (obj.type==="rect") return `<rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" ${f} ${s}/>`;
@@ -1367,7 +1539,9 @@
       const rect = canvas.getBoundingClientRect();
       const w=Math.max(1,Math.round(rect.width)), h=Math.max(1,Math.round(rect.height));
       const name = (document.getElementById("costume-name").value || "costume").replace(/[^\w\-]+/g,"_");
-      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${state.objects.map(serializeObj).join("\n")}\n</svg>`;
+      const defs = [];
+      state.objects.forEach((o) => collectSerializeDefs(o, defs));
+      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${defs.length ? `<defs>${defs.join("")}</defs>\n` : ""}${state.objects.map(serializeObj).join("\n")}\n</svg>`;
       const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([markup],{type:"image/svg+xml"})); a.download=name+".svg"; a.click(); URL.revokeObjectURL(a.href);
       toast("SVGを保存しました");
     }
@@ -1395,40 +1569,139 @@
     });
 
     document.querySelectorAll(".tool[data-tool]").forEach((btn)=>btn.addEventListener("click", ()=>setTool(btn.dataset.tool)));
-    const COLOR_PALETTE = ["#000000","#575e75","#ffffff","#d0021b","#ff8c1a","#ffbf00","#59c059","#4c97ff","#855cd6","#cf63cf","#ff6680","#00c2a8"];
-    function paintPalette(el, onPick) {
-      el.replaceChildren();
-      COLOR_PALETTE.forEach((color) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.dataset.color = color;
-        btn.style.setProperty("--c", color);
-        btn.title = color;
-        btn.addEventListener("click", () => onPick(color));
-        el.append(btn);
+
+    const colorPop = document.getElementById("color-pop");
+    function activePaintColor() {
+      return state.colorTarget === "stroke" ? state.stroke : state.fill;
+    }
+    function setActivePaintColor(hex) {
+      if (state.colorTarget === "stroke") {
+        state.stroke = hex;
+        state.strokeNone = false;
+      } else {
+        state.fill = hex;
+        state.fillNone = false;
+      }
+    }
+    function activeStyle() {
+      return state.colorTarget === "stroke" ? state.strokeStyle : state.fillStyle;
+    }
+    function syncPicker() {
+      const hsv = state.hsv;
+      const hex = hsvToHex(hsv.h, hsv.s, hsv.v);
+      document.getElementById("hsv-h").value = hsv.h;
+      document.getElementById("hsv-s").value = hsv.s;
+      document.getElementById("hsv-v").value = hsv.v;
+      document.getElementById("hsv-h-val").textContent = hsv.h;
+      document.getElementById("hsv-s-val").textContent = hsv.s;
+      document.getElementById("hsv-v-val").textContent = hsv.v;
+      document.getElementById("hsv-h").style.background = "linear-gradient(90deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000)";
+      const hueHex = hsvToHex(hsv.h, 100, 100);
+      document.getElementById("hsv-s").style.background = `linear-gradient(90deg,#ffffff,${hueHex})`;
+      document.getElementById("hsv-v").style.background = `linear-gradient(90deg,#000000,${hueHex})`;
+      const c1 = hex, c2 = state.colorTarget === "stroke" ? state.stroke2 : state.fill2;
+      document.querySelectorAll("#fill-modes button").forEach((btn) => {
+        const mode = btn.dataset.mode;
+        btn.style.background = gradientCss(mode, c1, c2);
+        btn.classList.toggle("active", mode === activeStyle());
       });
     }
-    function commitDrawingStyle() {
+    function commitPickerColor(snapshotIfNeeded) {
+      setActivePaintColor(hsvToHex(state.hsv.h, state.hsv.s, state.hsv.v));
+      updateChips();
+      if (snapshotIfNeeded && styleTargets().length) snapshot();
+      applyStyleToSelected();
+      syncPicker();
+    }
+    function openColorPop(target, anchor) {
+      state.colorTarget = target;
+      state.eyedrop = null;
+      canvas.classList.remove("eyedrop");
+      const color = target === "stroke" ? (state.strokeNone ? state.stroke : state.stroke) : (state.fillNone ? state.fill : state.fill);
+      state.hsv = hexToHsv(color || "#cf63cf");
+      colorPop.classList.remove("hidden");
+      const r = anchor.getBoundingClientRect();
+      const left = Math.min(r.left, window.innerWidth - 180);
+      colorPop.style.left = Math.max(8, left) + "px";
+      colorPop.style.top = (r.bottom + 8) + "px";
+      syncPicker();
+    }
+    function closeColorPop() { colorPop.classList.add("hidden"); }
+    function applyEyedrop(hit) {
+      state.eyedrop = null;
+      canvas.classList.remove("eyedrop");
+      if (!hit || hit.type === "group") {
+        if (hit?.type === "group" && hit.children?.[0]) hit = hit.children[0];
+        else { toast("色を取れませんでした"); return; }
+      }
+      const color = state.colorTarget === "stroke" ? hit.stroke : hit.fill;
+      if (!color || color === "none") {
+        if (state.colorTarget === "stroke") state.strokeNone = true;
+        else state.fillNone = true;
+        updateChips();
+        applyStyleToSelected();
+        return;
+      }
+      if (state.colorTarget === "stroke") {
+        state.strokeNone = false;
+        state.stroke = color;
+        if (hit.strokeStyle) state.strokeStyle = hit.strokeStyle;
+        if (hit.stroke2) state.stroke2 = hit.stroke2;
+      } else {
+        state.fillNone = false;
+        state.fill = color;
+        if (hit.fillStyle) state.fillStyle = hit.fillStyle;
+        if (hit.fill2) state.fill2 = hit.fill2;
+      }
+      state.hsv = hexToHsv(color);
+      updateChips();
       if (styleTargets().length) snapshot();
       applyStyleToSelected();
+      toast("色を取りました");
     }
-    paintPalette(document.getElementById("fill-palette"), (color) => {
-      state.fill = color;
-      state.fillNone = false;
-      document.getElementById("fill-color").value = toHex(color);
-      updateChips();
-      commitDrawingStyle();
+    document.getElementById("fill-wrap").addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!colorPop.classList.contains("hidden") && state.colorTarget === "fill") closeColorPop();
+      else openColorPop("fill", e.currentTarget);
     });
-    paintPalette(document.getElementById("stroke-palette"), (color) => {
-      state.stroke = color;
-      document.getElementById("stroke-color").value = toHex(color);
-      updateChips();
-      commitDrawingStyle();
+    document.getElementById("stroke-wrap").addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!colorPop.classList.contains("hidden") && state.colorTarget === "stroke") closeColorPop();
+      else openColorPop("stroke", e.currentTarget);
     });
-    document.getElementById("fill-color").addEventListener("input", (e)=>{ state.fill=e.target.value; state.fillNone=false; updateChips(); applyStyleToSelected(); });
-    document.getElementById("fill-color").addEventListener("change", ()=>{ if (styleTargets().length) snapshot(); });
-    document.getElementById("stroke-color").addEventListener("input", (e)=>{ state.stroke=e.target.value; updateChips(); applyStyleToSelected(); });
-    document.getElementById("stroke-color").addEventListener("change", ()=>{ if (styleTargets().length) snapshot(); });
+    document.querySelectorAll("#fill-modes button").forEach((btn) => btn.addEventListener("click", () => {
+      const mode = btn.dataset.mode;
+      if (state.colorTarget === "stroke") { state.strokeStyle = mode; state.strokeNone = false; }
+      else { state.fillStyle = mode; state.fillNone = false; }
+      commitPickerColor(true);
+    }));
+    ["hsv-h","hsv-s","hsv-v"].forEach((id) => {
+      const el = document.getElementById(id);
+      el.addEventListener("input", () => {
+        state.hsv = { h:+document.getElementById("hsv-h").value, s:+document.getElementById("hsv-s").value, v:+document.getElementById("hsv-v").value };
+        commitPickerColor(false);
+      });
+      el.addEventListener("change", () => { if (styleTargets().length) snapshot(); });
+    });
+    document.getElementById("pop-none").addEventListener("click", () => {
+      if (styleTargets().length) snapshot();
+      if (state.colorTarget === "stroke") state.strokeNone = !state.strokeNone;
+      else state.fillNone = !state.fillNone;
+      updateChips();
+      applyStyleToSelected();
+      syncPicker();
+    });
+    document.getElementById("pop-eyedrop").addEventListener("click", () => {
+      closeColorPop();
+      state.eyedrop = state.colorTarget;
+      canvas.classList.add("eyedrop");
+      toast("キャンバスの色をクリックして取ってください");
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (colorPop.classList.contains("hidden")) return;
+      if (colorPop.contains(e.target) || e.target.closest?.("#fill-wrap") || e.target.closest?.("#stroke-wrap")) return;
+      closeColorPop();
+    });
     document.getElementById("btn-no-fill").addEventListener("click", ()=>{ if (styleTargets().length) snapshot(); state.fillNone=!state.fillNone; updateChips(); applyStyleToSelected(); });
     document.getElementById("stroke-width").addEventListener("change", (e)=>{ if (styleTargets().length) snapshot(); state.strokeWidth=Number(e.target.value)||0; applyStyleToSelected(); });
     document.getElementById("font-family").addEventListener("change", (e)=>{ if (selected()) snapshot(); state.fontFamily=e.target.value; applyFontToSelected(); });
@@ -1454,6 +1727,7 @@
     window.addEventListener("keydown", (e) => {
       const tag = document.activeElement?.tagName;
       if (tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+      if (!document.getElementById("color-pop").classList.contains("hidden") && e.key==="Escape") { closeColorPop(); return; }
       if (document.body.classList.contains("import-open")) { if (e.key==="Escape") showCanvasView(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="z") { e.preventDefault(); e.shiftKey?redo():undo(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="y") { e.preventDefault(); redo(); return; }
@@ -1554,18 +1828,33 @@
         return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
       });
     }
+    function lumaOf(rgb) { return 0.299*rgb[0] + 0.587*rgb[1] + 0.114*rgb[2]; }
+    function ensureKeyColors(palette) {
+      const near = (rgb, thr) => palette.some((p) => {
+        const dr=p[0]-rgb[0], dg=p[1]-rgb[1], db=p[2]-rgb[2];
+        return dr*dr+dg*dg+db*db < thr*thr;
+      });
+      if (!near([0,0,0], 40)) palette.unshift([0,0,0]);
+      if (!near([255,255,255], 40)) palette.push([255,255,255]);
+      return palette;
+    }
     function quantize(imgData, palette) {
       const d = imgData.data, w = imgData.width, h = imgData.height;
       const labels = new Int16Array(w * h);
       labels.fill(-1);
+      const palLuma = palette.map(lumaOf);
       for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
         const i = (y*w+x)*4;
         if (d[i+3] < 32) continue;
+        const pr=d[i], pg=d[i+1], pb=d[i+2];
+        const lum = 0.299*pr + 0.587*pg + 0.114*pb;
         let best=0, bestD=1e12;
         for (let p=0;p<palette.length;p++) {
+          if (lum < 32 && palLuma[p] > 70) continue;
           const pal=palette[p];
-          const dr=d[i]-pal[0], dg=d[i+1]-pal[1], db=d[i+2]-pal[2];
-          const dist=dr*dr+dg*dg+db*db;
+          const dr=pr-pal[0], dg=pg-pal[1], db=pb-pal[2];
+          let dist=dr*dr+dg*dg+db*db;
+          if (lum < 32) dist *= palLuma[p] > 40 ? 4 : 0.35;
           if (dist<bestD) { bestD=dist; best=p; }
         }
         labels[y*w+x]=best;
@@ -1587,7 +1876,7 @@
         while (stack.length) {
           const p=stack.pop();
           const x=p%w, y=(p/w)|0;
-          const nbs=[[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+          const nbs=[[x-1,y],[x+1,y],[x,y-1],[x,y+1],[x-1,y-1],[x+1,y-1],[x-1,y+1],[x+1,y+1]];
           for (const [nx,ny] of nbs) {
             if (nx<0||ny<0||nx>=w||ny>=h) continue;
             const ni=ny*w+nx;
@@ -1612,7 +1901,7 @@
           const x=p%w, y=(p/w)|0;
           if (x<minX) minX=x; if (x>maxX) maxX=x;
           if (y<minY) minY=y; if (y>maxY) maxY=y;
-          const nbs=[[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+          const nbs=[[x-1,y],[x+1,y],[x,y-1],[x,y+1],[x-1,y-1],[x+1,y-1],[x-1,y+1],[x+1,y+1]];
           for (const [nx,ny] of nbs) {
             if (nx<0||ny<0||nx>=w||ny>=h) continue;
             const ni=ny*w+nx;
@@ -1738,44 +2027,53 @@
     async function traceBitmapToSvg(dataUrl) {
       aiStatus("トレースボット: 画像を読み込んでいます...");
       await tick();
-      const { imgData, w, h } = await loadImageData(dataUrl, 480);
+      const { imgData, w, h } = await loadImageData(dataUrl, 640);
       aiStatus("トレースボット: 色をまとめています...");
       await tick();
-      const palette = medianCutPalette(imgData, 16);
+      const palette = ensureKeyColors(medianCutPalette(imgData, 18));
       if (!palette.length) throw new Error("トレーできる色が見つかりませんでした");
       const labels = quantize(imgData, palette);
-      const minPixels = Math.max(20, Math.round(w * h * 0.0007));
+      const minPixels = Math.max(8, Math.round(w * h * 0.00025));
       const layers = [];
       for (let pi=0; pi<palette.length; pi++) {
         if (pi % 2 === 0) {
           aiStatus(`トレースボット: 輪郭をたどっています (${pi+1}/${palette.length})...`);
           await tick();
         }
-        const mask = colorMask(labels, pi, w, h, minPixels);
-        if (!mask) continue;
-        removeSpeckles(mask, w, h, 10);
-        const comps = connectedComponents(mask, w, h, 10);
         const [r,g,b] = palette[pi];
+        const dark = lumaOf(palette[pi]) < 48;
+        const mask = colorMask(labels, pi, w, h, dark ? 1 : minPixels);
+        if (!mask) continue;
+        if (!dark) removeSpeckles(mask, w, h, 8);
+        const comps = connectedComponents(mask, w, h, dark ? 1 : 4);
         const fill = rgbHex(r,g,b);
         for (const comp of comps) {
           const segs = extractSegments(comp.mask, comp.w, comp.h);
           if (!segs.length) continue;
           let loops = stitchLoops(segs).map((loop) => {
-            let s = simplifyClosed(loop, 1.05);
-            s = chaikinClosed(s, 2);
-            s = simplifyClosed(s, 0.5);
+            const rawArea = Math.abs(loopArea(loop));
+            const small = loop.length < 48 || rawArea < 90;
+            let s = simplifyClosed(loop, small ? 0.3 : 1.0);
+            if (!small && !dark) s = chaikinClosed(s, 2);
+            s = simplifyClosed(s, small || dark ? 0.18 : 0.5);
             return s.map((pt) => [pt[0] + comp.ox, pt[1] + comp.oy]);
-          }).filter((loop) => Math.abs(loopArea(loop)) >= 8);
+          }).filter((loop) => Math.abs(loopArea(loop)) >= (dark ? 0.4 : 3));
           if (!loops.length) continue;
           loops.sort((a,b) => Math.abs(loopArea(b)) - Math.abs(loopArea(a)));
-          const d = loops.map(loopToPath).join(" ");
-          const area = loops.reduce((sum, loop) => sum + Math.abs(loopArea(loop)), 0);
-          layers.push({ d, fill, area });
+          const outer = loops[0];
+          const d = loopToPath(outer);
+          const area = Math.abs(loopArea(outer));
+          layers.push({ d, fill, area, dark });
         }
       }
       if (!layers.length) throw new Error("輪郭を取り出せませんでした");
-      layers.sort((a,b) => b.area - a.area);
-      const paths = layers.map((l) => `<path fill="${l.fill}" stroke="none" fill-rule="evenodd" d="${l.d}"/>`).join("");
+      layers.sort((a,b) => {
+        const aDetail = a.dark && a.area < 1200;
+        const bDetail = b.dark && b.area < 1200;
+        if (aDetail !== bDetail) return aDetail ? 1 : -1;
+        return b.area - a.area;
+      });
+      const paths = layers.map((l) => `<path fill="${l.fill}" stroke="none" fill-rule="nonzero" d="${l.d}"/>`).join("");
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${paths}</svg>`;
     }
 
