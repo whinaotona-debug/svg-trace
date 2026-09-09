@@ -873,7 +873,7 @@
     document.getElementById("preset-title").textContent = mode === "costume" ? "コスチュームプリセット" : "スプライトプリセット";
     document.getElementById("preset-hint").textContent = mode === "costume"
       ? "4種の完成レイアウト。クリックでキャンバスに読み込みます。"
-      : "アニメの全コマがコスチュームリストに入ります。";
+      : "爆発などはペイント側のテンプレートがベクターです。こちらはPNG用の参考アニメです。";
     document.getElementById("asset-name").value = mode === "costume" ? "costume1" : "エフェクト";
     fillPresets();
     if (mode === "sprite" && !state.costumes.length) {

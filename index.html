@@ -23,7 +23,7 @@
     html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Noto Sans JP", sans-serif; user-select: none; overscroll-behavior: none; }
     button, input, select, textarea { font-family: inherit; }
     input, textarea, select, .text-edit { user-select: text; -webkit-user-select: text; }
-    .app { height: 100%; display: grid; grid-template-rows: 48px 1fr 42px; }
+    .app { height: 100%; display: grid; grid-template-rows: 48px 1fr 112px; }
     .topbar {
       display: flex; align-items: center; gap: 8px; padding: 0 10px;
       background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto;
@@ -126,6 +126,7 @@
     .ai-btn { background: #ffbf00; color: #111; }
     a.ai-btn { display: inline-flex; align-items: center; text-decoration: none; }
     .save-btn { background: var(--purple); color: #fff; }
+    .save-btn.sprite { background: #4c97ff; }
 
     .workspace { display: grid; grid-template-columns: 58px 1fr; min-height: 0; }
     .toolbar {
@@ -178,16 +179,62 @@
     .curve-tip.anchor { color: #1aae3a; font-weight: 700; border-color: #8fe09a; }
 
     .bottombar {
-      display: flex; align-items: center; justify-content: flex-end; gap: 6px;
-      padding: 0 12px; background: var(--panel); border-top: 1px solid var(--line);
+      display: flex; align-items: stretch; gap: 8px;
+      padding: 8px 10px; background: var(--panel); border-top: 1px solid var(--line);
     }
+    .costume-scroller {
+      display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0; align-items: stretch;
+    }
+    .c-thumb {
+      width: 96px; flex: 0 0 auto; border: 2px solid transparent; background: #fff;
+      border-radius: 8px; padding: 4px; font-size: 10px; color: var(--ink);
+      cursor: pointer; text-align: center; font-family: inherit;
+    }
+    .c-thumb.active { border-color: var(--purple); }
+    .c-thumb .c-preview {
+      height: 54px; border-radius: 4px; overflow: hidden;
+      background-color: #fff;
+      background-image:
+        linear-gradient(45deg, #eceff4 25%, transparent 25%),
+        linear-gradient(-45deg, #eceff4 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eceff4 75%),
+        linear-gradient(-45deg, transparent 75%, #eceff4 75%);
+      background-size: 12px 12px;
+      background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    }
+    .c-thumb .c-preview svg { width: 100%; height: 100%; display: block; }
+    .c-thumb span { display: block; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .costume-actions { display: flex; flex-direction: column; gap: 4px; justify-content: center; flex: 0 0 auto; }
+    .costume-actions button {
+      height: 26px; padding: 0 8px; border: 1px solid var(--line); background: #fff;
+      border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700; color: var(--text); font-family: inherit; white-space: nowrap;
+    }
+    .costume-actions button:hover { background: #e6eef5; }
+    .zoom-cluster { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
     .zoom-btn {
       width: 34px; height: 28px; border: 1px solid var(--line); background: #fff; border-radius: 4px; cursor: pointer; color: var(--text);
     }
     .zoom-label { min-width: 48px; text-align: center; font-size: 12px; }
+    .tmpl-pop {
+      position: fixed; left: 68px; bottom: 122px; z-index: 48;
+      width: min(540px, calc(100vw - 24px));
+      background: #fff; border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.16);
+    }
+    .tmpl-pop .tmpl-lead { font-size: 12px; color: #667; margin-bottom: 10px; line-height: 1.45; }
+    .tmpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .tmpl-card {
+      border: 1px solid var(--line); border-radius: 8px; background: #f7fafc;
+      padding: 8px; text-align: left; cursor: pointer; font-family: inherit;
+    }
+    .tmpl-card:hover { border-color: var(--purple); background: #f3eaff; }
+    .tmpl-card .c-preview { height: 64px; border-radius: 6px; margin-bottom: 6px; background: #fff; overflow: hidden; }
+    .tmpl-card .c-preview svg { width: 100%; height: 100%; display: block; }
+    .tmpl-card strong { display: block; color: var(--ink); font-size: 13px; }
+    .tmpl-card span { font-size: 11px; color: #667; }
 
     .toast {
-      position: fixed; right: 16px; bottom: 52px; background: #333; color: #fff; padding: 8px 12px; border-radius: 8px;
+      position: fixed; right: 16px; bottom: 124px; background: #333; color: #fff; padding: 8px 12px; border-radius: 8px;
       font-size: 13px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: .25s; z-index: 50;
     }
     .toast.show { opacity: 1; transform: none; }
@@ -302,6 +349,7 @@
       <a class="ai-btn" href="speech-generator/">吹き出し</a>
       <button class="ai-btn" id="btn-ai" type="button">画像から取込</button>
       <button class="save-btn" id="btn-export" type="button">SVG保存</button>
+      <button class="save-btn sprite" id="btn-export-sprite" type="button">sprite3保存</button>
     </header>
 
     <div class="workspace">
@@ -330,11 +378,24 @@
     </div>
 
     <footer class="bottombar">
-      <button class="zoom-btn" id="zoom-out" title="縮小">−</button>
-      <button class="zoom-btn" id="zoom-reset" title="100%">=</button>
-      <button class="zoom-btn" id="zoom-in" title="拡大">+</button>
-      <div class="zoom-label" id="zoom-label">100%</div>
+      <div class="costume-scroller" id="costume-list"></div>
+      <div class="costume-actions">
+        <button type="button" id="btn-add-costume">コスチューム追加</button>
+        <button type="button" id="btn-templates">テンプレート</button>
+        <button type="button" id="btn-play-costumes">再生</button>
+        <button type="button" id="btn-del-costume">このコマを削除</button>
+      </div>
+      <div class="zoom-cluster">
+        <button class="zoom-btn" id="zoom-out" title="縮小">−</button>
+        <button class="zoom-btn" id="zoom-reset" title="100%">=</button>
+        <button class="zoom-btn" id="zoom-in" title="拡大">+</button>
+        <div class="zoom-label" id="zoom-label">100%</div>
+      </div>
     </footer>
+  </div>
+  <div class="tmpl-pop hidden" id="tmpl-pop">
+    <p class="tmpl-lead">テンプレートを選ぶと各コマが costume1、costume2… に入ります。全部ベクターなので、コマを選んで形や色を直せます。選ばなくても「コスチューム追加」から空のコマを足して自分で描けます。</p>
+    <div class="tmpl-grid" id="tmpl-grid"></div>
   </div>
   <div class="toast" id="toast"></div>
   <div class="curve-tip hidden" id="curve-tip"></div>
@@ -405,6 +466,8 @@
 
   <script src="config.local.js"></script>
   <script src="js/google-fonts.js"></script>
+  <script src="js/vector-templates.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script>
     const svgNS = "http://www.w3.org/2000/svg";
     const canvas = document.getElementById("canvas");
@@ -444,6 +507,9 @@
       textAlign: "start",
       textVertical: false,
       textEdit: null,
+      costumes: [{ id: "c0", name: "costume1", objects: [] }],
+      currentCostume: 0,
+      playingCostumes: false,
     };
 
     function sanitizeFontFamily(ff) {
@@ -617,30 +683,270 @@
     }
 
     function snapshot() {
-      state.history.push({ objects: clone(state.objects), selectedIds: state.selectedIds.slice() });
+      saveCurrentCostume();
+      state.history.push({
+        objects: clone(state.objects),
+        selectedIds: state.selectedIds.slice(),
+        costumes: clone(state.costumes),
+        currentCostume: state.currentCostume
+      });
       if (state.history.length > 80) state.history.shift();
       state.future = [];
       refreshHistoryButtons();
     }
+    function restoreHistory(entry) {
+      state.costumes = clone(entry.costumes || [{ id: uid(), name: "costume1", objects: entry.objects || [] }]);
+      state.currentCostume = entry.currentCostume || 0;
+      state.objects = clone(entry.objects);
+      state.selectedIds = entry.selectedIds || [];
+      const c = state.costumes[state.currentCostume];
+      if (c) document.getElementById("costume-name").value = c.name || "costume1";
+      renderObjects(); syncSelectionUI(); refreshHistoryButtons(); syncCostumeList();
+    }
     function undo() {
       if (!state.history.length) return;
-      state.future.push({ objects: clone(state.objects), selectedIds: state.selectedIds.slice() });
-      const prev = state.history.pop();
-      state.objects = clone(prev.objects);
-      state.selectedIds = prev.selectedIds || [];
-      renderObjects(); syncSelectionUI(); refreshHistoryButtons();
+      saveCurrentCostume();
+      state.future.push({
+        objects: clone(state.objects),
+        selectedIds: state.selectedIds.slice(),
+        costumes: clone(state.costumes),
+        currentCostume: state.currentCostume
+      });
+      restoreHistory(state.history.pop());
     }
     function redo() {
       if (!state.future.length) return;
-      state.history.push({ objects: clone(state.objects), selectedIds: state.selectedIds.slice() });
-      const next = state.future.pop();
-      state.objects = clone(next.objects);
-      state.selectedIds = next.selectedIds || [];
-      renderObjects(); syncSelectionUI(); refreshHistoryButtons();
+      saveCurrentCostume();
+      state.history.push({
+        objects: clone(state.objects),
+        selectedIds: state.selectedIds.slice(),
+        costumes: clone(state.costumes),
+        currentCostume: state.currentCostume
+      });
+      restoreHistory(state.future.pop());
     }
     function refreshHistoryButtons() {
       document.getElementById("btn-undo").disabled = !state.history.length;
       document.getElementById("btn-redo").disabled = !state.future.length;
+    }
+
+    function hydrateVecShape(shape) {
+      if (!shape) return null;
+      if (shape.t === "group") {
+        return {
+          id: uid(), type: "group",
+          children: (shape.children || []).map(hydrateVecShape).filter(Boolean),
+          fill: "none", stroke: "none", strokeWidth: 0,
+          matrix: shape.matrix ? shape.matrix.slice() : identity()
+        };
+      }
+      const paint = {
+        fill: shape.fill || "none",
+        fill2: shape.f2 || "#ffffff",
+        fillStyle: shape.fs || "solid",
+        stroke: shape.stroke || "none",
+        stroke2: "#ffffff",
+        strokeStyle: "solid",
+        strokeWidth: shape.sw || 0,
+        matrix: shape.matrix ? shape.matrix.slice() : identity()
+      };
+      if (shape.t === "path") {
+        return Object.assign({ id: uid(), type: "path", d: shape.d, fillRule: shape.rule || "nonzero" }, paint);
+      }
+      return Object.assign({
+        id: uid(), type: "ellipse",
+        cx: shape.cx, cy: shape.cy,
+        rx: Math.max(0.5, shape.rx || 1),
+        ry: Math.max(0.5, shape.ry || 1)
+      }, paint);
+    }
+    function currentCostumeName(i) {
+      const c = state.costumes[i];
+      return (c && c.name) || ("costume" + (i + 1));
+    }
+    function saveCurrentCostume() {
+      if (!state.costumes.length) {
+        state.costumes = [{ id: uid(), name: document.getElementById("costume-name").value || "costume1", objects: clone(state.objects) }];
+        state.currentCostume = 0;
+        return;
+      }
+      const c = state.costumes[state.currentCostume];
+      if (!c) return;
+      c.objects = clone(state.objects);
+      c.name = document.getElementById("costume-name").value || currentCostumeName(state.currentCostume);
+    }
+    function stopCostumePlay() {
+      if (!state.playingCostumes) return;
+      clearInterval(state._playTimer);
+      state.playingCostumes = false;
+      const btn = document.getElementById("btn-play-costumes");
+      if (btn) btn.textContent = "再生";
+    }
+    function showCostume(i, skipSave) {
+      if (state.textEdit) commitTextEdit();
+      if (!skipSave) saveCurrentCostume();
+      const idx = Math.max(0, Math.min(i, state.costumes.length - 1));
+      state.currentCostume = idx;
+      const c = state.costumes[idx];
+      state.objects = clone((c && c.objects) || []);
+      state.selectedIds = [];
+      document.getElementById("costume-name").value = (c && c.name) || ("costume" + (idx + 1));
+      renderObjects();
+      syncSelectionUI();
+      if (state.playingCostumes) {
+        document.querySelectorAll("#costume-list .c-thumb").forEach((el, n) => el.classList.toggle("active", n === idx));
+      } else {
+        syncCostumeList();
+      }
+      drawSelection();
+    }
+    function measureObjectsBox(objects) {
+      if (!objects || !objects.length) return { x: 0, y: 0, w: 480, h: 360 };
+      const svg = createEl("svg", { xmlns: "http://www.w3.org/2000/svg" });
+      svg.setAttribute("width", "1");
+      svg.setAttribute("height", "1");
+      svg.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
+      objects.forEach((o) => svg.append(renderOne(o)));
+      document.body.appendChild(svg);
+      let box = { x: 0, y: 0, w: 1, h: 1 };
+      try {
+        const b = svg.getBBox();
+        if (b && (b.width || b.height)) box = { x: b.x, y: b.y, w: Math.max(1, b.width), h: Math.max(1, b.height) };
+      } catch (_) {}
+      svg.remove();
+      return box;
+    }
+    function costumePreviewMarkup(objects) {
+      const box = measureObjectsBox(objects);
+      const pad = Math.max(8, Math.max(box.w, box.h) * 0.08);
+      const x = box.x - pad, y = box.y - pad, w = box.w + pad * 2, h = box.h + pad * 2;
+      const defs = [];
+      (objects || []).forEach((o) => collectSerializeDefs(o, defs));
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" preserveAspectRatio="xMidYMid meet">${defs.length ? `<defs>${defs.join("")}</defs>` : ""}${(objects || []).map(serializeObj).join("")}</svg>`;
+    }
+    function syncCostumeList() {
+      const box = document.getElementById("costume-list");
+      if (!box) return;
+      box.innerHTML = "";
+      state.costumes.forEach((c, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "c-thumb" + (i === state.currentCostume ? " active" : "");
+        const prev = document.createElement("div");
+        prev.className = "c-preview";
+        const objs = i === state.currentCostume ? state.objects : (c.objects || []);
+        if (objs.length) prev.innerHTML = costumePreviewMarkup(objs);
+        const cap = document.createElement("span");
+        cap.textContent = c.name || ("costume" + (i + 1));
+        b.append(prev, cap);
+        b.addEventListener("click", () => { stopCostumePlay(); showCostume(i); });
+        box.appendChild(b);
+      });
+    }
+    function addBlankCostume() {
+      stopCostumePlay();
+      if (state.textEdit) commitTextEdit();
+      saveCurrentCostume();
+      snapshot();
+      const n = { id: uid(), name: "costume" + (state.costumes.length + 1), objects: [] };
+      state.costumes.push(n);
+      showCostume(state.costumes.length - 1, true);
+      toast("空のコスチュームを追加しました。ここに描けます");
+    }
+    function deleteCurrentCostume() {
+      stopCostumePlay();
+      if (state.textEdit) commitTextEdit();
+      if (state.costumes.length < 2) {
+        snapshot();
+        state.objects = [];
+        state.selectedIds = [];
+        saveCurrentCostume();
+        renderObjects(); syncSelectionUI(); syncCostumeList(); drawSelection();
+        toast("このコマを空にしました");
+        return;
+      }
+      snapshot();
+      const idx = state.currentCostume;
+      state.costumes.splice(idx, 1);
+      showCostume(Math.min(idx, state.costumes.length - 1), true);
+    }
+    function templateAnchor() {
+      const r = canvas.getBoundingClientRect();
+      const size = Math.max(140, Math.min(r.width, r.height) / state.zoom * 0.42);
+      return {
+        x: state.panX + r.width / (2 * state.zoom),
+        y: state.panY + r.height / (2 * state.zoom),
+        size
+      };
+    }
+    function applyVectorTemplate(id, frames, name) {
+      stopCostumePlay();
+      if (state.textEdit) commitTextEdit();
+      snapshot();
+      const a = templateAnchor();
+      const geom = (typeof buildVectorTemplateFrames === "function")
+        ? buildVectorTemplateFrames(id, frames, a.x, a.y, a.size)
+        : [];
+      const all = geom.map((shapes) => (shapes || []).map(hydrateVecShape).filter(Boolean));
+      if (!all.length) { toast("テンプレートを読み込めませんでした"); return; }
+      state.costumes = all.map((objs, i) => ({ id: uid(), name: "costume" + (i + 1), objects: objs }));
+      state.currentCostume = 0;
+      state._spriteName = name;
+      state.objects = clone(all[0]);
+      state.selectedIds = [];
+      document.getElementById("costume-name").value = "costume1";
+      renderObjects();
+      syncSelectionUI();
+      syncCostumeList();
+      drawSelection();
+      closeTemplatePop();
+      toast(name + "を costume1〜" + all.length + " に読み込みました。各コマを選んで編集できます");
+    }
+    function fillTemplateGrid() {
+      const grid = document.getElementById("tmpl-grid");
+      if (!grid) return;
+      grid.innerHTML = "";
+      const list = typeof VECTOR_TEMPLATES !== "undefined" ? VECTOR_TEMPLATES : [];
+      const a = templateAnchor();
+      list.forEach((p) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tmpl-card";
+        const prev = document.createElement("div");
+        prev.className = "c-preview";
+        const mid = Math.floor((p.frames - 1) * 0.45);
+        const geom = (typeof buildVectorTemplateFrames === "function")
+          ? (buildVectorTemplateFrames(p.id, p.frames, a.x, a.y, a.size)[mid] || [])
+          : [];
+        const objs = geom.map(hydrateVecShape).filter(Boolean);
+        if (objs.length) prev.innerHTML = costumePreviewMarkup(objs);
+        const title = document.createElement("strong");
+        title.textContent = p.name;
+        const blurb = document.createElement("span");
+        blurb.textContent = p.blurb || (p.frames + "コマ");
+        btn.append(prev, title, blurb);
+        btn.addEventListener("click", () => applyVectorTemplate(p.id, p.frames, p.name));
+        grid.appendChild(btn);
+      });
+    }
+    function openTemplatePop() {
+      fillTemplateGrid();
+      document.getElementById("tmpl-pop").classList.remove("hidden");
+    }
+    function closeTemplatePop() {
+      document.getElementById("tmpl-pop").classList.add("hidden");
+    }
+    function playCostumes() {
+      const btn = document.getElementById("btn-play-costumes");
+      if (state.playingCostumes) { stopCostumePlay(); return; }
+      if (state.costumes.length < 2) { toast("コマが2つ以上必要です"); return; }
+      saveCurrentCostume();
+      state.playingCostumes = true;
+      btn.textContent = "停止";
+      state._playTimer = setInterval(() => {
+        const next = (state.currentCostume + 1) % state.costumes.length;
+        showCostume(next, true);
+      }, 120);
     }
 
     function localBBox(obj) {
@@ -711,6 +1017,13 @@
       objectsLayer.replaceChildren();
       state.objects.forEach((obj) => collectGradients(obj));
       state.objects.forEach((obj) => objectsLayer.append(renderOne(obj)));
+      scheduleCostumeThumbs();
+    }
+    function scheduleCostumeThumbs() {
+      clearTimeout(scheduleCostumeThumbs._t);
+      scheduleCostumeThumbs._t = setTimeout(() => {
+        if (!state.playingCostumes) syncCostumeList();
+      }, 80);
     }
 
     function measureText(obj) {
@@ -2237,19 +2550,81 @@
       (obj.children || []).forEach((ch) => collectFontFamilies(ch, set));
     }
     function exportSVG() {
-      const rect = canvas.getBoundingClientRect();
-      const w=Math.max(1,Math.round(rect.width)), h=Math.max(1,Math.round(rect.height));
+      if (state.textEdit) commitTextEdit();
+      saveCurrentCostume();
+      const packed = costumeSvgForScratch(state.objects);
       const name = (document.getElementById("costume-name").value || "costume").replace(/[^\w\-]+/g,"_");
-      const defs = [];
-      state.objects.forEach((o) => collectSerializeDefs(o, defs));
-      const fonts = new Set();
-      state.objects.forEach((o) => collectFontFamilies(o, fonts));
-      const fontCss = fonts.size
-        ? `<style>@import url("https://fonts.googleapis.com/css2?${[...fonts].map((n) => "family=" + googleFontQuery(n)).join("&amp;")}&amp;display=swap");</style>\n`
-        : "";
-      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${fontCss}${defs.length ? `<defs>${defs.join("")}</defs>\n` : ""}${state.objects.map(serializeObj).join("\n")}\n</svg>`;
-      const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([markup],{type:"image/svg+xml"})); a.download=name+".svg"; a.click(); URL.revokeObjectURL(a.href);
+      const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([packed.markup],{type:"image/svg+xml"})); a.download=name+".svg"; a.click(); URL.revokeObjectURL(a.href);
       toast("SVGを保存しました");
+    }
+    function costumeSvgForScratch(objects) {
+      const list = objects || [];
+      if (!list.length) {
+        return { markup: `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360"></svg>`, w: 480, h: 360, cx: 240, cy: 180 };
+      }
+      const box = measureObjectsBox(list);
+      const pad = 12;
+      const bx = box.x - pad, by = box.y - pad;
+      const w = Math.max(8, Math.round(box.w + pad * 2));
+      const h = Math.max(8, Math.round(box.h + pad * 2));
+      const shifted = list.map((o) => {
+        const c = clone(o);
+        c.matrix = multiply(mTranslate(-bx, -by), c.matrix || identity());
+        return c;
+      });
+      const defs = [];
+      shifted.forEach((o) => collectSerializeDefs(o, defs));
+      const fonts = new Set();
+      shifted.forEach((o) => collectFontFamilies(o, fonts));
+      const fontCss = fonts.size
+        ? `<style>@import url("https://fonts.googleapis.com/css2?${[...fonts].map((n) => "family=" + googleFontQuery(n)).join("&amp;")}&amp;display=swap");</style>`
+        : "";
+      const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${fontCss}${defs.length ? `<defs>${defs.join("")}</defs>` : ""}${shifted.map(serializeObj).join("")}</svg>`;
+      return { markup, w, h, cx: w / 2, cy: h / 2 };
+    }
+    async function sha32(buf) {
+      const d = await crypto.subtle.digest("SHA-256", buf);
+      return Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+    }
+    async function exportSprite3() {
+      if (state.textEdit) commitTextEdit();
+      saveCurrentCostume();
+      if (typeof JSZip === "undefined") { toast("JSZipを読み込めませんでした"); return; }
+      if (!state.costumes.length) { toast("コスチュームがありません"); return; }
+      const zip = new JSZip();
+      const costumes = [];
+      const enc = new TextEncoder();
+      for (let i = 0; i < state.costumes.length; i++) {
+        const packed = costumeSvgForScratch(state.costumes[i].objects || []);
+        const buf = enc.encode(packed.markup);
+        const id = await sha32(buf);
+        const md5ext = id + ".svg";
+        zip.file(md5ext, packed.markup);
+        costumes.push({
+          name: state.costumes[i].name || ("costume" + (i + 1)),
+          bitmapResolution: 1,
+          dataFormat: "svg",
+          assetId: id,
+          md5ext: md5ext,
+          rotationCenterX: packed.cx,
+          rotationCenterY: packed.cy
+        });
+      }
+      const spriteName = state._spriteName || "Sprite";
+      const json = {
+        isStage: false, name: spriteName,
+        variables: {}, lists: {}, broadcasts: {}, blocks: {}, comments: {},
+        currentCostume: 0, costumes: costumes, sounds: [], volume: 100,
+        visible: true, x: 0, y: 0, size: 100, direction: 90, draggable: false, rotationStyle: "all around"
+      };
+      zip.file("sprite.json", JSON.stringify(json));
+      const out = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(out);
+      a.download = spriteName.replace(/[^\w\-]+/g, "_") + ".sprite3";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast("ベクターの .sprite3 を保存しました");
     }
 
     canvas.addEventListener("pointerdown", onPointerDown);
@@ -2427,6 +2802,28 @@
     document.getElementById("btn-undo").addEventListener("click", undo);
     document.getElementById("btn-redo").addEventListener("click", redo);
     document.getElementById("btn-export").addEventListener("click", exportSVG);
+    document.getElementById("btn-export-sprite").addEventListener("click", () => { exportSprite3().catch((err) => toast(err.message || "保存に失敗しました")); });
+    document.getElementById("btn-add-costume").addEventListener("click", addBlankCostume);
+    document.getElementById("btn-templates").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pop = document.getElementById("tmpl-pop");
+      if (pop.classList.contains("hidden")) openTemplatePop();
+      else closeTemplatePop();
+    });
+    document.getElementById("btn-play-costumes").addEventListener("click", playCostumes);
+    document.getElementById("btn-del-costume").addEventListener("click", deleteCurrentCostume);
+    document.getElementById("costume-name").addEventListener("input", () => {
+      const c = state.costumes[state.currentCostume];
+      if (c) c.name = document.getElementById("costume-name").value || currentCostumeName(state.currentCostume);
+      const cap = document.querySelector("#costume-list .c-thumb.active span");
+      if (cap) cap.textContent = c ? c.name : "costume1";
+    });
+    document.addEventListener("pointerdown", (e) => {
+      const pop = document.getElementById("tmpl-pop");
+      if (pop.classList.contains("hidden")) return;
+      if (pop.contains(e.target) || e.target.closest?.("#btn-templates")) return;
+      closeTemplatePop();
+    });
     document.getElementById("btn-delete").addEventListener("click", deleteSelected);
     document.getElementById("btn-front").addEventListener("click", bringToFront);
     document.getElementById("btn-back").addEventListener("click", sendToBack);
@@ -2507,6 +2904,7 @@
     fillGoogleFontSelect(document.getElementById("font-family"));
     _googleFontsLoaded["Noto Sans JP"] = true;
     updateChips(); updateFontUI(); setTool("select"); refreshHistoryButtons(); refreshSelectionButtons(); applyView();
+    syncCostumeList();
 
     const ai = { sourceDataUrl:null, svgMarkup:null, busy:false };
     function aiStatus(text, err) { const el=document.getElementById("ai-status"); el.textContent=text; el.classList.toggle("err", !!err); }
