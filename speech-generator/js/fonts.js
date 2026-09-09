@@ -1,0 +1,22 @@
+var SERIF_FONTS = [
+  { id: '"Noto Sans JP", sans-serif', name: "Noto Sans JP" },
+  { id: '"Zen Maru Gothic", sans-serif', name: "Zen Maru Gothic" },
+  { id: '"M PLUS Rounded 1c", sans-serif', name: "M PLUS Rounded" },
+  { id: '"Kosugi Maru", sans-serif', name: "Kosugi Maru" },
+  { id: '"Kiwi Maru", serif', name: "Kiwi Maru" },
+  { id: '"Kaisei Decol", serif', name: "Kaisei Decol" },
+  { id: '"Shippori Mincho", serif', name: "Shippori Mincho" },
+  { id: '"Noto Serif JP", serif', name: "Noto Serif JP" },
+  { id: '"Dela Gothic One", sans-serif', name: "Dela Gothic One" },
+  { id: '"Reggae One", cursive', name: "Reggae One" },
+  { id: '"RocknRoll One", sans-serif', name: "RocknRoll One" },
+  { id: '"DotGothic16", monospace', name: "DotGothic16" },
+  { id: '"Potta One", cursive', name: "Potta One" },
+  { id: '"Rampart One", sans-serif', name: "Rampart One" },
+  { id: '"Stick", sans-serif', name: "Stick" },
+  { id: '"Yusei Magic", sans-serif', name: "Yusei Magic" },
+  { id: '"Hachi Maru Pop", cursive', name: "Hachi Maru Pop" },
+  { id: '"Bangers", cursive', name: "Bangers" },
+  { id: '"Fredoka", sans-serif', name: "Fredoka" },
+  { id: '"Pacifico", cursive', name: "Pacifico" }
+];
