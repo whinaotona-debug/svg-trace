@@ -21,7 +21,8 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Noto Sans JP", sans-serif; user-select: none; overscroll-behavior: none; }
-    button, input, select { font-family: inherit; }
+    button, input, select, textarea { font-family: inherit; }
+    input, textarea, select, .text-edit { user-select: text; -webkit-user-select: text; }
     .app { height: 100%; display: grid; grid-template-rows: 48px 1fr 42px; }
     .topbar {
       display: flex; align-items: center; gap: 8px; padding: 0 10px;
@@ -49,6 +50,7 @@
       border: 2px solid #4c97ff; border-radius: 6px; padding: 6px 8px;
       background: #fff; color: #111; outline: none; resize: both;
       box-shadow: 0 8px 22px rgba(0,0,0,.16); line-height: 1.3;
+      pointer-events: auto;
     }
     .ibtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .color-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #575e75; white-space: nowrap; }
@@ -871,8 +873,16 @@
     }
     function selectObject(id, additive) { selectIds(id ? [id] : [], additive); }
 
+    function isTypingField(el) {
+      if (!el) return false;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (el.isContentEditable) return true;
+      return !!(el.closest && el.closest("textarea, input, select, .text-edit"));
+    }
     function drawSelection() {
       selectionLayer.replaceChildren();
+      if (state.textEdit) return;
       const objs = selectedObjects();
       if (!objs.length) return;
       if (state.tool === "reshape" && objs.length) { drawReshape(); return; }
@@ -1526,20 +1536,36 @@
       ta.style.textAlign = align === "middle" ? "center" : align === "end" ? "right" : "left";
     }
     function startTextEdit(obj, opts = {}) {
+      if (state.textEdit?.id === obj.id && document.querySelector("textarea.text-edit")) {
+        document.querySelector("textarea.text-edit").focus();
+        return;
+      }
       commitTextEdit();
       if (!opts.isNew) snapshot();
       const ta = document.createElement("textarea");
       ta.className = "text-edit";
       ta.value = obj.text || "";
       ta.placeholder = "テキスト";
+      ta.lang = "ja";
       ta.setAttribute("rows", String(Math.max(1, String(obj.text || "").split("\n").length)));
       document.body.appendChild(ta);
       state.textEdit = { id: obj.id, isNew: !!opts.isNew, original: obj.text || "" };
+      state._ignoreTextBlur = true;
       const shape = document.getElementById(obj.id)?.querySelector(".shape");
       if (shape) shape.style.opacity = "0";
       positionTextEdit(obj, ta);
-      ta.focus();
-      ta.select();
+      drawSelection();
+      const keepFocus = () => {
+        ta.focus({ preventScroll: true });
+        if (!opts.fromKey && ta.value) ta.select();
+      };
+      keepFocus();
+      requestAnimationFrame(() => {
+        keepFocus();
+        setTimeout(() => { state._ignoreTextBlur = false; }, 80);
+      });
+      ta.addEventListener("pointerdown", (e) => e.stopPropagation());
+      ta.addEventListener("mousedown", (e) => e.stopPropagation());
       ta.addEventListener("input", () => {
         obj.text = ta.value;
         positionTextEdit(obj, ta);
@@ -1550,6 +1576,10 @@
         if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitTextEdit(); }
       });
       ta.addEventListener("blur", () => {
+        if (state._ignoreTextBlur) {
+          requestAnimationFrame(() => ta.focus({ preventScroll: true }));
+          return;
+        }
         const id = obj.id;
         setTimeout(() => { if (state.textEdit?.id === id) commitTextEdit(); }, 0);
       });
@@ -1890,6 +1920,7 @@
         return;
       }
       if (state.tool === "text") {
+        evt.preventDefault();
         const hit = findObjectAt(evt);
         if (hit?.type === "text") {
           selectObject(hit.id);
@@ -1977,9 +2008,14 @@
         const hit = findObjectAt(evt);
         if (hit) {
           const additive = evt.shiftKey;
-          if (!state.selectedIds.includes(hit.id)) selectObject(hit.id, additive);
+          const already = state.selectedIds.includes(hit.id);
+          if (!already) selectObject(hit.id, additive);
           else if (additive) selectIds(state.selectedIds.filter((id)=>id!==hit.id));
-          state.gesture = { type:"move", start:p, recorded:false, startMatrices: selectedObjects().map((o)=>o.matrix.slice()) };
+          state.gesture = {
+            type:"move", start:p, recorded:false,
+            startMatrices: selectedObjects().map((o)=>o.matrix.slice()),
+            editOnClick: already && !additive && hit.type === "text"
+          };
         } else {
           if (!evt.shiftKey) selectObject(null);
           state.drawing = { mode:"marquee", start:p };
@@ -2148,6 +2184,12 @@
         }).map((o)=>o.id);
         if (ids.length) selectIds(ids, evt.shiftKey);
         state.drawing=null; return;
+      }
+      if (state.gesture?.type === "move" && state.gesture.editOnClick && !state.gesture.recorded) {
+        const obj = selected();
+        state.gesture = null; state.drawing = null;
+        if (obj?.type === "text") startTextEdit(obj);
+        return;
       }
       state.drawing=null; state.gesture=null;
     }
@@ -2412,8 +2454,12 @@
     document.getElementById("zoom-reset").addEventListener("click", ()=>{ state.zoom=1; state.panX=0; state.panY=0; applyView(); drawSelection(); });
 
     window.addEventListener("keydown", (e) => {
-      const tag = document.activeElement?.tagName;
-      if (tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+      if (isTypingField(document.activeElement)) return;
+      if (state.textEdit) {
+        const ta = document.querySelector("textarea.text-edit");
+        if (ta) ta.focus({ preventScroll: true });
+        return;
+      }
       if (!document.getElementById("color-pop").classList.contains("hidden") && e.key==="Escape") { closeColorPop(); return; }
       if (document.body.classList.contains("import-open")) { if (e.key==="Escape") showCanvasView(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="z") { e.preventDefault(); e.shiftKey?redo():undo(); return; }
@@ -2422,6 +2468,31 @@
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="v") { e.preventDefault(); pasteClipboard(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="g") { e.preventDefault(); e.shiftKey?ungroupSelected():groupSelected(); return; }
       if (e.key==="Enter" && state.drawing?.mode==="curve") { e.preventDefault(); finishCurve(false); return; }
+      const only = selectedObjects();
+      const textObj = only.length === 1 && only[0].type === "text" ? only[0] : null;
+      if (textObj && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const composing = e.isComposing || e.key === "Process" || e.keyCode === 229;
+        const printable = e.key.length === 1 || composing || e.key === "Enter" || e.key === "Backspace";
+        if (printable && e.key !== "Escape" && e.key !== "Tab") {
+          if (!composing) e.preventDefault();
+          startTextEdit(textObj, { fromKey: true });
+          const ta = document.querySelector("textarea.text-edit");
+          if (ta) {
+            if ((textObj.text === "テキスト" || textObj.text === "") && (e.key.length === 1 || composing)) {
+              ta.value = "";
+              textObj.text = "";
+            }
+            if (e.key.length === 1 && !composing) {
+              ta.value += e.key;
+              textObj.text = ta.value;
+            }
+            ta.focus({ preventScroll: true });
+            const n = ta.value.length;
+            try { ta.setSelectionRange(n, n); } catch (_) {}
+          }
+          return;
+        }
+      }
       if (e.key==="Delete"||e.key==="Backspace") { e.preventDefault(); deleteSelected(); return; }
       const map = { v:"select", a:"reshape", b:"pen", c:"curve", e:"eraser", f:"fill", t:"text", l:"line", o:"ellipse", r:"rect" };
       if (!e.ctrlKey && !e.metaKey && map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);

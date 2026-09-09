@@ -15,7 +15,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; background: var(--bg); color: var(--text); font-family: "Noto Sans JP", sans-serif; overflow: hidden; overscroll-behavior: none; }
-    button, input, select, textarea { font-family: inherit; color: inherit; }
+    button, input, select, textarea { font-family: inherit; color: inherit; user-select: text; -webkit-user-select: text; }
     button { cursor: pointer; }
     a.nav { text-decoration: none; display: inline-flex; align-items: center; }
     .app { height: 100%; display: grid; grid-template-rows: 48px 1fr 0; }
@@ -913,6 +913,8 @@
   function addText() {
     const obj = txt("セリフを入力", state.w * 0.28, state.h * 0.32, 200, 80, { outlineWidth: 4 });
     state.objects.push(obj); state.selected = obj.id; syncProps(); draw();
+    const ta = document.getElementById("p-text");
+    if (ta) { ta.focus(); ta.select(); }
   }
   function addTemplate(kind, group) {
     const obj = tmpl(kind, 0, 0, 96, 96);
@@ -1194,6 +1196,20 @@
     const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
     if (e.code === "Space" && !typing) { state.space = true; e.preventDefault(); }
     if (typing) return;
+    const o = selected();
+    if (o && o.type === "text" && !e.ctrlKey && !e.metaKey && (e.key.length === 1 || e.key === "Process" || e.isComposing || e.key === "Backspace")) {
+      const ta = document.getElementById("p-text");
+      if (ta) {
+        if (e.key !== "Process" && !e.isComposing) e.preventDefault();
+        ta.focus();
+        if (e.key.length === 1 && !e.isComposing) {
+          ta.value += e.key;
+          o.text = ta.value;
+          draw();
+        }
+        return;
+      }
+    }
     if (e.key === "Delete" || e.key === "Backspace") document.getElementById("btn-del").click();
     if (e.key === "+" || e.key === "=") document.getElementById("btn-zoom-in").click();
     if (e.key === "-" || e.key === "_") document.getElementById("btn-zoom-out").click();
