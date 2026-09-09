@@ -8,7 +8,7 @@
   --bg: #d9e3ea;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: "Noto Sans JP", "Segoe UI", sans-serif; overflow: hidden; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: "Noto Sans JP", sans-serif; overflow: hidden; overscroll-behavior: none; }
 button, input, select, textarea { font-family: inherit; color: inherit; }
 button { cursor: pointer; }
 .app { height: 100%; display: grid; grid-template-rows: 48px 1fr; }

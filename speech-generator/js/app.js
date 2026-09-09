@@ -95,16 +95,22 @@
     draw();
   }
   function applyWheel(e) {
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (ctrl) {
+      e.preventDefault();
+      e.stopPropagation();
+      const r = stageWrap.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      let dy = wheelDelta(e).dy;
+      dy = Math.max(-50, Math.min(50, dy));
+      setZoomAt(state.zoom * Math.exp(-dy * 0.004), mx, my);
+      return true;
+    }
     if (!overStage(e)) return false;
     e.preventDefault();
     e.stopPropagation();
-    const r = stageWrap.getBoundingClientRect();
-    const mx = e.clientX - r.left, my = e.clientY - r.top;
     const d = wheelDelta(e);
-    if (e.ctrlKey || e.metaKey || e.altKey) {
-      const factor = Math.exp(-d.dy * 0.0025);
-      setZoomAt(state.zoom * factor, mx, my);
-    } else if (e.shiftKey) {
+    if (e.shiftKey) {
       state.panX -= (d.dx || d.dy);
       draw();
     } else {

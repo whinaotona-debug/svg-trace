@@ -6,7 +6,7 @@
   <title>Scratch SVG Paint</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Dela+Gothic+One&family=DotGothic16&family=Fredoka:wght@600&family=Hachi+Maru+Pop&family=Kosugi+Maru&family=M+PLUS+Rounded+1c:wght@700&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@500;700&family=Pacifico&family=Rampart+One&family=Reggae+One&family=RocknRoll+One&family=Stick&family=Yusei+Magic&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Dela+Gothic+One&family=DotGothic16&family=Fredoka:wght@600&family=Hachi+Maru+Pop&family=Kaisei+Decol:wght@700&family=Kiwi+Maru:wght@500&family=Kosugi+Maru&family=M+PLUS+Rounded+1c:wght@700&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@500;700&family=Pacifico&family=Potta+One&family=Rampart+One&family=Reggae+One&family=RocknRoll+One&family=Shippori+Mincho:wght@700&family=Stick&family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
       --purple: #855cd6;
@@ -20,7 +20,7 @@
       --tool: 42px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Helvetica Neue", "Segoe UI", sans-serif; user-select: none; }
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Noto Sans JP", sans-serif; user-select: none; overscroll-behavior: none; }
     button, input, select { font-family: inherit; }
     .app { height: 100%; display: grid; grid-template-rows: 48px 1fr 42px; }
     .topbar {
@@ -36,6 +36,20 @@
     }
     .ibtn:hover { background: #e6eef5; }
     .ibtn:disabled { opacity: .35; cursor: default; }
+    .align-bar .ibtn, .text-align-bar .ibtn { font-size: 11px; font-weight: 700; }
+    .ibtn-txt {
+      width: auto; min-width: 32px; height: 32px; padding: 0 8px; font-size: 11px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    }
+    .ibtn-txt svg { width: 16px; height: 16px; }
+    .align-bar, .text-align-bar { display: flex; align-items: center; gap: 2px; }
+    .text-align-bar button.on { background: #d9e8ff; color: #2d5aa0; }
+    .text-edit {
+      position: fixed; z-index: 45; min-width: 140px; min-height: 32px;
+      border: 2px solid #4c97ff; border-radius: 6px; padding: 6px 8px;
+      background: #fff; color: #111; outline: none; resize: both;
+      box-shadow: 0 8px 22px rgba(0,0,0,.16); line-height: 1.3;
+    }
     .ibtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .color-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #575e75; white-space: nowrap; }
     .color-lab { line-height: 1; }
@@ -241,39 +255,52 @@
       </div>
       <div class="sep"></div>
       <div class="color-field">フォント
-        <select class="font-select" id="font-family">
-          <option value="Noto Sans JP, Yu Gothic, Meiryo, sans-serif" style="font-family:Noto Sans JP,sans-serif">ゴシック</option>
-          <option value="Noto Serif JP, Yu Mincho, serif" style="font-family:Noto Serif JP,serif">明朝</option>
-          <option value="M PLUS Rounded 1c, Yu Gothic, sans-serif" style="font-family:M PLUS Rounded 1c,sans-serif">丸ゴシック</option>
-          <option value="Kosugi Maru, Yu Gothic, sans-serif" style="font-family:Kosugi Maru,sans-serif">こすぎ丸</option>
-          <option value="Hachi Maru Pop, Yu Gothic, cursive" style="font-family:Hachi Maru Pop,cursive">はちまるポップ</option>
-          <option value="Yusei Magic, Yu Gothic, sans-serif" style="font-family:Yusei Magic,sans-serif">マジック</option>
-          <option value="Reggae One, Yu Gothic, cursive" style="font-family:Reggae One,cursive">レゲエ</option>
-          <option value="Dela Gothic One, Impact, sans-serif" style="font-family:Dela Gothic One,sans-serif">デラゴシック</option>
-          <option value="DotGothic16, MS Gothic, monospace" style="font-family:DotGothic16,monospace">ドット</option>
-          <option value="Rampart One, Impact, sans-serif" style="font-family:Rampart One,sans-serif">ランパート</option>
-          <option value="RocknRoll One, Yu Gothic, sans-serif" style="font-family:RocknRoll One,sans-serif">ロックンロール</option>
-          <option value="Stick, Yu Gothic, sans-serif" style="font-family:Stick,sans-serif">スティック</option>
-          <option value="Arial, Helvetica, sans-serif" style="font-family:Arial,sans-serif">Arial</option>
-          <option value="Verdana, Geneva, sans-serif" style="font-family:Verdana,sans-serif">Verdana</option>
-          <option value="Georgia, serif" style="font-family:Georgia,serif">Georgia</option>
-          <option value="Times New Roman, Times, serif" style="font-family:Times New Roman,serif">Times</option>
-          <option value="Courier New, Courier, monospace" style="font-family:Courier New,monospace">Courier</option>
-          <option value="Comic Sans MS, Comic Sans, cursive" style="font-family:Comic Sans MS,cursive">Comic Sans</option>
-          <option value="Impact, Haettenschweiler, sans-serif" style="font-family:Impact,sans-serif">Impact</option>
+        <select class="font-select" id="font-family" title="OFL/Apacheの無料フォントのみ。作品への利用・公開可">
+          <option value="Noto Sans JP, sans-serif" style="font-family:Noto Sans JP,sans-serif">ゴシック (Noto)</option>
+          <option value="Noto Serif JP, serif" style="font-family:Noto Serif JP,serif">明朝 (Noto)</option>
+          <option value="Zen Maru Gothic, sans-serif" style="font-family:Zen Maru Gothic,sans-serif">丸ゴシック</option>
+          <option value="M PLUS Rounded 1c, sans-serif" style="font-family:M PLUS Rounded 1c,sans-serif">M PLUS 丸</option>
+          <option value="Kosugi Maru, sans-serif" style="font-family:Kosugi Maru,sans-serif">こすぎ丸</option>
+          <option value="Kiwi Maru, serif" style="font-family:Kiwi Maru,serif">キウイ丸</option>
+          <option value="Kaisei Decol, serif" style="font-family:Kaisei Decol,serif">解星デコール</option>
+          <option value="Shippori Mincho, serif" style="font-family:Shippori Mincho,serif">しっぽり明朝</option>
+          <option value="Dela Gothic One, sans-serif" style="font-family:Dela Gothic One,sans-serif">デラゴシック</option>
+          <option value="Reggae One, cursive" style="font-family:Reggae One,cursive">レゲエ</option>
+          <option value="RocknRoll One, sans-serif" style="font-family:RocknRoll One,sans-serif">ロックンロール</option>
+          <option value="DotGothic16, monospace" style="font-family:DotGothic16,monospace">ドット</option>
+          <option value="Potta One, cursive" style="font-family:Potta One,cursive">ポッタ</option>
+          <option value="Rampart One, sans-serif" style="font-family:Rampart One,sans-serif">ランパート</option>
+          <option value="Stick, sans-serif" style="font-family:Stick,sans-serif">スティック</option>
+          <option value="Yusei Magic, sans-serif" style="font-family:Yusei Magic,sans-serif">マジック</option>
+          <option value="Hachi Maru Pop, cursive" style="font-family:Hachi Maru Pop,cursive">はちまるポップ</option>
+          <option value="Bangers, cursive" style="font-family:Bangers,cursive">Bangers</option>
+          <option value="Fredoka, sans-serif" style="font-family:Fredoka,sans-serif">Fredoka</option>
           <option value="Pacifico, cursive" style="font-family:Pacifico,cursive">Pacifico</option>
-          <option value="Bangers, Impact, cursive" style="font-family:Bangers,cursive">Bangers</option>
-          <option value="Fredoka, Arial Rounded MT Bold, sans-serif" style="font-family:Fredoka,sans-serif">Fredoka</option>
         </select>
         <input class="width-num" id="font-size" type="number" min="8" max="240" value="28" title="サイズ" />
+        <div class="text-align-bar" title="文字揃え">
+          <button class="ibtn" id="btn-text-left" type="button" title="左揃え">左</button>
+          <button class="ibtn" id="btn-text-center" type="button" title="中央">中</button>
+          <button class="ibtn" id="btn-text-right" type="button" title="右揃え">右</button>
+          <button class="ibtn" id="btn-text-vert" type="button" title="縦書き">縦</button>
+        </div>
       </div>
       <div class="sep"></div>
-      <button class="ibtn" id="btn-copy" title="コピー"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg></button>
-      <button class="ibtn" id="btn-paste" title="貼り付け"><svg viewBox="0 0 24 24"><path d="M8 8h11v12H8z"/><path d="M5 16V4h10"/></svg></button>
+      <button class="ibtn ibtn-txt" id="btn-copy" title="コピー (Ctrl+C)"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="10" height="11"/><path d="M7 16V5h10"/></svg>コピー</button>
+      <button class="ibtn ibtn-txt" id="btn-paste" title="貼り付け (Ctrl+V)"><svg viewBox="0 0 24 24"><path d="M9 4h6"/><path d="M8 4h8v4H8z"/><rect x="6" y="8" width="12" height="12"/><path d="M12 12v5"/><path d="M9.5 15.5L12 18l2.5-2.5"/></svg>貼り付け</button>
       <button class="ibtn" id="btn-delete" title="削除"><svg viewBox="0 0 24 24"><path d="M6 8h12"/><path d="M9 8V6h6v2"/><path d="M8 8l1 12h6l1-12"/></svg></button>
       <div class="sep"></div>
       <button class="ibtn" id="btn-flip-h" title="左右反転"><svg viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M5 8l7 4-7 4z"/><path d="M19 8l-7 4 7 4z"/></svg></button>
       <button class="ibtn" id="btn-flip-v" title="上下反転"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M8 5l4 7-4 7"/><path d="M16 5l-4 7 4 7"/></svg></button>
+      <div class="sep"></div>
+      <div class="align-bar">
+        <button class="ibtn" id="btn-align-left" title="左揃え">左</button>
+        <button class="ibtn" id="btn-align-center" title="左右中央">中</button>
+        <button class="ibtn" id="btn-align-right" title="右揃え">右</button>
+        <button class="ibtn" id="btn-align-top" title="上揃え">上</button>
+        <button class="ibtn" id="btn-align-middle" title="上下中央">央</button>
+        <button class="ibtn" id="btn-align-bottom" title="下揃え">下</button>
+      </div>
       <div class="grow"></div>
       <button class="ai-btn" id="btn-ai" type="button">画像から取込</button>
       <button class="save-btn" id="btn-export" type="button">SVG保存</button>
@@ -284,6 +311,7 @@
         <button class="tool active" data-tool="select"><svg viewBox="0 0 24 24"><path d="M5 4l6 16 2.2-6.2L19.5 12z"/></svg><span class="hint">選択</span></button>
         <button class="tool" data-tool="reshape"><svg viewBox="0 0 24 24"><path d="M5 5l8 14 1.5-6L21 11z"/><circle cx="18" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg><span class="hint">再変形</span></button>
         <button class="tool" data-tool="pen"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg><span class="hint">筆</span></button>
+        <button class="tool" data-tool="curve"><svg viewBox="0 0 24 24"><path d="M4 18C8 6 16 6 20 18"/></svg><span class="hint">曲線（点→Enter）</span></button>
         <button class="tool" data-tool="eraser"><svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7-4 4H9z"/></svg><span class="hint">消しゴム</span></button>
         <button class="tool" data-tool="fill"><svg viewBox="0 0 24 24"><path d="M7 14l6-8 6 8H7z"/><path d="M8 17h8"/></svg><span class="hint">塗りつぶし</span></button>
         <button class="tool" data-tool="text"><svg viewBox="0 0 24 24"><path d="M5 6h14"/><path d="M12 6v14"/><path d="M8 20h8"/></svg><span class="hint">テキスト</span></button>
@@ -411,9 +439,50 @@
       zoom: 1,
       panX: 0,
       panY: 0,
-      fontFamily: "Noto Sans JP, Yu Gothic, Meiryo, sans-serif",
+      fontFamily: "Noto Sans JP, sans-serif",
       fontSize: 28,
+      textAlign: "start",
+      textVertical: false,
+      textEdit: null,
     };
+
+    const GOOGLE_FONT_QUERY = {
+      "Noto Sans JP": "Noto+Sans+JP:wght@400;700",
+      "Noto Serif JP": "Noto+Serif+JP:wght@500;700",
+      "Zen Maru Gothic": "Zen+Maru+Gothic:wght@500;700",
+      "M PLUS Rounded 1c": "M+PLUS+Rounded+1c:wght@700",
+      "Kosugi Maru": "Kosugi+Maru",
+      "Kiwi Maru": "Kiwi+Maru:wght@500",
+      "Kaisei Decol": "Kaisei+Decol:wght@700",
+      "Shippori Mincho": "Shippori+Mincho:wght@700",
+      "Dela Gothic One": "Dela+Gothic+One",
+      "Reggae One": "Reggae+One",
+      "RocknRoll One": "RocknRoll+One",
+      "DotGothic16": "DotGothic16",
+      "Potta One": "Potta+One",
+      "Rampart One": "Rampart+One",
+      "Stick": "Stick",
+      "Yusei Magic": "Yusei+Magic",
+      "Hachi Maru Pop": "Hachi+Maru+Pop",
+      "Bangers": "Bangers",
+      "Fredoka": "Fredoka:wght@600",
+      "Pacifico": "Pacifico",
+    };
+    function sanitizeFontFamily(ff) {
+      if (!ff) return "Noto Sans JP, sans-serif";
+      const sel = document.getElementById("font-family");
+      if (sel && [...sel.options].some((o) => o.value === ff)) return ff;
+      const name = String(ff).split(",")[0].replace(/['"]/g, "").trim();
+      if (GOOGLE_FONT_QUERY[name]) {
+        const fallback = /serif/i.test(ff) && !/sans/i.test(name) ? "serif" : /mono|dot/i.test(name) ? "monospace" : /cursive|pop|bangers|pacifico|reggae|potta/i.test(name) ? "cursive" : "sans-serif";
+        return `${name}, ${fallback}`;
+      }
+      const lower = String(ff).toLowerCase();
+      if (/mincho|times|georgia|serif/.test(lower) && !/sans/.test(lower)) return "Noto Serif JP, serif";
+      if (/comic|cursive/.test(lower)) return "Hachi Maru Pop, cursive";
+      if (/courier|ms gothic|dotgothic|mono/.test(lower)) return "DotGothic16, monospace";
+      return "Noto Sans JP, sans-serif";
+    }
 
     const uid = () => "o" + Math.random().toString(36).slice(2, 10);
     const identity = () => [1, 0, 0, 1, 0, 0];
@@ -531,6 +600,48 @@
       const h = Math.max(1, r.height / state.zoom);
       canvas.setAttribute("viewBox", `${state.panX} ${state.panY} ${w} ${h}`);
       document.getElementById("zoom-label").textContent = Math.round(state.zoom * 100) + "%";
+      const ta = document.querySelector("textarea.text-edit");
+      if (ta && state.textEdit) {
+        const obj = findById(state.objects, state.textEdit.id);
+        if (obj) positionTextEdit(obj, ta);
+      }
+    }
+    function wheelPixels(e) {
+      let dx = e.deltaX, dy = e.deltaY;
+      if (e.deltaMode === 1) { dx *= 16; dy *= 16; }
+      else if (e.deltaMode === 2) { dx *= 100; dy *= 100; }
+      return { dx, dy };
+    }
+    function onCanvasWheel(e) {
+      if (document.body.classList.contains("import-open")) return;
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl) {
+        e.preventDefault();
+        if (document.querySelector("textarea.text-edit")) return;
+        const r = canvas.getBoundingClientRect();
+        const { dy } = wheelPixels(e);
+        const capped = Math.max(-50, Math.min(50, dy));
+        const wx = state.panX + (e.clientX - r.left) / state.zoom;
+        const wy = state.panY + (e.clientY - r.top) / state.zoom;
+        state.zoom = Math.max(0.2, Math.min(8, state.zoom * Math.exp(-capped * 0.004)));
+        state.panX = wx - (e.clientX - r.left) / state.zoom;
+        state.panY = wy - (e.clientY - r.top) / state.zoom;
+        applyView();
+        drawSelection();
+        return;
+      }
+      const r = canvas.getBoundingClientRect();
+      const over = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (!over) return;
+      e.preventDefault();
+      const { dx, dy } = wheelPixels(e);
+      if (e.shiftKey) state.panX += (dx || dy) / state.zoom;
+      else {
+        state.panX += dx / state.zoom;
+        state.panY += dy / state.zoom;
+      }
+      applyView();
+      drawSelection();
     }
 
     function snapshot() {
@@ -568,10 +679,7 @@
       }
       if (obj.type === "rect") return { x:obj.x, y:obj.y, w:obj.width, h:obj.height };
       if (obj.type === "ellipse") return { x:obj.cx-obj.rx, y:obj.cy-obj.ry, w:obj.rx*2, h:obj.ry*2 };
-      if (obj.type === "text") {
-        const s = measureText(obj);
-        return { x:obj.x, y:obj.y-obj.fontSize, w: s.w, h: s.h };
-      }
+      if (obj.type === "text") return textLocalBox(obj);
       if (obj.type === "line") {
         const x = Math.min(obj.x1,obj.x2), y = Math.min(obj.y1,obj.y2);
         return { x, y, w: Math.abs(obj.x2-obj.x1)||1, h: Math.abs(obj.y2-obj.y1)||1 };
@@ -598,7 +706,10 @@
       if (obj.type === "path") return createEl("path", { ...common, d: obj.d, "fill-rule": obj.fillRule || "evenodd" });
       if (obj.type === "rect") return createEl("rect", { ...common, x:obj.x, y:obj.y, width:obj.width, height:obj.height });
       if (obj.type === "ellipse") return createEl("ellipse", { ...common, cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry });
-      if (obj.type === "text") return createEl("text", { ...common, x:obj.x, y:obj.y, "font-size":obj.fontSize, "font-family": obj.fontFamily || "sans-serif" });
+      if (obj.type === "text") {
+        const attrs = { ...common, ...textSvgAttrs(obj) };
+        return createEl("text", attrs);
+      }
       return createEl("line", { ...common, x1:obj.x1, y1:obj.y1, x2:obj.x2, y2:obj.y2, fill:"none" });
     }
     function hitNode(obj) {
@@ -608,8 +719,8 @@
       if (obj.type === "rect") return createEl("rect", { x:obj.x, y:obj.y, width:obj.width, height:obj.height, fill:"transparent", class:"hit", "pointer-events":"all" });
       if (obj.type === "ellipse") return createEl("ellipse", { cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry, fill:"transparent", class:"hit", "pointer-events":"all" });
       if (obj.type === "text") {
-        const s = measureText(obj);
-        return createEl("rect", { x:obj.x, y:obj.y-obj.fontSize, width:s.w, height:s.h, fill:"transparent", class:"hit", "pointer-events":"all" });
+        const b = textLocalBox(obj);
+        return createEl("rect", { x:b.x, y:b.y, width:b.w, height:b.h, fill:"transparent", class:"hit", "pointer-events":"all" });
       }
       return createEl("line", { x1:obj.x1, y1:obj.y1, x2:obj.x2, y2:obj.y2, stroke:"transparent", "stroke-width":hitWidth, class:"hit", "pointer-events":"stroke" });
     }
@@ -619,7 +730,7 @@
         obj.children.forEach((ch) => g.append(renderOne(ch)));
       } else {
         g.append(hitNode(obj), shapeNode(obj));
-        if (obj.type === "text") g.querySelector(".shape").textContent = obj.text || "";
+        if (obj.type === "text") fillTextNode(g.querySelector(".shape"), obj);
       }
       return g;
     }
@@ -632,19 +743,75 @@
 
     function measureText(obj) {
       const ctx = measureText._c || (measureText._c = document.createElement("canvas").getContext("2d"));
-      ctx.font = `${obj.fontSize || 28}px ${obj.fontFamily || "sans-serif"}`;
-      return { w: Math.max(20, ctx.measureText(obj.text || "").width), h: (obj.fontSize || 28) * 1.3 };
+      const fs = obj.fontSize || 28;
+      ctx.font = `${fs}px ${obj.fontFamily || "sans-serif"}`;
+      const lines = String(obj.text || " ").split("\n");
+      const w = Math.max(20, ...lines.map((l) => ctx.measureText(l.length ? l : " ").width));
+      const h = fs * 1.3 * Math.max(1, lines.length);
+      return { w, h };
+    }
+    function textSvgAttrs(obj) {
+      const attrs = {
+        x: obj.x, y: obj.y,
+        "font-size": obj.fontSize,
+        "font-family": obj.fontFamily || "Noto Sans JP, sans-serif",
+        "text-anchor": obj.textAlign || "start",
+      };
+      if (obj.vertical) attrs["writing-mode"] = "vertical-rl";
+      return attrs;
+    }
+    function textLocalBox(obj) {
+      const s = measureText(obj);
+      const fs = obj.fontSize || 28;
+      const align = obj.textAlign || "start";
+      if (obj.vertical) {
+        const thick = fs * 1.3 * Math.max(1, String(obj.text || " ").split("\n").length);
+        const len = s.w;
+        let y0 = obj.y;
+        if (align === "middle") y0 = obj.y - len / 2;
+        else if (align === "end") y0 = obj.y - len;
+        return { x: obj.x - thick * 0.85, y: y0, w: thick, h: Math.max(len, fs) };
+      }
+      let x0 = obj.x;
+      if (align === "middle") x0 = obj.x - s.w / 2;
+      else if (align === "end") x0 = obj.x - s.w;
+      return { x: x0, y: obj.y - fs * 0.9, w: s.w, h: s.h };
+    }
+    function fillTextNode(el, obj) {
+      const lines = String(obj.text || "").split("\n");
+      const fs = obj.fontSize || 28;
+      el.textContent = "";
+      lines.forEach((line, i) => {
+        const t = createEl("tspan", obj.vertical
+          ? { x: obj.x - i * fs * 1.3, y: obj.y }
+          : { x: obj.x, y: obj.y + i * fs * 1.3 });
+        t.textContent = line.length ? line : "\u00a0";
+        el.append(t);
+      });
+    }
+    function escapeXml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     }
     function updateFontUI() {
       const sel = document.getElementById("font-family");
       const size = document.getElementById("font-size");
+      state.fontFamily = sanitizeFontFamily(state.fontFamily);
       if ([...sel.options].some((o) => o.value === state.fontFamily)) sel.value = state.fontFamily;
       size.value = state.fontSize;
+      document.getElementById("btn-text-left").classList.toggle("on", state.textAlign === "start");
+      document.getElementById("btn-text-center").classList.toggle("on", state.textAlign === "middle");
+      document.getElementById("btn-text-right").classList.toggle("on", state.textAlign === "end");
+      document.getElementById("btn-text-vert").classList.toggle("on", !!state.textVertical);
     }
     function applyFontToSelected() {
       if (state.applyingUI) return;
       const apply = (obj) => {
-        if (obj.type === "text") { obj.fontFamily = state.fontFamily; obj.fontSize = state.fontSize; }
+        if (obj.type === "text") {
+          obj.fontFamily = state.fontFamily;
+          obj.fontSize = state.fontSize;
+          obj.textAlign = state.textAlign;
+          obj.vertical = !!state.textVertical;
+        }
         if (obj.type === "group" && obj.children) obj.children.forEach(apply);
       };
       if (selectedObjects().length) {
@@ -701,8 +868,10 @@
         if (obj.fill2) state.fill2 = obj.fill2;
       }
       if (obj.type === "text") {
-        if (obj.fontFamily) state.fontFamily = obj.fontFamily;
+        if (obj.fontFamily) state.fontFamily = sanitizeFontFamily(obj.fontFamily);
         if (obj.fontSize) state.fontSize = obj.fontSize;
+        state.textAlign = obj.textAlign || "start";
+        state.textVertical = !!obj.vertical;
         updateFontUI();
       }
       updateChips();
@@ -710,7 +879,7 @@
     }
     function refreshSelectionButtons() {
       const on = state.selectedIds.length > 0;
-      ["btn-front","btn-back","btn-forward","btn-backward","btn-delete","btn-copy","btn-flip-h","btn-flip-v","btn-group","btn-ungroup","btn-clean-junk"].forEach((id) => {
+      ["btn-front","btn-back","btn-forward","btn-backward","btn-delete","btn-copy","btn-flip-h","btn-flip-v","btn-group","btn-ungroup","btn-clean-junk","btn-align-left","btn-align-center","btn-align-right","btn-align-top","btn-align-middle","btn-align-bottom"].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.disabled = !on;
       });
@@ -1102,6 +1271,8 @@
     }
 
     function setTool(tool) {
+      if (state.drawing?.mode === "curve" && tool !== "curve") finishCurve();
+      if (state.textEdit && tool !== "text") commitTextEdit();
       state.tool = tool;
       document.querySelectorAll(".tool[data-tool]").forEach((btn) => btn.classList.toggle("active", btn.dataset.tool === tool));
       canvas.className = "canvas " + tool;
@@ -1171,6 +1342,124 @@
       objs.forEach((o) => { o.matrix = multiply(around, o.matrix); });
       renderObjects(); drawSelection();
     }
+    function currentViewBox() {
+      const r = canvas.getBoundingClientRect();
+      return { x: state.panX, y: state.panY, w: Math.max(1, r.width / state.zoom), h: Math.max(1, r.height / state.zoom) };
+    }
+    function alignSelected(kind) {
+      const objs = selectedObjects();
+      if (!objs.length) return;
+      snapshot();
+      const box = objs.length === 1 ? currentViewBox() : unionBox(objs);
+      objs.forEach((o) => {
+        const b = unionBox([o]);
+        let dx = 0, dy = 0;
+        if (kind === "left") dx = box.x - b.x;
+        if (kind === "center") dx = (box.x + box.w / 2) - (b.x + b.w / 2);
+        if (kind === "right") dx = (box.x + box.w) - (b.x + b.w);
+        if (kind === "top") dy = box.y - b.y;
+        if (kind === "middle") dy = (box.y + box.h / 2) - (b.y + b.h / 2);
+        if (kind === "bottom") dy = (box.y + box.h) - (b.y + b.h);
+        if (dx || dy) o.matrix = multiply(mTranslate(dx, dy), o.matrix);
+      });
+      renderObjects(); drawSelection();
+    }
+    function finishCurve() {
+      const pts = state.drawing?.mode === "curve" ? state.drawing.points : null;
+      previewLayer.replaceChildren();
+      state.drawing = null;
+      if (!pts || pts.length < 2) return;
+      snapshot();
+      const obj = { id:uid(), type:"path", d:pointsToSmoothPath(pts), matrix:identity() };
+      applyCurrentPaint(obj); obj.fill = "none";
+      state.objects.push(obj); renderObjects();
+    }
+    function cancelCurve() {
+      previewLayer.replaceChildren();
+      state.drawing = null;
+    }
+    function positionTextEdit(obj, ta) {
+      const node = document.getElementById(obj.id)?.querySelector(".shape") || canvas;
+      const ctm = node.getScreenCTM ? node.getScreenCTM() : canvas.getScreenCTM();
+      if (!ctm) return;
+      const fs = obj.fontSize || 28;
+      const pt = canvas.createSVGPoint();
+      pt.x = obj.x; pt.y = obj.y;
+      const sp = pt.matrixTransform(ctm);
+      const scale = Math.hypot(ctm.a, ctm.b) || 1;
+      const align = obj.textAlign || "start";
+      ta.style.position = "fixed";
+      ta.style.left = sp.x + "px";
+      ta.style.top = (sp.y - (obj.vertical ? 0 : fs * scale * 0.95)) + "px";
+      if (align === "middle") ta.style.transform = obj.vertical ? "translateY(-50%)" : "translateX(-50%)";
+      else if (align === "end") ta.style.transform = obj.vertical ? "translateY(-100%)" : "translateX(-100%)";
+      else ta.style.transform = "none";
+      ta.style.fontFamily = obj.fontFamily || "Noto Sans JP, sans-serif";
+      ta.style.fontSize = Math.max(12, fs * scale) + "px";
+      ta.style.color = (obj.fill && obj.fill !== "none" && !String(obj.fill).startsWith("url")) ? obj.fill : "#111";
+      ta.style.writingMode = obj.vertical ? "vertical-rl" : "horizontal-tb";
+      ta.style.textAlign = align === "middle" ? "center" : align === "end" ? "right" : "left";
+    }
+    function startTextEdit(obj, opts = {}) {
+      commitTextEdit();
+      if (!opts.isNew) snapshot();
+      const ta = document.createElement("textarea");
+      ta.className = "text-edit";
+      ta.value = obj.text || "";
+      ta.placeholder = "テキスト";
+      ta.setAttribute("rows", String(Math.max(1, String(obj.text || "").split("\n").length)));
+      document.body.appendChild(ta);
+      state.textEdit = { id: obj.id, isNew: !!opts.isNew, original: obj.text || "" };
+      const shape = document.getElementById(obj.id)?.querySelector(".shape");
+      if (shape) shape.style.opacity = "0";
+      positionTextEdit(obj, ta);
+      ta.focus();
+      ta.select();
+      ta.addEventListener("input", () => {
+        obj.text = ta.value;
+        positionTextEdit(obj, ta);
+      });
+      ta.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Escape") { e.preventDefault(); cancelTextEdit(); }
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitTextEdit(); }
+      });
+      ta.addEventListener("blur", () => {
+        const id = obj.id;
+        setTimeout(() => { if (state.textEdit?.id === id) commitTextEdit(); }, 0);
+      });
+    }
+    function finishTextEdit(mode) {
+      const ed = state.textEdit;
+      const ta = document.querySelector("textarea.text-edit");
+      if (!ed && !ta) return;
+      if (state._textEditLock) return;
+      state._textEditLock = true;
+      const obj = ed ? findById(state.objects, ed.id) : null;
+      const value = ta ? ta.value : (obj?.text || "");
+      if (ta) ta.remove();
+      state.textEdit = null;
+      if (obj) {
+        const shape = document.getElementById(obj.id)?.querySelector(".shape");
+        if (shape) shape.style.opacity = "";
+        if (mode === "cancel") {
+          if (ed.isNew) {
+            state.objects = state.objects.filter((o) => o.id !== obj.id);
+            state.selectedIds = state.selectedIds.filter((id) => id !== obj.id);
+          } else obj.text = ed.original;
+        } else if (ed.isNew && !String(value).trim()) {
+          state.objects = state.objects.filter((o) => o.id !== obj.id);
+          state.selectedIds = state.selectedIds.filter((id) => id !== obj.id);
+        } else {
+          obj.text = value || "テキスト";
+        }
+        renderObjects();
+        syncSelectionUI();
+      }
+      state._textEditLock = false;
+    }
+    function commitTextEdit() { finishTextEdit("commit"); }
+    function cancelTextEdit() { finishTextEdit("cancel"); }
     function groupSelected() {
       const ids = new Set(state.selectedIds);
       const ordered = state.objects.filter((o) => ids.has(o.id));
@@ -1438,7 +1727,7 @@
       [...defsLayer.querySelectorAll("[id^='g-fill-preview'], [id^='g-stroke-preview']")].forEach((n) => n.remove());
       collectGradients(dummy);
       const n = shapeNode(dummy);
-      if (dummy.type === "text") n.textContent = dummy.text || "";
+      if (dummy.type === "text") fillTextNode(n, dummy);
       previewLayer.append(n);
     }
 
@@ -1463,7 +1752,7 @@
         return;
       }
       const p = svgPoint(evt);
-      canvas.setPointerCapture(evt.pointerId);
+      if (state.tool !== "text" && state.tool !== "curve") canvas.setPointerCapture(evt.pointerId);
 
       if (state.tool === "fill") {
         const hit = findObjectAt(evt);
@@ -1476,12 +1765,22 @@
         return;
       }
       if (state.tool === "text") {
-        const text = prompt("テキスト", "Hello") || "";
-        if (!text) return;
+        const hit = findObjectAt(evt);
+        if (hit?.type === "text") {
+          selectObject(hit.id);
+          startTextEdit(hit);
+          return;
+        }
         snapshot();
-        const obj = { id:uid(), type:"text", x:p.x, y:p.y, text, fontSize:state.fontSize, fontFamily:state.fontFamily, matrix:identity() };
+        const obj = {
+          id: uid(), type: "text", x: p.x, y: p.y, text: "",
+          fontSize: state.fontSize, fontFamily: state.fontFamily,
+          textAlign: state.textAlign, vertical: !!state.textVertical,
+          matrix: identity()
+        };
         applyCurrentPaint(obj); obj.stroke = "none"; obj.strokeWidth = 0;
-        state.objects.push(obj); renderObjects(); selectObject(obj.id); setTool("select");
+        state.objects.push(obj); renderObjects(); selectObject(obj.id);
+        startTextEdit(obj, { isNew: true });
         return;
       }
       if (state.tool === "eraser") {
@@ -1558,11 +1857,26 @@
         showPreview({ type:"path", d: polylinePath([p]), fill:"none" });
         return;
       }
+      if (state.tool === "curve") {
+        if (state.drawing?.mode === "curve") {
+          state.drawing.points.push(p);
+          showPreview({ type:"path", d: pointsToSmoothPath(state.drawing.points), fill:"none" });
+        } else {
+          state.drawing = { mode:"curve", points:[p] };
+          showPreview({ type:"path", d: polylinePath([p]), fill:"none" });
+        }
+        return;
+      }
       state.drawing = { mode:"shape", start:p };
       showPreview(objectFromPreview(p,p,evt.shiftKey));
     }
 
     function onPointerMove(evt) {
+      if (state.drawing?.mode === "curve") {
+        const p = svgPoint(evt);
+        showPreview({ type:"path", d: pointsToSmoothPath(state.drawing.points.concat([p])), fill:"none" });
+        return;
+      }
       if (!(evt.buttons & 1) && !state.drawing && !state.gesture) return;
       const p = svgPoint(evt);
       if (state.drawing?.mode === "erase") {
@@ -1609,6 +1923,7 @@
     }
 
     function onPointerUp(evt) {
+      if (state.drawing?.mode === "curve") return;
       const p = svgPoint(evt);
       if (state.drawing?.mode==="pen") {
         const pts=state.drawing.points; previewLayer.replaceChildren();
@@ -1664,11 +1979,29 @@
       if (obj.type==="path") return `<path d="${obj.d}" ${f} ${s}${rule}/>`;
       if (obj.type==="rect") return `<rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" ${f} ${s}/>`;
       if (obj.type==="ellipse") return `<ellipse cx="${obj.cx}" cy="${obj.cy}" rx="${obj.rx}" ry="${obj.ry}" ${f} ${s}/>`;
-      if (obj.type==="text") return `<text x="${obj.x}" y="${obj.y}" font-size="${obj.fontSize}" font-family="${(obj.fontFamily||"sans-serif").replace(/"/g,"'")}" ${f} ${s}>${obj.text}</text>`;
+      if (obj.type==="text") {
+        const align = obj.textAlign || "start";
+        const vert = obj.vertical ? ` writing-mode="vertical-rl"` : "";
+        const fs = obj.fontSize || 28;
+        const lines = String(obj.text || "").split("\n");
+        const inner = lines.map((line, i) => {
+          const x = obj.vertical ? obj.x - i * fs * 1.3 : obj.x;
+          const y = obj.vertical ? obj.y : obj.y + i * fs * 1.3;
+          return `<tspan x="${x}" y="${y}">${escapeXml(line)}</tspan>`;
+        }).join("");
+        return `<text x="${obj.x}" y="${obj.y}" font-size="${fs}" font-family="${escapeXml(obj.fontFamily || "Noto Sans JP, sans-serif")}" text-anchor="${align}"${vert} ${f} ${s}>${inner}</text>`;
+      }
       return `<line x1="${obj.x1}" y1="${obj.y1}" x2="${obj.x2}" y2="${obj.y2}" fill="none" ${s}/>`;
     }
     function serializeObj(obj) {
       return `<g transform="matrix(${obj.matrix.join(" ")})">${serializeShape(obj)}</g>`;
+    }
+    function collectFontFamilies(obj, set) {
+      if (obj.type === "text" && obj.fontFamily) {
+        const name = String(obj.fontFamily).split(",")[0].replace(/['"]/g, "").trim();
+        if (GOOGLE_FONT_QUERY[name]) set.add(name);
+      }
+      (obj.children || []).forEach((ch) => collectFontFamilies(ch, set));
     }
     function exportSVG() {
       const rect = canvas.getBoundingClientRect();
@@ -1676,7 +2009,12 @@
       const name = (document.getElementById("costume-name").value || "costume").replace(/[^\w\-]+/g,"_");
       const defs = [];
       state.objects.forEach((o) => collectSerializeDefs(o, defs));
-      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${defs.length ? `<defs>${defs.join("")}</defs>\n` : ""}${state.objects.map(serializeObj).join("\n")}\n</svg>`;
+      const fonts = new Set();
+      state.objects.forEach((o) => collectFontFamilies(o, fonts));
+      const fontCss = fonts.size
+        ? `<style>@import url("https://fonts.googleapis.com/css2?${[...fonts].map((n) => "family=" + GOOGLE_FONT_QUERY[n]).join("&amp;")}&amp;display=swap");</style>\n`
+        : "";
+      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${fontCss}${defs.length ? `<defs>${defs.join("")}</defs>\n` : ""}${state.objects.map(serializeObj).join("\n")}\n</svg>`;
       const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([markup],{type:"image/svg+xml"})); a.download=name+".svg"; a.click(); URL.revokeObjectURL(a.href);
       toast("SVGを保存しました");
     }
@@ -1687,6 +2025,16 @@
     canvas.addEventListener("pointercancel", onPointerUp);
     canvas.addEventListener("contextmenu", (e)=>e.preventDefault());
     canvas.addEventListener("dblclick", (e) => {
+      if (state.drawing?.mode === "curve") {
+        e.preventDefault();
+        const pts = state.drawing.points;
+        if (pts.length >= 2) {
+          const a = pts.at(-1), b = pts.at(-2);
+          if (Math.hypot(a.x - b.x, a.y - b.y) < 3) pts.pop();
+        }
+        finishCurve();
+        return;
+      }
       if (state.tool === "reshape") {
         const node = eventEl(e, "[data-node]");
         if (node) {
@@ -1700,7 +2048,7 @@
         }
       }
       const hit = findObjectAt(e);
-      if (hit?.type==="text") { const t=prompt("テキスト", hit.text); if (t!=null) { snapshot(); hit.text=t; renderObjects(); } }
+      if (hit?.type === "text") { selectObject(hit.id); startTextEdit(hit); }
     });
 
     document.querySelectorAll(".tool[data-tool]").forEach((btn)=>btn.addEventListener("click", ()=>setTool(btn.dataset.tool)));
@@ -1852,6 +2200,16 @@
     document.getElementById("btn-paste").addEventListener("click", pasteClipboard);
     document.getElementById("btn-flip-h").addEventListener("click", ()=>flipSelected("h"));
     document.getElementById("btn-flip-v").addEventListener("click", ()=>flipSelected("v"));
+    document.getElementById("btn-align-left").addEventListener("click", ()=>alignSelected("left"));
+    document.getElementById("btn-align-center").addEventListener("click", ()=>alignSelected("center"));
+    document.getElementById("btn-align-right").addEventListener("click", ()=>alignSelected("right"));
+    document.getElementById("btn-align-top").addEventListener("click", ()=>alignSelected("top"));
+    document.getElementById("btn-align-middle").addEventListener("click", ()=>alignSelected("middle"));
+    document.getElementById("btn-align-bottom").addEventListener("click", ()=>alignSelected("bottom"));
+    document.getElementById("btn-text-left").addEventListener("click", ()=>{ if (selected()) snapshot(); state.textAlign="start"; applyFontToSelected(); updateFontUI(); });
+    document.getElementById("btn-text-center").addEventListener("click", ()=>{ if (selected()) snapshot(); state.textAlign="middle"; applyFontToSelected(); updateFontUI(); });
+    document.getElementById("btn-text-right").addEventListener("click", ()=>{ if (selected()) snapshot(); state.textAlign="end"; applyFontToSelected(); updateFontUI(); });
+    document.getElementById("btn-text-vert").addEventListener("click", ()=>{ if (selected()) snapshot(); state.textVertical=!state.textVertical; applyFontToSelected(); updateFontUI(); });
     document.getElementById("btn-group").addEventListener("click", groupSelected);
     document.getElementById("btn-ungroup").addEventListener("click", ungroupSelected);
     document.getElementById("btn-clean-junk").addEventListener("click", cleanHaloJunkSelected);
@@ -1869,12 +2227,17 @@
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="c") { e.preventDefault(); copySelected(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="v") { e.preventDefault(); pasteClipboard(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="g") { e.preventDefault(); e.shiftKey?ungroupSelected():groupSelected(); return; }
+      if (e.key==="Enter" && state.drawing?.mode==="curve") { e.preventDefault(); finishCurve(); return; }
       if (e.key==="Delete"||e.key==="Backspace") { e.preventDefault(); deleteSelected(); return; }
-      const map = { v:"select", a:"reshape", b:"pen", e:"eraser", f:"fill", t:"text", l:"line", o:"ellipse", r:"rect" };
+      const map = { v:"select", a:"reshape", b:"pen", c:"curve", e:"eraser", f:"fill", t:"text", l:"line", o:"ellipse", r:"rect" };
       if (!e.ctrlKey && !e.metaKey && map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
-      if (e.key==="Escape") selectObject(null);
+      if (e.key==="Escape") {
+        if (state.drawing?.mode==="curve") { cancelCurve(); return; }
+        selectObject(null);
+      }
     });
     window.addEventListener("resize", applyView);
+    window.addEventListener("wheel", onCanvasWheel, { passive: false, capture: true });
 
     updateChips(); updateFontUI(); setTool("select"); refreshHistoryButtons(); refreshSelectionButtons(); applyView();
 
@@ -2448,7 +2811,7 @@
     function parseSvgObjects(markup) {
       const doc=new DOMParser().parseFromString(markup,"image/svg+xml"); const root=doc.documentElement;
       if (!root || root.nodeName.toLowerCase()!=="svg" || doc.querySelector("parsererror")) throw new Error("SVGを解析できませんでした");
-      const imported=[]; const skip=new Set(["defs","clippath","mask","filter","style","script","title","desc"]);
+      const imported=[]; const skip=new Set(["defs","clippath","mask","filter","style","script","title","desc","tspan"]);
       function walk(el, inherited, parentMat) {
         const tag=el.localName.toLowerCase(); if (skip.has(tag)) return;
         const paint=readPaint(el,inherited); const mat=multiply(parentMat, parseTransform(el.getAttribute("transform"))); let obj=null;
@@ -2458,7 +2821,20 @@
         else if (tag==="ellipse") obj={ type:"ellipse", cx:+el.getAttribute("cx")||0, cy:+el.getAttribute("cy")||0, rx:+el.getAttribute("rx")||0, ry:+el.getAttribute("ry")||0 };
         else if (tag==="line") obj={ type:"line", x1:+el.getAttribute("x1")||0, y1:+el.getAttribute("y1")||0, x2:+el.getAttribute("x2")||0, y2:+el.getAttribute("y2")||0 };
         else if (tag==="polygon"||tag==="polyline") { const d=polygonToPath(el.getAttribute("points"), tag==="polygon"); if(d) obj={ type:"path", d, fillRule: paint.fillRule }; }
-        else if (tag==="text") obj={ type:"text", x:+el.getAttribute("x")||0, y:+el.getAttribute("y")||0, text: el.textContent||"", fontSize: parseFloat(el.getAttribute("font-size")||28), fontFamily: el.getAttribute("font-family") || "sans-serif" };
+        else if (tag==="text") {
+          const tspans = [...el.querySelectorAll("tspan")];
+          const text = tspans.length ? tspans.map((t) => t.textContent || "").join("\n") : (el.textContent || "");
+          obj = {
+            type:"text",
+            x:+el.getAttribute("x")||0,
+            y:+el.getAttribute("y")||0,
+            text,
+            fontSize: parseFloat(el.getAttribute("font-size")||28),
+            fontFamily: sanitizeFontFamily(el.getAttribute("font-family") || "Noto Sans JP, sans-serif"),
+            textAlign: el.getAttribute("text-anchor") || "start",
+            vertical: /vertical/.test(el.getAttribute("writing-mode") || ""),
+          };
+        }
         if (obj) imported.push({ id:uid(), ...obj, fill: obj.type==="line"?"none":paint.fill, stroke:paint.stroke, strokeWidth:paint.strokeWidth, matrix:mat });
         [...el.children].forEach((child)=>walk(child,paint,mat));
       }
