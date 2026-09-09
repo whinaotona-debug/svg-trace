@@ -122,6 +122,7 @@
       height: 30px; padding: 0 10px; border: 0; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 700;
     }
     .ai-btn { background: #ffbf00; color: #111; }
+    a.ai-btn { display: inline-flex; align-items: center; text-decoration: none; }
     .save-btn { background: var(--purple); color: #fff; }
 
     .workspace { display: grid; grid-template-columns: 58px 1fr; min-height: 0; }
@@ -296,6 +297,7 @@
         <button class="ibtn" id="btn-align-bottom" title="下揃え">下</button>
       </div>
       <div class="grow"></div>
+      <a class="ai-btn" href="speech-generator/">吹き出し</a>
       <button class="ai-btn" id="btn-ai" type="button">画像から取込</button>
       <button class="save-btn" id="btn-export" type="button">SVG保存</button>
     </header>
