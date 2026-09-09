@@ -159,6 +159,20 @@
     svg.canvas.select, svg.canvas.reshape, svg.canvas.fill { cursor: default; }
     svg.canvas.eraser { cursor: cell; }
     svg.canvas.text { cursor: text; }
+    svg.canvas.curve {
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath fill='%23111' stroke='%23fff' stroke-width='1.3' d='M3 21l5-1.3 12-12.7-4-4L4.2 16z'/%3E%3C/svg%3E") 3 21, crosshair;
+    }
+    svg.canvas.curve.curve-new {
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath fill='%23111' stroke='%23fff' stroke-width='1.3' d='M3 21l5-1.3 12-12.7-4-4L4.2 16z'/%3E%3Ctext x='15' y='22' font-size='11' font-family='Arial' font-weight='700' fill='%23111'%3E*%3C/text%3E%3C/svg%3E") 3 21, crosshair;
+    }
+    #preview { pointer-events: none; }
+    .curve-tip {
+      position: fixed; z-index: 46; pointer-events: none;
+      background: #fff; border: 1px solid #c2d0db; border-radius: 4px;
+      font-size: 11px; padding: 2px 6px; color: #333; white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    }
+    .curve-tip.anchor { color: #1aae3a; font-weight: 700; border-color: #8fe09a; }
 
     .bottombar {
       display: flex; align-items: center; justify-content: flex-end; gap: 6px;
@@ -217,6 +231,7 @@
     svg.canvas.reshape #selection-ui .node,
     svg.canvas.reshape #selection-ui .mid { pointer-events: auto; cursor: pointer; }
     svg.canvas.reshape #selection-ui .mid { cursor: copy; }
+    svg.canvas.reshape #selection-ui .bez-handle { pointer-events: auto; cursor: grab; }
     .hidden { display: none !important; }
     @media (max-width: 640px) { .preview-row { grid-template-columns: 1fr; } }
   </style>
@@ -290,7 +305,7 @@
         <button class="tool active" data-tool="select"><svg viewBox="0 0 24 24"><path d="M5 4l6 16 2.2-6.2L19.5 12z"/></svg><span class="hint">選択</span></button>
         <button class="tool" data-tool="reshape"><svg viewBox="0 0 24 24"><path d="M5 5l8 14 1.5-6L21 11z"/><circle cx="18" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg><span class="hint">再変形</span></button>
         <button class="tool" data-tool="pen"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg><span class="hint">筆</span></button>
-        <button class="tool" data-tool="curve"><svg viewBox="0 0 24 24"><path d="M4 18C8 6 16 6 20 18"/></svg><span class="hint">曲線（点→Enter）</span></button>
+        <button class="tool" data-tool="curve"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l4 4"/></svg><span class="hint">ペン（ドラッグで曲線）</span></button>
         <button class="tool" data-tool="eraser"><svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7-4 4H9z"/></svg><span class="hint">消しゴム</span></button>
         <button class="tool" data-tool="fill"><svg viewBox="0 0 24 24"><path d="M7 14l6-8 6 8H7z"/><path d="M8 17h8"/></svg><span class="hint">塗りつぶし</span></button>
         <button class="tool" data-tool="text"><svg viewBox="0 0 24 24"><path d="M5 6h14"/><path d="M12 6v14"/><path d="M8 20h8"/></svg><span class="hint">テキスト</span></button>
@@ -318,6 +333,7 @@
     </footer>
   </div>
   <div class="toast" id="toast"></div>
+  <div class="curve-tip hidden" id="curve-tip"></div>
   <div class="color-pop hidden" id="color-pop">
     <div class="fill-modes" id="fill-modes">
       <button type="button" data-mode="solid" title="単色"></button>
@@ -858,6 +874,7 @@
       const objs = selectedObjects();
       if (!objs.length) return;
       if (state.tool === "reshape" && objs.length) { drawReshape(); return; }
+      if (state.tool === "curve" || state.tool === "pen") return;
       const box = unionBox(objs);
       const corners = [
         {x:box.x,y:box.y},{x:box.x+box.w,y:box.y},{x:box.x+box.w,y:box.y+box.h},{x:box.x,y:box.y+box.h}
@@ -987,7 +1004,18 @@
         { x:obj.cx, y:obj.cy-obj.ry, cmd:2 }, { x:obj.cx, y:obj.cy+obj.ry, cmd:3 },
       ];
       if (obj.type === "path") {
-        return parsePathCommands(obj.d).map((cmd, i) => cmd.c === "Z" ? null : { x:cmd.x, y:cmd.y, cmd:i }).filter(Boolean);
+        const cmds = parsePathCommands(obj.d);
+        const start = cmds.find((c) => c.c === "M");
+        const closed = cmds.some((c) => c.c === "Z");
+        let lastI = -1;
+        for (let i = cmds.length - 1; i >= 0; i--) {
+          if (cmds[i].c !== "Z") { lastI = i; break; }
+        }
+        return cmds.map((cmd, i) => {
+          if (cmd.c === "Z" || cmd.x == null) return null;
+          if (closed && start && i === lastI && i !== 0 && Math.hypot(cmd.x - start.x, cmd.y - start.y) < 0.05) return null;
+          return { x: cmd.x, y: cmd.y, cmd: i };
+        }).filter(Boolean);
       }
       return [];
     }
@@ -1195,6 +1223,33 @@
             "pointer-events":"all",
           }));
         });
+        if (obj.type !== "path") return;
+        const cmds = parsePathCommands(obj.d);
+        const cCount = cmds.filter((c) => c.c === "C").length;
+        if (cCount > 48) return;
+        const sw = 1.2 / state.zoom, hr = 4.5 / state.zoom;
+        cmds.forEach((cmd, i) => {
+          if (cmd.c !== "C") return;
+          const prev = cmds[i - 1];
+          if (prev && prev.c !== "Z" && prev.x != null) {
+            const w0 = applyMat(mat, prev.x, prev.y);
+            const w1 = applyMat(mat, cmd.x1, cmd.y1);
+            selectionLayer.append(createEl("line", { x1:w0.x, y1:w0.y, x2:w1.x, y2:w1.y, stroke:"#4c97ff", "stroke-width": sw, "pointer-events":"none" }));
+            selectionLayer.append(createEl("circle", {
+              class:"bez-handle", cx:w1.x, cy:w1.y, r: hr + 4 / state.zoom, fill:"transparent",
+              "data-bez":"c1", "data-obj": obj.id, "data-cmd": String(i), "pointer-events":"all"
+            }));
+            selectionLayer.append(createEl("circle", { cx:w1.x, cy:w1.y, r:hr, fill:"#fff", stroke:"#4c97ff", "stroke-width": sw, "pointer-events":"none" }));
+          }
+          const w2 = applyMat(mat, cmd.x2, cmd.y2);
+          const w3 = applyMat(mat, cmd.x, cmd.y);
+          selectionLayer.append(createEl("line", { x1:w3.x, y1:w3.y, x2:w2.x, y2:w2.y, stroke:"#4c97ff", "stroke-width": sw, "pointer-events":"none" }));
+          selectionLayer.append(createEl("circle", {
+            class:"bez-handle", cx:w2.x, cy:w2.y, r: hr + 4 / state.zoom, fill:"transparent",
+            "data-bez":"c2", "data-obj": obj.id, "data-cmd": String(i), "pointer-events":"all"
+          }));
+          selectionLayer.append(createEl("circle", { cx:w2.x, cy:w2.y, r:hr, fill:"#fff", stroke:"#4c97ff", "stroke-width": sw, "pointer-events":"none" }));
+        });
       });
     }
     function reshapePoints(obj) { return reshapeAnchors(obj); }
@@ -1214,6 +1269,14 @@
       } else if (obj.type === "ellipse") {
         if (gesture.cmd < 2) obj.rx=Math.abs(local.x-obj.cx)||1;
         else obj.ry=Math.abs(local.y-obj.cy)||1;
+      } else if (obj.type === "path" && gesture.bez) {
+        const cmds = parsePathCommands(obj.d);
+        const cmd = cmds[gesture.cmd];
+        if (cmd?.c === "C") {
+          if (gesture.bez === "c1") { cmd.x1 = local.x; cmd.y1 = local.y; }
+          else { cmd.x2 = local.x; cmd.y2 = local.y; }
+          obj.d = serializePathCommands(cmds);
+        }
       } else if (obj.type === "path") movePathAnchor(obj, gesture.cmd, local.x, local.y);
     }
     function syncSelectionUI() { refreshSelectionButtons(); drawSelection(); }
@@ -1227,12 +1290,16 @@
       return state.objects.find((o) => o.id === (top.id || g.id)) || null;
     }
 
+    function applyCanvasToolClass() {
+      const extra = state.tool === "curve" && state.drawing?.mode !== "curve" ? " curve-new" : "";
+      canvas.setAttribute("class", "canvas " + state.tool + extra);
+    }
     function setTool(tool) {
       if (state.drawing?.mode === "curve" && tool !== "curve") finishCurve();
       if (state.textEdit && tool !== "text") commitTextEdit();
       state.tool = tool;
       document.querySelectorAll(".tool[data-tool]").forEach((btn) => btn.classList.toggle("active", btn.dataset.tool === tool));
-      canvas.className = "canvas " + tool;
+      applyCanvasToolClass();
       drawSelection();
     }
 
@@ -1321,19 +1388,118 @@
       });
       renderObjects(); drawSelection();
     }
-    function finishCurve() {
-      const pts = state.drawing?.mode === "curve" ? state.drawing.points : null;
+    function finishCurve(closed) {
+      const drawing = state.drawing?.mode === "curve" ? state.drawing : null;
       previewLayer.replaceChildren();
+      hideCurveTip();
       state.drawing = null;
-      if (!pts || pts.length < 2) return;
+      const anchors = drawing?.anchors || [];
+      if (anchors.length < 2) { applyCanvasToolClass(); return; }
       snapshot();
-      const obj = { id:uid(), type:"path", d:pointsToSmoothPath(pts), matrix:identity() };
-      applyCurrentPaint(obj); obj.fill = "none";
-      state.objects.push(obj); renderObjects();
+      const obj = { id: uid(), type: "path", d: curveAnchorsToPath(anchors, null, !!closed), matrix: identity() };
+      applyCurrentPaint(obj);
+      if (!closed) obj.fill = "none";
+      state.objects.push(obj);
+      renderObjects();
+      selectObject(obj.id);
+      applyCanvasToolClass();
     }
     function cancelCurve() {
       previewLayer.replaceChildren();
+      hideCurveTip();
       state.drawing = null;
+      applyCanvasToolClass();
+    }
+    function newCurveAnchor(p) {
+      return { x: p.x, y: p.y, inX: p.x, inY: p.y, outX: p.x, outY: p.y };
+    }
+    function curveHandleLen(a, hx, hy) {
+      return Math.hypot((hx ?? a.x) - a.x, (hy ?? a.y) - a.y);
+    }
+    function constrain45(origin, p) {
+      const dx = p.x - origin.x, dy = p.y - origin.y;
+      const len = Math.hypot(dx, dy);
+      if (!len) return { x: origin.x, y: origin.y };
+      const snap = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+      return { x: origin.x + Math.cos(snap) * len, y: origin.y + Math.sin(snap) * len };
+    }
+    function nearWorld(a, b, px) {
+      return Math.hypot(a.x - b.x, a.y - b.y) <= (px || 12) / state.zoom;
+    }
+    function curveAnchorsToPath(anchors, hover, closed) {
+      if (!anchors.length) return "";
+      const pts = anchors.slice();
+      if (hover && !closed) pts.push(newCurveAnchor(hover));
+      if (pts.length === 1) return `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+      let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+      const n = pts.length;
+      const count = closed ? n : n - 1;
+      for (let i = 0; i < count; i++) {
+        const a = pts[i], b = pts[(i + 1) % n];
+        const ox = a.outX ?? a.x, oy = a.outY ?? a.y;
+        const ix = b.inX ?? b.x, iy = b.inY ?? b.y;
+        const straight = curveHandleLen(a, ox, oy) < 0.6 && curveHandleLen(b, ix, iy) < 0.6;
+        const isClose = closed && i === count - 1;
+        if (straight) {
+          if (!isClose) d += ` L ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
+        } else d += ` C ${ox.toFixed(2)} ${oy.toFixed(2)} ${ix.toFixed(2)} ${iy.toFixed(2)} ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
+      }
+      if (closed) d += " Z";
+      return d;
+    }
+    function hideCurveTip() {
+      document.getElementById("curve-tip")?.classList.add("hidden");
+    }
+    function showCurveTip(evt, text, isAnchor) {
+      const el = document.getElementById("curve-tip");
+      if (!el) return;
+      if (!text) { el.classList.add("hidden"); return; }
+      el.textContent = text;
+      el.classList.toggle("anchor", !!isAnchor);
+      el.classList.remove("hidden");
+      el.style.left = (evt.clientX + 14) + "px";
+      el.style.top = (evt.clientY - 22) + "px";
+    }
+    function renderCurvePreview(hover, evt) {
+      const drawing = state.drawing;
+      if (!drawing?.anchors) return;
+      if (hover && drawing.anchors.length && nearWorld(hover, drawing.anchors.at(-1), 4)) hover = null;
+      const closing = !!(hover && drawing.anchors.length >= 2 && nearWorld(hover, drawing.anchors[0], 14));
+      const d = curveAnchorsToPath(drawing.anchors, closing ? null : hover, closing);
+      const fill = closing || drawing.anchors.length >= 2 ? currentFill() : "none";
+      showPreview({ type: "path", d, fill });
+      const sw = 1.25 / state.zoom;
+      const s = 7 / state.zoom;
+      const hr = 4.5 / state.zoom;
+      const skeleton = createEl("path", { d, fill: "none", stroke: "#4c97ff", "stroke-width": sw, "stroke-linecap": "round", "stroke-linejoin": "round" });
+      previewLayer.append(skeleton);
+      const pts = drawing.anchors;
+      pts.forEach((a, i) => {
+        if (curveHandleLen(a, a.outX, a.outY) > 0.6) {
+          previewLayer.append(createEl("line", { x1: a.x, y1: a.y, x2: a.outX, y2: a.outY, stroke: "#4c97ff", "stroke-width": sw }));
+          previewLayer.append(createEl("circle", { cx: a.outX, cy: a.outY, r: hr, fill: "#fff", stroke: "#4c97ff", "stroke-width": sw }));
+        }
+        if (curveHandleLen(a, a.inX, a.inY) > 0.6) {
+          previewLayer.append(createEl("line", { x1: a.x, y1: a.y, x2: a.inX, y2: a.inY, stroke: "#4c97ff", "stroke-width": sw }));
+          previewLayer.append(createEl("circle", { cx: a.inX, cy: a.inY, r: hr, fill: "#fff", stroke: "#4c97ff", "stroke-width": sw }));
+        }
+        const active = closing && i === 0;
+        previewLayer.append(createEl("rect", {
+          x: a.x - s / 2, y: a.y - s / 2, width: s, height: s,
+          fill: "#fff", stroke: active ? "#1aae3a" : "#4c97ff", "stroke-width": (active ? 2.2 : 1.5) / state.zoom
+        }));
+        if (active) previewLayer.append(createEl("circle", { cx: a.x, cy: a.y, r: 11 / state.zoom, fill: "none", stroke: "#1aae3a", "stroke-width": sw }));
+      });
+      if (evt) {
+        if (closing) showCurveTip(evt, "アンカー", true);
+        else if (pts.length) {
+          const last = pts.at(-1);
+          let q = hover;
+          if (!q && curveHandleLen(last, last.outX, last.outY) > 0.6) q = { x: last.outX, y: last.outY };
+          const dist = q ? Math.hypot(q.x - last.x, q.y - last.y) : 0;
+          showCurveTip(evt, `D :${dist.toFixed(2)} px`);
+        } else hideCurveTip();
+      }
     }
     function positionTextEdit(obj, ta) {
       const node = document.getElementById(obj.id)?.querySelector(".shape") || canvas;
@@ -1709,7 +1875,7 @@
         return;
       }
       const p = svgPoint(evt);
-      if (state.tool !== "text" && state.tool !== "curve") canvas.setPointerCapture(evt.pointerId);
+      if (state.tool !== "text") canvas.setPointerCapture(evt.pointerId);
 
       if (state.tool === "fill") {
         const hit = findObjectAt(evt);
@@ -1747,8 +1913,17 @@
         return;
       }
       if (state.tool === "reshape") {
+        const bez = eventEl(evt, "[data-bez]");
         const node = eventEl(evt, "[data-node]");
         const mid = eventEl(evt, "[data-mid]");
+        if (bez) {
+          const obj = findById(state.objects, bez.getAttribute("data-obj"));
+          if (obj) {
+            snapshot();
+            state.gesture = { type:"reshape", objId: obj.id, cmd: +bez.getAttribute("data-cmd"), bez: bez.getAttribute("data-bez") };
+          }
+          return;
+        }
         if (node) {
           const obj = findById(state.objects, node.getAttribute("data-obj"));
           if (obj) {
@@ -1815,13 +1990,41 @@
         return;
       }
       if (state.tool === "curve") {
-        if (state.drawing?.mode === "curve") {
-          state.drawing.points.push(p);
-          showPreview({ type:"path", d: pointsToSmoothPath(state.drawing.points), fill:"none" });
-        } else {
-          state.drawing = { mode:"curve", points:[p] };
-          showPreview({ type:"path", d: polylinePath([p]), fill:"none" });
+        const drawing = state.drawing?.mode === "curve" ? state.drawing : null;
+        let pt = p;
+        if (drawing?.anchors.length && evt.shiftKey) pt = constrain45(drawing.anchors.at(-1), p);
+        const startDrag = (armed) => {
+          drawing.dragging = true;
+          drawing.armed = !!armed;
+          drawing.breakHandle = evt.altKey;
+          drawing.dragFrom = { x: pt.x, y: pt.y };
+        };
+        if (drawing) {
+          const first = drawing.anchors[0];
+          const last = drawing.anchors.at(-1);
+          if (drawing.anchors.length >= 2 && nearWorld(p, first, 14)) {
+            finishCurve(true);
+            return;
+          }
+          if (nearWorld(p, last, 8)) {
+            startDrag(false);
+            return;
+          }
+          drawing.anchors.push(newCurveAnchor(pt));
+          startDrag(false);
+          renderCurvePreview(null, evt);
+          return;
         }
+        state.drawing = {
+          mode: "curve",
+          anchors: [newCurveAnchor(pt)],
+          dragging: true,
+          armed: false,
+          breakHandle: evt.altKey,
+          dragFrom: { x: pt.x, y: pt.y },
+        };
+        applyCanvasToolClass();
+        renderCurvePreview(null, evt);
         return;
       }
       state.drawing = { mode:"shape", start:p };
@@ -1830,8 +2033,31 @@
 
     function onPointerMove(evt) {
       if (state.drawing?.mode === "curve") {
-        const p = svgPoint(evt);
-        showPreview({ type:"path", d: pointsToSmoothPath(state.drawing.points.concat([p])), fill:"none" });
+        const drawing = state.drawing;
+        let pt = svgPoint(evt);
+        const last = drawing.anchors.at(-1);
+        if (drawing.dragging && last && (evt.buttons & 1)) {
+          if (!drawing.armed) {
+            if (nearWorld(pt, drawing.dragFrom || last, 4)) {
+              renderCurvePreview(null, evt);
+              return;
+            }
+            drawing.armed = true;
+          }
+          if (evt.shiftKey) pt = constrain45(last, pt);
+          const dx = pt.x - last.x, dy = pt.y - last.y;
+          last.outX = pt.x; last.outY = pt.y;
+          if (!drawing.breakHandle && !evt.altKey) {
+            last.inX = last.x - dx;
+            last.inY = last.y - dy;
+          } else {
+            drawing.breakHandle = true;
+          }
+          renderCurvePreview(null, evt);
+          return;
+        }
+        if (evt.shiftKey && last) pt = constrain45(last, pt);
+        renderCurvePreview(pt, evt);
         return;
       }
       if (!(evt.buttons & 1) && !state.drawing && !state.gesture) return;
@@ -1880,7 +2106,13 @@
     }
 
     function onPointerUp(evt) {
-      if (state.drawing?.mode === "curve") return;
+      if (state.drawing?.mode === "curve") {
+        state.drawing.dragging = false;
+        state.drawing.armed = false;
+        state.drawing.breakHandle = false;
+        renderCurvePreview(svgPoint(evt), evt);
+        return;
+      }
       const p = svgPoint(evt);
       if (state.drawing?.mode==="pen") {
         const pts=state.drawing.points; previewLayer.replaceChildren();
@@ -1980,16 +2212,19 @@
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerup", onPointerUp);
     canvas.addEventListener("pointercancel", onPointerUp);
+    canvas.addEventListener("pointerleave", () => {
+      if (state.drawing?.mode === "curve" && !state.drawing.dragging) hideCurveTip();
+    });
     canvas.addEventListener("contextmenu", (e)=>e.preventDefault());
     canvas.addEventListener("dblclick", (e) => {
       if (state.drawing?.mode === "curve") {
         e.preventDefault();
-        const pts = state.drawing.points;
-        if (pts.length >= 2) {
-          const a = pts.at(-1), b = pts.at(-2);
-          if (Math.hypot(a.x - b.x, a.y - b.y) < 3) pts.pop();
+        const a = state.drawing.anchors || [];
+        if (a.length >= 2) {
+          const last = a.at(-1), prev = a.at(-2);
+          if (nearWorld(last, prev, 8)) a.pop();
         }
-        finishCurve();
+        finishCurve(false);
         return;
       }
       if (state.tool === "reshape") {
@@ -2184,7 +2419,7 @@
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="c") { e.preventDefault(); copySelected(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="v") { e.preventDefault(); pasteClipboard(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="g") { e.preventDefault(); e.shiftKey?ungroupSelected():groupSelected(); return; }
-      if (e.key==="Enter" && state.drawing?.mode==="curve") { e.preventDefault(); finishCurve(); return; }
+      if (e.key==="Enter" && state.drawing?.mode==="curve") { e.preventDefault(); finishCurve(false); return; }
       if (e.key==="Delete"||e.key==="Backspace") { e.preventDefault(); deleteSelected(); return; }
       const map = { v:"select", a:"reshape", b:"pen", c:"curve", e:"eraser", f:"fill", t:"text", l:"line", o:"ellipse", r:"rect" };
       if (!e.ctrlKey && !e.metaKey && map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
