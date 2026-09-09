@@ -37,10 +37,36 @@
     .ibtn:hover { background: #e6eef5; }
     .ibtn:disabled { opacity: .35; cursor: default; }
     .ibtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-    .color-field { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
-    .swatch { position: relative; width: 28px; height: 28px; flex: 0 0 auto; border: 0; padding: 0; background: transparent; cursor: pointer; }
-    .chip { width: 100%; height: 100%; border-radius: 6px; border: 1px solid #9aaebb; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); display: block; }
-    .none .chip { background: linear-gradient(135deg, transparent 46%, #d0021b 46% 54%, transparent 54%), #fff !important; }
+    .color-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #575e75; white-space: nowrap; }
+    .color-lab { line-height: 1; }
+    .scratch-swatch {
+      display: flex; align-items: stretch;
+      width: 54px; height: 32px; padding: 0; flex: 0 0 auto;
+      border: 1px solid #c2d0db; border-radius: 8px; background: #fff; cursor: pointer; overflow: hidden;
+    }
+    .scratch-swatch:hover { border-color: #9eb1c0; }
+    .scratch-swatch .chip {
+      flex: 1; min-width: 0; height: auto; display: block; position: relative;
+      border: 0; border-radius: 0; box-shadow: none; pointer-events: none;
+    }
+    .scratch-swatch.none .chip {
+      background: #fff !important;
+    }
+    .scratch-swatch.none .chip::after {
+      content: "";
+      position: absolute; inset: 4px;
+      background: linear-gradient(to top right, transparent calc(50% - 1.6px), #ff8c1a calc(50% - 1.6px), #ff8c1a calc(50% + 1.6px), transparent calc(50% + 1.6px));
+    }
+    .swatch-caret {
+      width: 16px; flex: 0 0 16px; border-left: 1px solid #c2d0db; background: #fff; position: relative; pointer-events: none;
+    }
+    .swatch-caret::after {
+      content: "";
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -20%);
+      border-left: 4px solid transparent; border-right: 4px solid transparent;
+      border-top: 5px solid #575e75;
+    }
     .color-pop {
       position: fixed; z-index: 80; width: 168px; background: #fff; border-radius: 8px;
       box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 10px; color: #575e75; font-size: 12px;
@@ -67,7 +93,12 @@
     }
     .pop-foot svg { width: 18px; height: 18px; }
     svg.canvas.eyedrop { cursor: crosshair; }
-    .width-num { width: 42px; height: 26px; border: 1px solid var(--line); border-radius: 4px; text-align: center; }
+    .width-num { width: 42px; height: 26px; border: 1px solid var(--line); border-radius: 4px; text-align: center; color: #575e75; }
+    #stroke-width {
+      width: 40px; height: 32px; border-radius: 999px; font-size: 13px; background: #fff;
+      -moz-appearance: textfield; appearance: textfield;
+    }
+    #stroke-width::-webkit-outer-spin-button, #stroke-width::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .font-select {
       height: 26px; max-width: 148px; border: 1px solid var(--line); border-radius: 4px;
       background: #fff; color: var(--ink); font-size: 12px; padding: 0 4px;
@@ -162,7 +193,7 @@
     .drop input { display: none; }
     .preview-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .pv { border: 1px solid var(--line); border-radius: 10px; min-height: 180px; display: grid; place-items: center; background: #fafafa; overflow: hidden; }
-    .pv img, .pv svg { max-width: 100%; max-height: 200px; }
+    .pv img, .pv svg { max-width: 100%; max-height: 240px; }
     .import-status { font-size: 13px; min-height: 18px; margin: 10px 0; }
     .import-status.err { color: #d0021b; }
     .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; }
@@ -193,13 +224,20 @@
       <button class="ibtn" id="btn-front" title="最前面へ"><svg viewBox="0 0 24 24"><rect x="7" y="8" width="11" height="10"/><rect x="4" y="4" width="11" height="10"/></svg></button>
       <button class="ibtn" id="btn-back" title="最背面へ"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="10"/><rect x="7" y="8" width="11" height="10"/></svg></button>
       <div class="sep"></div>
-      <div class="color-field">塗りつぶし
-        <button class="swatch" id="fill-wrap" type="button" title="塗りつぶしの色"><span id="fill-chip" class="chip" style="background:#cf63cf"></span></button>
-        <button class="ibtn" id="btn-no-fill" title="塗りなし"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M6 18L18 6"/></svg></button>
+      <div class="color-field">
+        <span class="color-lab">塗りつぶし</span>
+        <button class="scratch-swatch" id="fill-wrap" type="button" title="塗りつぶしの色">
+          <span id="fill-chip" class="chip" style="background:#cf63cf"></span>
+          <span class="swatch-caret"></span>
+        </button>
       </div>
-      <div class="color-field">枠線
-        <button class="swatch" id="stroke-wrap" type="button" title="枠線の色"><span id="stroke-chip" class="chip" style="background:#111111"></span></button>
-        <input class="width-num" id="stroke-width" type="number" min="0" max="80" value="4" />
+      <div class="color-field">
+        <span class="color-lab">枠線</span>
+        <button class="scratch-swatch" id="stroke-wrap" type="button" title="枠線の色">
+          <span id="stroke-chip" class="chip" style="background:#111111"></span>
+          <span class="swatch-caret"></span>
+        </button>
+        <input class="width-num" id="stroke-width" type="number" min="0" max="80" value="4" title="枠線の太さ" />
       </div>
       <div class="sep"></div>
       <div class="color-field">フォント
@@ -309,7 +347,7 @@
     </header>
     <div class="import-wrap">
       <h2>画像からキャンバスへ</h2>
-      <p class="lead">トレースボットが色面をたどってSVGにします。本体から離れた細かいゴミは自動で捨てます。変換後はキャンバス中央に置かれ、選択して動かせます。</p>
+      <p class="lead">トレースボットが高解像度で色と輪郭を精密にたどります。少し時間がかかりますが、首・顔・細い線まで残します。変換後はキャンバス中央に置かれます。</p>
       <div class="import-tabs">
         <button type="button" class="active" data-tab="upload">画像をアップロード</button>
         <button type="button" data-tab="generate">AIで画像を生成</button>
@@ -1799,7 +1837,6 @@
       if (colorPop.contains(e.target) || e.target.closest?.("#fill-wrap") || e.target.closest?.("#stroke-wrap")) return;
       closeColorPop();
     });
-    document.getElementById("btn-no-fill").addEventListener("click", ()=>{ if (styleTargets().length) snapshot(); state.fillNone=!state.fillNone; updateChips(); applyStyleToSelected(); });
     document.getElementById("stroke-width").addEventListener("change", (e)=>{ if (styleTargets().length) snapshot(); state.strokeWidth=Number(e.target.value)||0; applyStyleToSelected(); });
     document.getElementById("font-family").addEventListener("change", (e)=>{ if (selected()) snapshot(); state.fontFamily=e.target.value; applyFontToSelected(); });
     document.getElementById("font-size").addEventListener("change", (e)=>{ if (selected()) snapshot(); state.fontSize=Math.max(8, Number(e.target.value)||28); applyFontToSelected(); });
@@ -1853,7 +1890,7 @@
     function showSvgPreview(markup) {
       const frame=document.getElementById("svg-frame"); frame.innerHTML="";
       const doc=new DOMParser().parseFromString(markup,"image/svg+xml"); const svg=doc.documentElement;
-      if (svg && svg.nodeName.toLowerCase()==="svg" && !doc.querySelector("parsererror")) { svg.querySelectorAll("script").forEach(n=>n.remove()); svg.style.maxWidth="100%"; svg.style.maxHeight="160px"; frame.append(document.importNode(svg,true)); }
+      if (svg && svg.nodeName.toLowerCase()==="svg" && !doc.querySelector("parsererror")) { svg.querySelectorAll("script").forEach(n=>n.remove()); svg.style.maxWidth="100%"; svg.style.maxHeight="220px"; frame.append(document.importNode(svg,true)); }
       else frame.textContent="解析失敗";
     }
     function fileToDataUrl(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error("画像の読み込みに失敗しました")); r.readAsDataURL(file); }); }
@@ -1875,7 +1912,7 @@
       throw lastError||new Error("画像生成に失敗しました");
     }
 
-    const tick = () => new Promise((r) => setTimeout(r, 0));
+    const tick = () => new Promise((r) => setTimeout(r, 16));
     function rgbHex(r, g, b) {
       return "#" + [r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("");
     }
@@ -1886,8 +1923,101 @@
       const h = Math.max(1, Math.round(img.height * scale));
       const c = document.createElement("canvas"); c.width = w; c.height = h;
       const ctx = c.getContext("2d", { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, 0, 0, w, h);
       return { imgData: ctx.getImageData(0, 0, w, h), w, h };
+    }
+    function rgbToLab(r, g, b) {
+      let R = r / 255, G = g / 255, B = b / 255;
+      R = R > 0.04045 ? Math.pow((R + 0.055) / 1.055, 2.4) : R / 12.92;
+      G = G > 0.04045 ? Math.pow((G + 0.055) / 1.055, 2.4) : G / 12.92;
+      B = B > 0.04045 ? Math.pow((B + 0.055) / 1.055, 2.4) : B / 12.92;
+      let x = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047;
+      let y = (R * 0.2126 + G * 0.7152 + B * 0.0722);
+      let z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+      const f = (t) => t > 0.008856 ? Math.cbrt(t) : (7.787 * t + 16 / 116);
+      x = f(x); y = f(y); z = f(z);
+      return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+    }
+    function imageLab(imgData) {
+      const d = imgData.data, n = d.length / 4;
+      const lab = new Float32Array(n * 3);
+      for (let i = 0, p = 0; i < d.length; i += 4, p += 3) {
+        if (d[i + 3] < 32) { lab[p] = lab[p + 1] = lab[p + 2] = 0; continue; }
+        const L = rgbToLab(d[i], d[i + 1], d[i + 2]);
+        lab[p] = L[0]; lab[p + 1] = L[1]; lab[p + 2] = L[2];
+      }
+      return lab;
+    }
+    function medianFilterRgb(imgData, radius) {
+      const w = imgData.width, h = imgData.height, d = imgData.data;
+      const out = new Uint8ClampedArray(d);
+      const r = Math.max(1, radius | 0);
+      const buf = [];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] < 32) continue;
+        for (let c = 0; c < 3; c++) {
+          buf.length = 0;
+          for (let dy = -r; dy <= r; dy++) {
+            const yy = y + dy;
+            if (yy < 0 || yy >= h) continue;
+            for (let dx = -r; dx <= r; dx++) {
+              const xx = x + dx;
+              if (xx < 0 || xx >= w) continue;
+              const j = (yy * w + xx) * 4;
+              if (d[j + 3] < 32) continue;
+              buf.push(d[j + c]);
+            }
+          }
+          if (!buf.length) continue;
+          buf.sort((a, b) => a - b);
+          out[i + c] = buf[buf.length >> 1];
+        }
+      }
+      return new ImageData(out, w, h);
+    }
+    function morphOnce(mask, w, h, dilate) {
+      const out = new Uint8Array(w * h);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        let on = mask[y * w + x];
+        if (dilate ? !on : on) {
+          const nbs = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1], [x - 1, y - 1], [x + 1, y - 1], [x - 1, y + 1], [x + 1, y + 1]];
+          for (const [nx, ny] of nbs) {
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            if (dilate && mask[ny * w + nx]) { on = 1; break; }
+            if (!dilate && !mask[ny * w + nx]) { on = 0; break; }
+          }
+        }
+        out[y * w + x] = on;
+      }
+      return out;
+    }
+    function morphClose(mask, w, h, times) {
+      let m = mask;
+      for (let i = 0; i < times; i++) m = morphOnce(m, w, h, true);
+      for (let i = 0; i < times; i++) m = morphOnce(m, w, h, false);
+      return m;
+    }
+    function smoothLabels(labels, w, h, palLuma) {
+      const out = new Int16Array(labels);
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        const cur = labels[i];
+        if (cur < 0) continue;
+        if (palLuma[cur] < 48) continue;
+        const counts = new Map();
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const l = labels[(y + dy) * w + (x + dx)];
+          if (l < 0) continue;
+          counts.set(l, (counts.get(l) || 0) + 1);
+        }
+        let best = cur, bc = 0;
+        counts.forEach((c, l) => { if (c > bc) { bc = c; best = l; } });
+        if (bc >= 5) out[i] = best;
+      }
+      return out;
     }
     function medianCutPalette(imgData, maxColors) {
       const d = imgData.data;
@@ -1895,8 +2025,8 @@
       for (let i=0;i<d.length;i+=4) if (d[i+3] >= 32) pixels.push([d[i], d[i+1], d[i+2]]);
       if (!pixels.length) return [];
       let pts = pixels;
-      if (pts.length > 48000) {
-        const step = Math.ceil(pts.length / 48000);
+      if (pts.length > 160000) {
+        const step = Math.ceil(pts.length / 160000);
         pts = pts.filter((_, i) => i % step === 0);
       }
       const boxes = [{ pts }];
@@ -1932,30 +2062,73 @@
         const dr=p[0]-rgb[0], dg=p[1]-rgb[1], db=p[2]-rgb[2];
         return dr*dr+dg*dg+db*db < thr*thr;
       });
-      if (!near([0,0,0], 40)) palette.unshift([0,0,0]);
-      if (!near([255,255,255], 40)) palette.push([255,255,255]);
+      if (!near([0,0,0], 36)) palette.unshift([0,0,0]);
+      if (!near([255,255,255], 36)) palette.push([255,255,255]);
       return palette;
     }
-    function quantize(imgData, palette) {
+    function dedupePalette(palette, minLab) {
+      const out = [];
+      const labs = [];
+      for (const p of palette) {
+        const L = rgbToLab(p[0], p[1], p[2]);
+        if (labs.some((q) => {
+          const d0=L[0]-q[0], d1=L[1]-q[1], d2=L[2]-q[2];
+          return d0*d0+d1*d1+d2*d2 < minLab*minLab;
+        })) continue;
+        out.push(p);
+        labs.push(L);
+      }
+      return out.length ? out : palette;
+    }
+    async function refinePaletteKMeans(imgData, labImg, palette, rounds) {
+      const d = imgData.data, nPix = d.length / 4, n = palette.length;
+      const pal = palette.map((p) => p.slice());
+      const stride = nPix > 900000 ? 3 : nPix > 400000 ? 2 : 1;
+      for (let round = 0; round < rounds; round++) {
+        aiStatus(`トレースボット: 色を精密に分けています (${round + 1}/${rounds})...`);
+        await tick();
+        const palLab = pal.map((p) => rgbToLab(p[0], p[1], p[2]));
+        const sum = Array.from({ length: n }, () => [0, 0, 0, 0]);
+        for (let i = 0; i < nPix; i += stride) {
+          if (d[i * 4 + 3] < 32) continue;
+          const L = labImg[i * 3], A = labImg[i * 3 + 1], B = labImg[i * 3 + 2];
+          let best = 0, bestD = 1e12;
+          for (let p = 0; p < n; p++) {
+            const P = palLab[p];
+            const dist = (L - P[0]) * (L - P[0]) + (A - P[1]) * (A - P[1]) + (B - P[2]) * (B - P[2]);
+            if (dist < bestD) { bestD = dist; best = p; }
+          }
+          sum[best][0] += d[i * 4];
+          sum[best][1] += d[i * 4 + 1];
+          sum[best][2] += d[i * 4 + 2];
+          sum[best][3] += 1;
+        }
+        for (let p = 0; p < n; p++) {
+          if (sum[p][3] < 1) continue;
+          pal[p] = [Math.round(sum[p][0] / sum[p][3]), Math.round(sum[p][1] / sum[p][3]), Math.round(sum[p][2] / sum[p][3])];
+        }
+      }
+      return pal;
+    }
+    function quantize(imgData, labImg, palette) {
       const d = imgData.data, w = imgData.width, h = imgData.height;
       const labels = new Int16Array(w * h);
       labels.fill(-1);
+      const palLab = palette.map((p) => rgbToLab(p[0], p[1], p[2]));
       const palLuma = palette.map(lumaOf);
-      for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
-        const i = (y*w+x)*4;
-        if (d[i+3] < 32) continue;
-        const pr=d[i], pg=d[i+1], pb=d[i+2];
-        const lum = 0.299*pr + 0.587*pg + 0.114*pb;
-        let best=0, bestD=1e12;
-        for (let p=0;p<palette.length;p++) {
-          if (lum < 32 && palLuma[p] > 70) continue;
-          const pal=palette[p];
-          const dr=pr-pal[0], dg=pg-pal[1], db=pb-pal[2];
-          let dist=dr*dr+dg*dg+db*db;
-          if (lum < 32) dist *= palLuma[p] > 40 ? 4 : 0.35;
-          if (dist<bestD) { bestD=dist; best=p; }
+      for (let i = 0; i < w * h; i++) {
+        if (d[i * 4 + 3] < 32) continue;
+        const L = labImg[i * 3], A = labImg[i * 3 + 1], B = labImg[i * 3 + 2];
+        const lum = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+        let best = 0, bestD = 1e12;
+        for (let p = 0; p < palette.length; p++) {
+          if (lum < 28 && palLuma[p] > 72) continue;
+          const P = palLab[p];
+          let dist = (L - P[0]) * (L - P[0]) + (A - P[1]) * (A - P[1]) + (B - P[2]) * (B - P[2]);
+          if (lum < 28) dist *= palLuma[p] > 40 ? 5 : 0.22;
+          if (dist < bestD) { bestD = dist; best = p; }
         }
-        labels[y*w+x]=best;
+        labels[i] = best;
       }
       return labels;
     }
@@ -2122,6 +2295,22 @@
       for (let i=1;i<pts.length;i++) d += ` L ${pts[i][0].toFixed(2)} ${pts[i][1].toFixed(2)}`;
       return d + " Z";
     }
+    function loopToSmoothPath(pts) {
+      let p = pts;
+      if (p.length > 1 && p[0][0] === p[p.length - 1][0] && p[0][1] === p[p.length - 1][1]) p = p.slice(0, -1);
+      if (p.length < 6) return loopToPath(pts);
+      const n = p.length;
+      let d = `M ${p[0][0].toFixed(2)} ${p[0][1].toFixed(2)}`;
+      for (let i = 0; i < n; i++) {
+        const p0 = p[(i - 1 + n) % n], p1 = p[i], p2 = p[(i + 1) % n], p3 = p[(i + 2) % n];
+        const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+        const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+        const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+        const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+        d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
+      }
+      return d + " Z";
+    }
     function loopBBox(pts) {
       let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
       for (const p of pts) {
@@ -2141,70 +2330,93 @@
     }
     function pruneHaloJunk(layers, imgW, imgH) {
       if (!layers.length || layers.length < 3) return layers;
-      const maxA = layers.reduce((m, l) => Math.max(m, l.area), 0);
       const imgA = Math.max(1, imgW * imgH);
-      const coreMin = Math.max(maxA * 0.035, imgA * 0.002, 60);
-      const bodyCore = layers.filter((l) => !l.dark && l.area >= coreMin);
-      const cores = bodyCore.length ? bodyCore : layers.filter((l) => l.area >= coreMin);
-      if (!cores.length) return layers;
-      const pad = Math.max(16, Math.round(Math.min(imgW, imgH) * 0.045));
-      const coreBoxes = cores.map((l) => inflateBox(l.box, pad));
-      const onFigure = (l) => coreBoxes.some((b) => pointInBox(b, l.box.cx, l.box.cy) || boxesOverlap(b, inflateBox(l.box, 2)));
+      const tiny = Math.max(10, imgA * 0.00003);
+      const significant = Math.max(220, imgA * 0.0009);
+      const byArea = layers.slice().sort((a, b) => b.area - a.area);
+      const seeds = byArea.filter((l) => !l.dark && l.area >= significant);
+      const core = new Set(seeds.length ? seeds : byArea.filter((l) => l.area >= significant).slice(0, 10));
+      if (!core.size) return layers;
+      const pad = Math.max(28, Math.round(Math.min(imgW, imgH) * 0.09));
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const l of layers) {
+          if (core.has(l)) continue;
+          const near = [...core].some((c) => boxesOverlap(inflateBox(c.box, pad), inflateBox(l.box, 4)));
+          if (near) { core.add(l); changed = true; }
+        }
+      }
       const kept = layers.filter((l) => {
-        if (l.area >= coreMin) return true;
-        if (!onFigure(l)) return false;
-        if (!l.dark && l.area < 8) return false;
+        if (l.area >= significant) return true;
+        if (!core.has(l)) return false;
+        if (!l.dark && l.area < tiny) return false;
         return true;
       });
       return kept.length ? kept : layers;
     }
     async function traceBitmapToSvg(dataUrl) {
-      aiStatus("トレースボット: 画像を読み込んでいます...");
+      aiStatus("トレースボット: 画像を高解像度で読み込んでいます...");
       await tick();
-      const { imgData, w, h } = await loadImageData(dataUrl, 640);
-      aiStatus("トレースボット: 色をまとめています...");
+      let { imgData, w, h } = await loadImageData(dataUrl, 1536);
+      aiStatus("トレースボット: ノイズを整えています...");
       await tick();
-      const palette = ensureKeyColors(medianCutPalette(imgData, 18));
+      imgData = medianFilterRgb(imgData, 1);
+      aiStatus("トレースボット: 色を分析しています...");
+      await tick();
+      const labImg = imageLab(imgData);
+      let palette = medianCutPalette(imgData, 40);
+      palette = await refinePaletteKMeans(imgData, labImg, palette, 8);
+      palette = ensureKeyColors(dedupePalette(palette, 4.2));
       if (!palette.length) throw new Error("トレーできる色が見つかりませんでした");
-      const labels = quantize(imgData, palette);
-      const minPixels = Math.max(8, Math.round(w * h * 0.00025));
+      aiStatus("トレースボット: 画素を色分けしています...");
+      await tick();
+      let labels = quantize(imgData, labImg, palette);
+      labels = smoothLabels(labels, w, h, palette.map(lumaOf));
+      const minPixels = Math.max(6, Math.round(w * h * 0.00012));
       const layers = [];
-      for (let pi=0; pi<palette.length; pi++) {
-        if (pi % 2 === 0) {
-          aiStatus(`トレースボット: 輪郭をたどっています (${pi+1}/${palette.length})...`);
-          await tick();
-        }
-        const [r,g,b] = palette[pi];
+      for (let pi = 0; pi < palette.length; pi++) {
+        aiStatus(`トレースボット: 輪郭を高精度でたどっています (${pi + 1}/${palette.length})...`);
+        await tick();
+        const [r, g, b] = palette[pi];
         const dark = lumaOf(palette[pi]) < 48;
-        const mask = colorMask(labels, pi, w, h, dark ? 1 : minPixels);
+        let mask = colorMask(labels, pi, w, h, dark ? 1 : minPixels);
         if (!mask) continue;
-        if (!dark) removeSpeckles(mask, w, h, 8);
-        const comps = connectedComponents(mask, w, h, dark ? 1 : 4);
-        const fill = rgbHex(r,g,b);
+        if (!dark) {
+          mask = morphClose(mask, w, h, 2);
+          removeSpeckles(mask, w, h, 10);
+        }
+        const comps = connectedComponents(mask, w, h, dark ? 1 : 5);
+        const fill = rgbHex(r, g, b);
         for (const comp of comps) {
           const segs = extractSegments(comp.mask, comp.w, comp.h);
           if (!segs.length) continue;
           let loops = stitchLoops(segs).map((loop) => {
             const rawArea = Math.abs(loopArea(loop));
-            const small = loop.length < 48 || rawArea < 90;
-            let s = simplifyClosed(loop, small ? 0.3 : 1.0);
+            const small = loop.length < 64 || rawArea < 140;
+            let s = simplifyClosed(loop, small ? 0.22 : 0.48);
             if (!small && !dark) s = chaikinClosed(s, 2);
-            s = simplifyClosed(s, small || dark ? 0.18 : 0.5);
+            s = simplifyClosed(s, small || dark ? 0.14 : 0.28);
             return s.map((pt) => [pt[0] + comp.ox, pt[1] + comp.oy]);
-          }).filter((loop) => Math.abs(loopArea(loop)) >= (dark ? 0.4 : 3));
+          }).filter((loop) => Math.abs(loopArea(loop)) >= (dark ? 0.35 : 2.5));
           if (!loops.length) continue;
-          loops.sort((a,b) => Math.abs(loopArea(b)) - Math.abs(loopArea(a)));
+          loops.sort((a, b) => Math.abs(loopArea(b)) - Math.abs(loopArea(a)));
           const outer = loops[0];
-          const d = loopToPath(outer);
           const area = Math.abs(loopArea(outer));
-          layers.push({ d, fill, area, dark, box: loopBBox(outer) });
+          const useSmooth = !dark && outer.length >= 8 && area >= 80;
+          layers.push({
+            d: useSmooth ? loopToSmoothPath(outer) : loopToPath(outer),
+            fill, area, dark, box: loopBBox(outer)
+          });
         }
       }
       if (!layers.length) throw new Error("輪郭を取り出せませんでした");
+      aiStatus("トレースボット: 首や顔のパーツを繋いでいます...");
+      await tick();
       const cleaned = pruneHaloJunk(layers, w, h);
-      cleaned.sort((a,b) => {
-        const aDetail = a.dark && a.area < 1200;
-        const bDetail = b.dark && b.area < 1200;
+      cleaned.sort((a, b) => {
+        const aDetail = a.dark && a.area < 2400;
+        const bDetail = b.dark && b.area < 2400;
         if (aDetail !== bDetail) return aDetail ? 1 : -1;
         return b.area - a.area;
       });
@@ -2316,7 +2528,7 @@
     });
     document.getElementById("btn-convert").addEventListener("click", async ()=>{
       if(!ai.sourceDataUrl) return aiStatus("先に画像を用意してください",true);
-      setAiBusy(true,"トレースボットで変換中...");
+        setAiBusy(true,"高精度トレース中...");
       try{
         const svg=await traceBitmapToSvg(ai.sourceDataUrl);
         ai.svgMarkup=svg;
