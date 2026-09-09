@@ -6,7 +6,7 @@
   <title>Scratch SVG Paint</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Dela+Gothic+One&family=DotGothic16&family=Fredoka:wght@600&family=Hachi+Maru+Pop&family=Kaisei+Decol:wght@700&family=Kiwi+Maru:wght@500&family=Kosugi+Maru&family=M+PLUS+Rounded+1c:wght@700&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@500;700&family=Pacifico&family=Potta+One&family=Rampart+One&family=Reggae+One&family=RocknRoll+One&family=Shippori+Mincho:wght@700&family=Stick&family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     :root {
       --purple: #855cd6;
@@ -114,7 +114,7 @@
     }
     #stroke-width::-webkit-outer-spin-button, #stroke-width::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .font-select {
-      height: 26px; max-width: 148px; border: 1px solid var(--line); border-radius: 4px;
+      height: 28px; max-width: 210px; border: 1px solid var(--line); border-radius: 4px;
       background: #fff; color: var(--ink); font-size: 12px; padding: 0 4px;
     }
     .grow { flex: 1; }
@@ -255,28 +255,7 @@
       </div>
       <div class="sep"></div>
       <div class="color-field">フォント
-        <select class="font-select" id="font-family" title="OFL/Apacheの無料フォントのみ。作品への利用・公開可">
-          <option value="Noto Sans JP, sans-serif" style="font-family:Noto Sans JP,sans-serif">ゴシック (Noto)</option>
-          <option value="Noto Serif JP, serif" style="font-family:Noto Serif JP,serif">明朝 (Noto)</option>
-          <option value="Zen Maru Gothic, sans-serif" style="font-family:Zen Maru Gothic,sans-serif">丸ゴシック</option>
-          <option value="M PLUS Rounded 1c, sans-serif" style="font-family:M PLUS Rounded 1c,sans-serif">M PLUS 丸</option>
-          <option value="Kosugi Maru, sans-serif" style="font-family:Kosugi Maru,sans-serif">こすぎ丸</option>
-          <option value="Kiwi Maru, serif" style="font-family:Kiwi Maru,serif">キウイ丸</option>
-          <option value="Kaisei Decol, serif" style="font-family:Kaisei Decol,serif">解星デコール</option>
-          <option value="Shippori Mincho, serif" style="font-family:Shippori Mincho,serif">しっぽり明朝</option>
-          <option value="Dela Gothic One, sans-serif" style="font-family:Dela Gothic One,sans-serif">デラゴシック</option>
-          <option value="Reggae One, cursive" style="font-family:Reggae One,cursive">レゲエ</option>
-          <option value="RocknRoll One, sans-serif" style="font-family:RocknRoll One,sans-serif">ロックンロール</option>
-          <option value="DotGothic16, monospace" style="font-family:DotGothic16,monospace">ドット</option>
-          <option value="Potta One, cursive" style="font-family:Potta One,cursive">ポッタ</option>
-          <option value="Rampart One, sans-serif" style="font-family:Rampart One,sans-serif">ランパート</option>
-          <option value="Stick, sans-serif" style="font-family:Stick,sans-serif">スティック</option>
-          <option value="Yusei Magic, sans-serif" style="font-family:Yusei Magic,sans-serif">マジック</option>
-          <option value="Hachi Maru Pop, cursive" style="font-family:Hachi Maru Pop,cursive">はちまるポップ</option>
-          <option value="Bangers, cursive" style="font-family:Bangers,cursive">Bangers</option>
-          <option value="Fredoka, sans-serif" style="font-family:Fredoka,sans-serif">Fredoka</option>
-          <option value="Pacifico, cursive" style="font-family:Pacifico,cursive">Pacifico</option>
-        </select>
+        <select class="font-select" id="font-family" title="Google Fonts（OFL/Apache）。選んだフォントを読み込み、作品への利用・公開可"></select>
         <input class="width-num" id="font-size" type="number" min="8" max="240" value="28" title="サイズ" />
         <div class="text-align-bar" title="文字揃え">
           <button class="ibtn" id="btn-text-left" type="button" title="左揃え">左</button>
@@ -405,6 +384,7 @@
   </div>
 
   <script src="config.local.js"></script>
+  <script src="js/google-fonts.js"></script>
   <script>
     const svgNS = "http://www.w3.org/2000/svg";
     const canvas = document.getElementById("canvas");
@@ -446,42 +426,14 @@
       textEdit: null,
     };
 
-    const GOOGLE_FONT_QUERY = {
-      "Noto Sans JP": "Noto+Sans+JP:wght@400;700",
-      "Noto Serif JP": "Noto+Serif+JP:wght@500;700",
-      "Zen Maru Gothic": "Zen+Maru+Gothic:wght@500;700",
-      "M PLUS Rounded 1c": "M+PLUS+Rounded+1c:wght@700",
-      "Kosugi Maru": "Kosugi+Maru",
-      "Kiwi Maru": "Kiwi+Maru:wght@500",
-      "Kaisei Decol": "Kaisei+Decol:wght@700",
-      "Shippori Mincho": "Shippori+Mincho:wght@700",
-      "Dela Gothic One": "Dela+Gothic+One",
-      "Reggae One": "Reggae+One",
-      "RocknRoll One": "RocknRoll+One",
-      "DotGothic16": "DotGothic16",
-      "Potta One": "Potta+One",
-      "Rampart One": "Rampart+One",
-      "Stick": "Stick",
-      "Yusei Magic": "Yusei+Magic",
-      "Hachi Maru Pop": "Hachi+Maru+Pop",
-      "Bangers": "Bangers",
-      "Fredoka": "Fredoka:wght@600",
-      "Pacifico": "Pacifico",
-    };
     function sanitizeFontFamily(ff) {
-      if (!ff) return "Noto Sans JP, sans-serif";
-      const sel = document.getElementById("font-family");
-      if (sel && [...sel.options].some((o) => o.value === ff)) return ff;
-      const name = String(ff).split(",")[0].replace(/['"]/g, "").trim();
-      if (GOOGLE_FONT_QUERY[name]) {
-        const fallback = /serif/i.test(ff) && !/sans/i.test(name) ? "serif" : /mono|dot/i.test(name) ? "monospace" : /cursive|pop|bangers|pacifico|reggae|potta/i.test(name) ? "cursive" : "sans-serif";
-        return `${name}, ${fallback}`;
-      }
-      const lower = String(ff).toLowerCase();
-      if (/mincho|times|georgia|serif/.test(lower) && !/sans/.test(lower)) return "Noto Serif JP, serif";
-      if (/comic|cursive/.test(lower)) return "Hachi Maru Pop, cursive";
-      if (/courier|ms gothic|dotgothic|mono/.test(lower)) return "DotGothic16, monospace";
-      return "Noto Sans JP, sans-serif";
+      const font = findGoogleFont(ff);
+      if (font) return googleFontCssFamily(font);
+      const lower = String(ff || "").toLowerCase();
+      if (/mincho|times|georgia|serif/.test(lower) && !/sans/.test(lower)) return googleFontCssFamily("Noto Serif JP");
+      if (/comic|cursive|hand/.test(lower)) return googleFontCssFamily("Hachi Maru Pop");
+      if (/courier|gothic16|mono/.test(lower)) return googleFontCssFamily("DotGothic16");
+      return googleFontCssFamily("Noto Sans JP");
     }
 
     const uid = () => "o" + Math.random().toString(36).slice(2, 10);
@@ -814,10 +766,12 @@
         }
         if (obj.type === "group" && obj.children) obj.children.forEach(apply);
       };
-      if (selectedObjects().length) {
-        selectedObjects().forEach(apply);
-        renderObjects(); drawSelection();
-      }
+      whenGoogleFontReady(state.fontFamily, () => {
+        if (selectedObjects().length) {
+          selectedObjects().forEach(apply);
+          renderObjects(); drawSelection();
+        }
+      });
     }
     function toHex(color) {
       if (!color || color === "none") return "#000000";
@@ -868,7 +822,10 @@
         if (obj.fill2) state.fill2 = obj.fill2;
       }
       if (obj.type === "text") {
-        if (obj.fontFamily) state.fontFamily = sanitizeFontFamily(obj.fontFamily);
+        if (obj.fontFamily) {
+          state.fontFamily = sanitizeFontFamily(obj.fontFamily);
+          whenGoogleFontReady(state.fontFamily, () => { renderObjects(); drawSelection(); });
+        }
         if (obj.fontSize) state.fontSize = obj.fontSize;
         state.textAlign = obj.textAlign || "start";
         state.textVertical = !!obj.vertical;
@@ -1998,8 +1955,8 @@
     }
     function collectFontFamilies(obj, set) {
       if (obj.type === "text" && obj.fontFamily) {
-        const name = String(obj.fontFamily).split(",")[0].replace(/['"]/g, "").trim();
-        if (GOOGLE_FONT_QUERY[name]) set.add(name);
+        const font = findGoogleFont(obj.fontFamily);
+        if (font) set.add(font.family);
       }
       (obj.children || []).forEach((ch) => collectFontFamilies(ch, set));
     }
@@ -2012,7 +1969,7 @@
       const fonts = new Set();
       state.objects.forEach((o) => collectFontFamilies(o, fonts));
       const fontCss = fonts.size
-        ? `<style>@import url("https://fonts.googleapis.com/css2?${[...fonts].map((n) => "family=" + GOOGLE_FONT_QUERY[n]).join("&amp;")}&amp;display=swap");</style>\n`
+        ? `<style>@import url("https://fonts.googleapis.com/css2?${[...fonts].map((n) => "family=" + googleFontQuery(n)).join("&amp;")}&amp;display=swap");</style>\n`
         : "";
       const markup = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${fontCss}${defs.length ? `<defs>${defs.join("")}</defs>\n` : ""}${state.objects.map(serializeObj).join("\n")}\n</svg>`;
       const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([markup],{type:"image/svg+xml"})); a.download=name+".svg"; a.click(); URL.revokeObjectURL(a.href);
@@ -2239,6 +2196,8 @@
     window.addEventListener("resize", applyView);
     window.addEventListener("wheel", onCanvasWheel, { passive: false, capture: true });
 
+    fillGoogleFontSelect(document.getElementById("font-family"));
+    _googleFontsLoaded["Noto Sans JP"] = true;
     updateChips(); updateFontUI(); setTool("select"); refreshHistoryButtons(); refreshSelectionButtons(); applyView();
 
     const ai = { sourceDataUrl:null, svgMarkup:null, busy:false };
@@ -2872,6 +2831,9 @@
       showCanvasView();
       applyView();
       renderObjects();
+      imported.forEach((o) => {
+        if (o.type === "text") whenGoogleFontReady(o.fontFamily, () => { renderObjects(); drawSelection(); });
+      });
       afterLayout(() => {
         placeImportedGroup(group);
         renderObjects();

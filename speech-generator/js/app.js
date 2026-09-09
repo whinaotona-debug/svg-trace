@@ -137,7 +137,7 @@
     const obj = {
       id: uid(), type: "text",
       x: state.w * 0.28, y: state.h * 0.32, w: 200, h: 80,
-      text: "セリフを入力", fontFamily: SERIF_FONTS[0].id, fontSize: 28,
+      text: "セリフを入力", fontFamily: googleFontCssFamily("Noto Sans JP"), fontSize: 28,
       fill: "#222222", outline: "#ffffff", outlineWidth: 4
     };
     state.objects.push(obj); state.selected = obj.id; syncProps(); draw();
@@ -189,6 +189,7 @@
       o.text = document.getElementById("p-text").value;
       o.fontFamily = document.getElementById("p-font").value;
       o.fontSize = Number(document.getElementById("p-font-size").value) || 28;
+      whenGoogleFontReady(o.fontFamily, draw);
       o.fill = document.getElementById("p-fill").value;
       o.outline = document.getElementById("p-outline").value;
       o.outlineWidth = Number(document.getElementById("p-outline-w").value) || 0;
@@ -233,11 +234,8 @@
   }
 
   const fontSel = document.getElementById("p-font");
-  SERIF_FONTS.forEach(function (f) {
-    const opt = document.createElement("option");
-    opt.value = f.id; opt.textContent = f.name; opt.style.fontFamily = f.id;
-    fontSel.append(opt);
-  });
+  fillGoogleFontSelect(fontSel);
+  _googleFontsLoaded["Noto Sans JP"] = true;
   fillLibrary();
   document.getElementById("btn-add-text").addEventListener("click", addText);
   ["p-text", "p-font", "p-font-size", "p-fill", "p-outline", "p-outline-w", "p-sfill", "p-sstroke", "p-sw", "p-nofill", "p-nostroke"].forEach(function (id) {
