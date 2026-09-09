@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>セリフ・吹き出し画像ジェネレーター</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Dela+Gothic+One&family=DotGothic16&family=Fredoka:wght@600&family=Hachi+Maru+Pop&family=Kaisei+Decol:wght@700&family=Kiwi+Maru:wght@500&family=Kosugi+Maru&family=M+PLUS+Rounded+1c:wght@700;800&family=Noto+Sans+JP:wght@400;700;900&family=Noto+Serif+JP:wght@600;700&family=Pacifico&family=Potta+One&family=Rampart+One&family=Reggae+One&family=RocknRoll+One&family=Shippori+Mincho:wght@700&family=Stick&family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --purple: #855cd6;
+      --blue: #4c97ff;
+      --panel: #f2f7fb;
+      --line: #c2d0db;
+      --text: #575e75;
+      --ink: #222;
+      --bg: #d9e3ea;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: "Noto Sans JP", "Segoe UI", sans-serif; overflow: hidden; }
+    button, input, select, textarea { font-family: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .app { height: 100%; display: grid; grid-template-rows: 48px 1fr; }
+    .topbar {
+      display: flex; align-items: center; gap: 10px; padding: 0 12px;
+      background: var(--panel); border-bottom: 1px solid var(--line);
+    }
+    .brand { font-weight: 800; color: var(--ink); font-size: 14px; white-space: nowrap; }
+    .sep { width: 1px; height: 22px; background: var(--line); }
+    .grow { flex: 1; }
+    .size-wrap, .zoom-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+    select, .num {
+      height: 28px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 0 8px;
+    }
+    .num { width: 64px; text-align: center; }
+    .ibtn, .go {
+      height: 30px; border: 0; border-radius: 6px; padding: 0 10px; font-size: 12px; font-weight: 700;
+    }
+    .ibtn { background: #e9eef4; color: var(--text); }
+    .ibtn:hover { background: #dde6ee; }
+    .go { background: var(--purple); color: #fff; }
+    .go:hover { filter: brightness(1.05); }
+    .main { display: grid; grid-template-columns: 232px 1fr 250px; min-height: 0; }
+    .side {
+      background: var(--panel); overflow: auto; padding: 10px;
+      border-right: 1px solid var(--line);
+    }
+    .props { border-right: 0; border-left: 1px solid var(--line); }
+    .stage-wrap { min-width: 0; min-height: 0; position: relative; background: #c8d4de; }
+    #view { width: 100%; height: 100%; display: block; touch-action: none; }
+    h3 { font-size: 11px; letter-spacing: .04em; color: #8090a0; margin: 12px 0 6px; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+    .tabs button {
+      flex: 1; height: 28px; border: 0; border-radius: 6px; background: #e4ebf1; font-size: 11px; font-weight: 700;
+    }
+    .tabs button.on { background: var(--blue); color: #fff; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .tile {
+      border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 4px 5px;
+      font-size: 10px; text-align: center; color: var(--ink); min-height: 58px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    }
+    .tile:hover { border-color: var(--blue); }
+    .tile canvas { width: 72px; height: 36px; }
+    .hint { font-size: 11px; line-height: 1.45; color: #7a8794; margin-bottom: 8px; }
+    .field { display: grid; gap: 4px; margin-bottom: 10px; font-size: 12px; }
+    .field span { color: #6b7785; }
+    .row { display: flex; gap: 6px; align-items: center; }
+    .row input[type="color"] { width: 42px; height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 2px; background: #fff; }
+    textarea { width: 100%; min-height: 72px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; resize: vertical; }
+    .empty { color: #8b97a4; font-size: 12px; padding: 12px 0; }
+    @media (max-width: 980px) {
+      .main { grid-template-columns: 1fr; grid-template-rows: 160px 1fr 220px; }
+      .side { border-right: 0; border-bottom: 1px solid var(--line); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">セリフ・吹き出しジェネレーター</div>
+      <div class="sep"></div>
+      <label class="size-wrap">キャンバス
+        <select id="canvas-size">
+          <option value="480x360">480×360 Scratch</option>
+          <option value="960x720">960×720</option>
+          <option value="640x480">640×480</option>
+          <option value="1080x1080">1080×1080</option>
+        </select>
+      </label>
+      <div class="sep"></div>
+      <button class="ibtn" id="btn-front" type="button">前面へ</button>
+      <button class="ibtn" id="btn-back" type="button">背面へ</button>
+      <button class="ibtn" id="btn-dup" type="button">複製</button>
+      <button class="ibtn" id="btn-del" type="button">削除</button>
+      <div class="grow"></div>
+      <div class="zoom-wrap">ズーム <span id="zoom-label">100%</span></div>
+      <button class="ibtn" id="btn-reset-view" type="button">表示リセット</button>
+      <button class="go" id="btn-png" type="button">PNGダウンロード</button>
+    </header>
+    <div class="main">
+      <aside class="side" id="library">
+        <div class="tabs">
+          <button type="button" class="on" data-tab="shapes">図形</button>
+          <button type="button" data-tab="text">テキスト</button>
+          <button type="button" data-tab="temps">テンプレ</button>
+        </div>
+        <section id="tab-shapes">
+          <p class="hint">クリックでキャンバスに追加。色や線は右パネルで変更できます。</p>
+          <div class="grid" id="shape-grid"></div>
+        </section>
+        <section id="tab-text" hidden>
+          <p class="hint">テキストを追加して、フォント・サイズ・縁取りを調整できます。</p>
+          <button class="go" id="btn-add-text" type="button" style="width:100%">テキストを追加</button>
+        </section>
+        <section id="tab-temps" hidden>
+          <h3>背景</h3>
+          <div class="grid" id="bg-grid"></div>
+          <h3>キャラ・アイコン</h3>
+          <div class="grid" id="char-grid"></div>
+        </section>
+      </aside>
+      <div class="stage-wrap"><canvas id="view"></canvas></div>
+      <aside class="side props">
+        <h3 style="margin-top:0">プロパティ</h3>
+        <div id="props-empty" class="empty">オブジェクトを選ぶと、ここで色や文字を変えられます。</div>
+        <div id="props-box" hidden>
+          <div class="field" id="text-fields" hidden>
+            <span>セリフ</span>
+            <textarea id="p-text"></textarea>
+            <span>フォント</span>
+            <select id="p-font"></select>
+            <span>文字サイズ</span>
+            <input class="num" id="p-font-size" type="number" min="8" max="240" />
+            <span>文字色</span>
+            <div class="row"><input id="p-fill" type="color" /><input class="num" id="p-fill-hex" /></div>
+            <span>縁取り色</span>
+            <div class="row"><input id="p-outline" type="color" /><input class="num" id="p-outline-hex" /></div>
+            <span>縁取り幅</span>
+            <input class="num" id="p-outline-w" type="number" min="0" max="40" />
+          </div>
+          <div class="field" id="shape-fields">
+            <span>塗り色</span>
+            <div class="row"><input id="p-sfill" type="color" /><input class="num" id="p-sfill-hex" /><label><input type="checkbox" id="p-nofill" /> なし</label></div>
+            <span>線の色</span>
+            <div class="row"><input id="p-sstroke" type="color" /><input class="num" id="p-sstroke-hex" /><label><input type="checkbox" id="p-nostroke" /> なし</label></div>
+            <span>線の太さ</span>
+            <input class="num" id="p-sw" type="number" min="0" max="40" />
+          </div>
+        </div>
+        <p class="hint" style="margin-top:16px">
+          Ctrl + ホイール：拡大縮小<br />
+          Shift + ホイール：左右移動<br />
+          ホイール：上下移動<br />
+          ドラッグ：移動 / 端の四角：サイズ
+        </p>
+      </aside>
+    </div>
+  </div>
+  <script>
+    const FONTS = [
+      { id: '"Noto Sans JP", sans-serif', name: "Noto Sans JP" },
+      { id: '"Zen Maru Gothic", sans-serif', name: "Zen Maru Gothic" },
+      { id: '"M PLUS Rounded 1c", sans-serif', name: "M PLUS Rounded" },
+      { id: '"Kosugi Maru", sans-serif', name: "Kosugi Maru" },
+      { id: '"Kiwi Maru", serif', name: "Kiwi Maru" },
+      { id: '"Kaisei Decol", serif', name: "Kaisei Decol" },
+      { id: '"Shippori Mincho", serif', name: "Shippori Mincho" },
+      { id: '"Noto Serif JP", serif', name: "Noto Serif JP" },
+      { id: '"Dela Gothic One", sans-serif', name: "Dela Gothic One" },
+      { id: '"Reggae One", cursive', name: "Reggae One" },
+      { id: '"RocknRoll One", sans-serif', name: "RocknRoll One" },
+      { id: '"DotGothic16", monospace', name: "DotGothic16" },
+      { id: '"Potta One", cursive', name: "Potta One" },
+      { id: '"Rampart One", sans-serif', name: "Rampart One" },
+      { id: '"Stick", sans-serif', name: "Stick" },
+      { id: '"Yusei Magic", sans-serif', name: "Yusei Magic" },
+      { id: '"Hachi Maru Pop", cursive', name: "Hachi Maru Pop" },
+      { id: '"Bangers", cursive', name: "Bangers" },
+      { id: '"Fredoka", sans-serif', name: "Fredoka" },
+      { id: '"Pacifico", cursive', name: "Pacifico" }
+    ];
+    const SHAPES = [
+      { kind: "bubble-round", name: "丸型吹き出し" },
+      { kind: "bubble-roundrect", name: "角丸吹き出し" },
+      { kind: "bubble-cloud", name: "思考吹き出し" },
+      { kind: "bubble-spike", name: "強調吹き出し" },
+      { kind: "frame-rect", name: "四角枠" },
+      { kind: "frame-round", name: "角丸四角枠" },
+      { kind: "novel", name: "ノベル窓" },
+      { kind: "speed", name: "集中線" },
+      { kind: "heart", name: "ハート" },
+      { kind: "star", name: "星" },
+      { kind: "diamond", name: "ダイヤ" },
+      { kind: "arrow", name: "矢印" }
+    ];
+    const TEMPLATES = [
+      { kind: "bg-sky", name: "青空", group: "bg" },
+      { kind: "bg-sunset", name: "夕焼け", group: "bg" },
+      { kind: "bg-school", name: "学校", group: "bg" },
+      { kind: "bg-room", name: "室内", group: "bg" },
+      { kind: "bg-space", name: "宇宙", group: "bg" },
+      { kind: "bg-cyber", name: "サイバー", group: "bg" },
+      { kind: "bg-dot", name: "ドット絵", group: "bg" },
+      { kind: "bg-park", name: "公園", group: "bg" },
+      { kind: "bg-stage", name: "ステージ", group: "bg" },
+      { kind: "bg-night", name: "夜の街", group: "bg" },
+      { kind: "face-joy", name: "喜び顔", group: "char" },
+      { kind: "face-angry", name: "怒り顔", group: "char" },
+      { kind: "face-sad", name: "悲しみ顔", group: "char" },
+      { kind: "face-surprise", name: "驚き顔", group: "char" },
+      { kind: "face-cool", name: "クール顔", group: "char" },
+      { kind: "char-robot", name: "ロボット", group: "char" },
+      { kind: "char-monster", name: "モンスター", group: "char" },
+      { kind: "char-cat", name: "ネコ", group: "char" },
+      { kind: "deco-tail", name: "しっぽ", group: "char" },
+      { kind: "deco-spark", name: "キラキラ", group: "char" }
+    ];
+
+    const view = document.getElementById("view");
+    const ctx = view.getContext("2d");
+    const state = {
+      w: 480, h: 360, zoom: 1, panX: 40, panY: 40,
+      objects: [], selected: null, drag: null, applying: false
+    };
+
+    function uid() { return "o" + Math.random().toString(36).slice(2, 9); }
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function roundRectPath(x, y, w, h, r) {
+      const p = new Path2D();
+      r = Math.max(0, Math.min(r, w / 2, h / 2));
+      p.moveTo(x + r, y);
+      p.arcTo(x + w, y, x + w, y + h, r);
+      p.arcTo(x + w, y + h, x, y + h, r);
+      p.arcTo(x, y + h, x, y, r);
+      p.arcTo(x, y, x + w, y, r);
+      p.closePath();
+      return p;
+    }
+    function ellipsePath(x, y, w, h) {
+      const p = new Path2D();
+      p.ellipse(x + w / 2, y + h / 2, Math.abs(w / 2), Math.abs(h / 2), 0, 0, Math.PI * 2);
+      return p;
+    }
+    function addTail(p, x, y, w, h, side) {
+      const cx = x + w / 2, by = y + h;
+      if (side === "left") {
+        p.moveTo(x + w * 0.28, by - 2);
+        p.lineTo(x + w * 0.08, by + h * 0.22);
+        p.lineTo(x + w * 0.42, by - 2);
+      } else {
+        p.moveTo(x + w * 0.58, by - 2);
+        p.lineTo(x + w * 0.92, by + h * 0.22);
+        p.lineTo(x + w * 0.72, by - 2);
+      }
+      p.closePath();
+      return p;
+    }
+    function heartPath(x, y, w, h) {
+      const p = new Path2D();
+      p.moveTo(x + w / 2, y + h * 0.32);
+      p.bezierCurveTo(x + w * 0.15, y - h * 0.08, x - w * 0.08, y + h * 0.38, x + w / 2, y + h);
+      p.bezierCurveTo(x + w * 1.08, y + h * 0.38, x + w * 0.85, y - h * 0.08, x + w / 2, y + h * 0.32);
+      p.closePath();
+      return p;
+    }
+    function starPath(x, y, w, h, spikes, inner) {
+      const p = new Path2D();
+      const cx = x + w / 2, cy = y + h / 2, n = spikes || 5;
+      const ro = 1, ri = inner || 0.45;
+      for (let i = 0; i < n * 2; i++) {
+        const t = -Math.PI / 2 + i * Math.PI / n;
+        const r = i % 2 ? ri : ro;
+        const px = cx + Math.cos(t) * (w / 2) * r;
+        const py = cy + Math.sin(t) * (h / 2) * r;
+        if (i === 0) p.moveTo(px, py); else p.lineTo(px, py);
+      }
+      p.closePath();
+      return p;
+    }
+    function diamondPath(x, y, w, h) {
+      const p = new Path2D();
+      p.moveTo(x + w / 2, y);
+      p.lineTo(x + w, y + h / 2);
+      p.lineTo(x + w / 2, y + h);
+      p.lineTo(x, y + h / 2);
+      p.closePath();
+      return p;
+    }
+    function arrowPath(x, y, w, h) {
+      const p = new Path2D();
+      const s = h * 0.28;
+      p.moveTo(x, y + h * 0.32);
+      p.lineTo(x + w * 0.58, y + h * 0.32);
+      p.lineTo(x + w * 0.58, y);
+      p.lineTo(x + w, y + h / 2);
+      p.lineTo(x + w * 0.58, y + h);
+      p.lineTo(x + w * 0.58, y + h * 0.68);
+      p.lineTo(x, y + h * 0.68);
+      p.closePath();
+      return p;
+    }
+    function shapePath(kind, x, y, w, h) {
+      if (kind === "bubble-round") {
+        const p = ellipsePath(x, y, w, h * 0.78);
+        addTail(p, x, y, w, h * 0.78, "left");
+        return p;
+      }
+      if (kind === "bubble-roundrect") {
+        const p = roundRectPath(x, y, w, h * 0.76, Math.min(w, h) * 0.18);
+        addTail(p, x, y, w, h * 0.76, "right");
+        return p;
+      }
+      if (kind === "bubble-cloud") {
+        const p = new Path2D();
+        const bumps = [
+          [0.22, 0.48, 0.22, 0.28], [0.48, 0.38, 0.28, 0.32], [0.75, 0.46, 0.22, 0.26],
+          [0.38, 0.62, 0.26, 0.22], [0.62, 0.64, 0.24, 0.2]
+        ];
+        bumps.forEach(([px, py, rx, ry]) => {
+          p.ellipse(x + w * px, y + h * py * 0.78, w * rx, h * ry, 0, 0, Math.PI * 2);
+        });
+        [[0.22, 0.86, 0.07], [0.14, 0.96, 0.045], [0.07, 1.04, 0.03]].forEach(([px, py, r]) => {
+          p.ellipse(x + w * px, y + h * py, w * r, h * r * 0.9, 0, 0, Math.PI * 2);
+        });
+        return p;
+      }
+      if (kind === "bubble-spike") {
+        const p = starPath(x, y - h * 0.02, w, h * 0.82, 16, 0.72);
+        addTail(p, x, y, w, h * 0.78, "left");
+        return p;
+      }
+      if (kind === "frame-rect") return roundRectPath(x, y, w, h, 0);
+      if (kind === "frame-round") return roundRectPath(x, y, w, h, Math.min(w, h) * 0.16);
+      if (kind === "novel") return roundRectPath(x, y, w, h, 10);
+      if (kind === "heart") return heartPath(x, y, w, h);
+      if (kind === "star") return starPath(x, y, w, h, 5, 0.42);
+      if (kind === "diamond") return diamondPath(x, y, w, h);
+      if (kind === "arrow") return arrowPath(x, y, w, h);
+      return roundRectPath(x, y, w, h, 8);
+    }
+    function paintPath(c, obj, path) {
+      if (obj.fill && obj.fill !== "none") {
+        c.fillStyle = obj.fill;
+        c.fill(path);
+      }
+      if (obj.strokeWidth > 0 && obj.stroke && obj.stroke !== "none") {
+        c.strokeStyle = obj.stroke;
+        c.lineWidth = obj.strokeWidth;
+        c.lineJoin = "round";
+        c.lineCap = "round";
+        c.stroke(path);
+      }
+    }
+    function drawSpeed(c, obj) {
+      const { x, y, w, h } = obj;
+      const cx = x + w / 2, cy = y + h / 2, r = Math.hypot(w, h) / 2;
+      c.save();
+      c.beginPath();
+      c.rect(x, y, w, h);
+      c.clip();
+      c.strokeStyle = obj.stroke === "none" ? "#111" : obj.stroke;
+      c.lineWidth = Math.max(1, obj.strokeWidth || 2);
+      c.lineCap = "round";
+      for (let i = 0; i < 56; i++) {
+        const a = (i / 56) * Math.PI * 2;
+        const jig = ((i * 13) % 9) / 9;
+        const inner = r * (0.12 + jig * 0.18);
+        c.beginPath();
+        c.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+        c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        c.stroke();
+      }
+      c.restore();
+    }
+    function drawNovel(c, obj) {
+      paintPath(c, obj, roundRectPath(obj.x, obj.y, obj.w, obj.h, 12));
+      c.fillStyle = obj.stroke === "none" ? "#4c97ff" : obj.stroke;
+      c.fill(roundRectPath(obj.x + 12, obj.y - 14, 88, 22, 6));
+      c.fillStyle = "#fff";
+      c.font = '700 11px "Noto Sans JP", sans-serif';
+      c.textBaseline = "middle";
+      c.fillText("なまえ", obj.x + 24, obj.y - 3);
+    }
+    function hash(n) { return Math.abs(Math.sin(n * 12.9898) * 43758.5453) % 1; }
+    function drawTemplate(c, kind, x, y, w, h) {
+      c.save();
+      c.beginPath();
+      c.rect(x, y, w, h);
+      c.clip();
+      const g = (a, b) => {
+        const gr = c.createLinearGradient(x, y, x, y + h);
+        gr.addColorStop(0, a); gr.addColorStop(1, b); return gr;
+      };
+      if (kind === "bg-sky") {
+        c.fillStyle = g("#7ecbff", "#d6f0ff"); c.fillRect(x, y, w, h);
+        c.fillStyle = "rgba(255,255,255,.9)";
+        [[0.2, 0.22], [0.55, 0.18], [0.78, 0.3]].forEach(([px, py]) => {
+          c.beginPath(); c.ellipse(x + w * px, y + h * py, w * 0.14, h * 0.06, 0, 0, Math.PI * 2); c.fill();
+        });
+      } else if (kind === "bg-sunset") {
+        c.fillStyle = g("#ffb347", "#ff5e7e"); c.fillRect(x, y, w, h);
+        c.fillStyle = "#ffe08a";
+        c.beginPath(); c.arc(x + w * 0.72, y + h * 0.28, Math.min(w, h) * 0.12, 0, Math.PI * 2); c.fill();
+      } else if (kind === "bg-school") {
+        c.fillStyle = "#3d8b5a"; c.fillRect(x, y, w, h * 0.72);
+        c.fillStyle = "#8b5a2b"; c.fillRect(x, y, 10, h); c.fillRect(x + w - 10, y, 10, h); c.fillRect(x, y, w, 10);
+        c.fillStyle = "#e6d3a3"; c.fillRect(x, y + h * 0.72, w, h * 0.28);
+        c.strokeStyle = "rgba(255,255,255,.25)"; c.lineWidth = 2;
+        for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(x + 18, y + h * 0.12 * i + 8); c.lineTo(x + w - 18, y + h * 0.12 * i + 8); c.stroke(); }
+      } else if (kind === "bg-room") {
+        c.fillStyle = "#f3e6d0"; c.fillRect(x, y, w, h);
+        c.fillStyle = "#8ec8ff"; c.fillRect(x + w * 0.55, y + h * 0.12, w * 0.32, h * 0.38);
+        c.fillStyle = "#fff"; c.strokeStyle = "#c9b79a"; c.lineWidth = 4;
+        c.strokeRect(x + w * 0.55, y + h * 0.12, w * 0.32, h * 0.38);
+        c.fillStyle = "#d7b48a"; c.fillRect(x, y + h * 0.7, w, h * 0.3);
+      } else if (kind === "bg-space") {
+        c.fillStyle = g("#070b2a", "#1b0b3b"); c.fillRect(x, y, w, h);
+        c.fillStyle = "#fff";
+        for (let i = 0; i < 40; i++) {
+          const px = x + hash(i + 2) * w, py = y + hash(i + 9) * h, r = 0.6 + hash(i) * 1.6;
+          c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.fill();
+        }
+        c.fillStyle = "#7aa7ff";
+        c.beginPath(); c.arc(x + w * 0.22, y + h * 0.28, Math.min(w, h) * 0.08, 0, Math.PI * 2); c.fill();
+      } else if (kind === "bg-cyber") {
+        c.fillStyle = "#061016"; c.fillRect(x, y, w, h);
+        c.strokeStyle = "#23e1c3"; c.lineWidth = 1;
+        c.beginPath();
+        for (let i = 0; i <= 8; i++) {
+          c.moveTo(x, y + h * 0.35 + i * 10);
+          c.lineTo(x + w, y + h * 0.35 + i * 10);
+        }
+        for (let i = 0; i <= 12; i++) {
+          const t = i / 12;
+          c.moveTo(x + w * t, y + h * 0.35);
+          c.lineTo(x + w * (0.5 + (t - 0.5) * 1.8), y + h);
+        }
+        c.stroke();
+      } else if (kind === "bg-dot") {
+        c.fillStyle = "#1d2b3a"; c.fillRect(x, y, w, h);
+        const s = Math.max(6, w / 24);
+        for (let yy = y; yy < y + h; yy += s) for (let xx = x; xx < x + w; xx += s) {
+          c.fillStyle = ((xx + yy) / s) % 2 < 1 ? "#ff6b9a" : "#ffe066";
+          c.fillRect(xx, yy, s - 1, s - 1);
+        }
+      } else if (kind === "bg-park") {
+        c.fillStyle = g("#9ad9ff", "#e8f7ff"); c.fillRect(x, y, w, h);
+        c.fillStyle = "#f7d15a";
+        c.beginPath(); c.arc(x + w * 0.8, y + h * 0.18, Math.min(w, h) * 0.1, 0, Math.PI * 2); c.fill();
+        c.fillStyle = "#6fbf63";
+        c.beginPath(); c.ellipse(x + w * 0.3, y + h, w * 0.55, h * 0.45, 0, Math.PI, 0); c.fill();
+        c.beginPath(); c.ellipse(x + w * 0.75, y + h, w * 0.5, h * 0.38, 0, Math.PI, 0); c.fill();
+      } else if (kind === "bg-stage") {
+        c.fillStyle = "#1a1020"; c.fillRect(x, y, w, h);
+        c.fillStyle = "#8b1e2d"; c.fillRect(x, y, w * 0.12, h); c.fillRect(x + w * 0.88, y, w * 0.12, h);
+        const lg = c.createRadialGradient(x + w / 2, y, 10, x + w / 2, y + h * 0.2, h);
+        lg.addColorStop(0, "rgba(255,240,170,.55)"); lg.addColorStop(1, "rgba(255,240,170,0)");
+        c.fillStyle = lg; c.fillRect(x, y, w, h);
+      } else if (kind === "bg-night") {
+        c.fillStyle = g("#1a1440", "#4b2a6a"); c.fillRect(x, y, w, h);
+        c.fillStyle = "#0e1028";
+        [0.1, 0.28, 0.5, 0.68, 0.85].forEach((px, i) => {
+          const bw = w * (0.12 + hash(i) * 0.08), bh = h * (0.28 + hash(i + 3) * 0.35);
+          c.fillRect(x + w * px, y + h - bh, bw, bh);
+          c.fillStyle = "#ffe08a";
+          for (let k = 0; k < 6; k++) c.fillRect(x + w * px + 4, y + h - bh + 6 + k * 10, 4, 4);
+          c.fillStyle = "#0e1028";
+        });
+      } else if (kind.startsWith("face-") || kind === "char-cat") {
+        drawFace(c, kind, x, y, w, h);
+      } else if (kind === "char-robot") {
+        c.fillStyle = "#9aa7b8";
+        c.fill(roundRectPath(x + w * 0.2, y + h * 0.22, w * 0.6, h * 0.58, 8));
+        c.fillStyle = "#4c97ff";
+        c.fillRect(x + w * 0.28, y + h * 0.34, w * 0.44, h * 0.16);
+        c.strokeStyle = "#575e75"; c.lineWidth = 3;
+        c.beginPath(); c.moveTo(x + w / 2, y + h * 0.22); c.lineTo(x + w / 2, y + h * 0.1); c.stroke();
+        c.fillStyle = "#ffbf00"; c.beginPath(); c.arc(x + w / 2, y + h * 0.08, 5, 0, Math.PI * 2); c.fill();
+      } else if (kind === "char-monster") {
+        c.fillStyle = "#7ed957";
+        c.beginPath(); c.ellipse(x + w / 2, y + h * 0.55, w * 0.32, h * 0.32, 0, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.moveTo(x + w * 0.32, y + h * 0.32); c.lineTo(x + w * 0.28, y + h * 0.08); c.lineTo(x + w * 0.44, y + h * 0.28); c.fill();
+        c.beginPath(); c.moveTo(x + w * 0.68, y + h * 0.32); c.lineTo(x + w * 0.72, y + h * 0.08); c.lineTo(x + w * 0.56, y + h * 0.28); c.fill();
+        c.fillStyle = "#111"; c.beginPath(); c.arc(x + w * 0.4, y + h * 0.5, 4, 0, Math.PI * 2); c.arc(x + w * 0.6, y + h * 0.5, 4, 0, Math.PI * 2); c.fill();
+        c.fillStyle = "#fff"; c.fillRect(x + w * 0.42, y + h * 0.62, 6, 8); c.fillRect(x + w * 0.52, y + h * 0.62, 6, 8);
+      } else if (kind === "deco-tail") {
+        c.fillStyle = "#fff"; c.strokeStyle = "#222"; c.lineWidth = 3;
+        c.beginPath();
+        c.moveTo(x + w * 0.2, y + h * 0.2);
+        c.lineTo(x + w * 0.5, y + h * 0.85);
+        c.lineTo(x + w * 0.8, y + h * 0.2);
+        c.closePath(); c.fill(); c.stroke();
+      } else if (kind === "deco-spark") {
+        c.fillStyle = "#ffd84d";
+        c.fill(starPath(x + w * 0.15, y + h * 0.1, w * 0.5, h * 0.5, 4, 0.35));
+        c.fill(starPath(x + w * 0.5, y + h * 0.42, w * 0.35, h * 0.35, 4, 0.35));
+      }
+      c.restore();
+    }
+    function drawFace(c, kind, x, y, w, h) {
+      const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) * 0.38;
+      c.fillStyle = kind === "char-cat" ? "#ffb347" : "#ffe08a";
+      c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = "#222"; c.lineWidth = 3; c.stroke();
+      if (kind === "char-cat") {
+        c.fillStyle = "#ffb347";
+        c.beginPath(); c.moveTo(cx - r * 0.7, cy - r * 0.2); c.lineTo(cx - r * 0.85, cy - r * 1.05); c.lineTo(cx - r * 0.15, cy - r * 0.7); c.fill();
+        c.beginPath(); c.moveTo(cx + r * 0.7, cy - r * 0.2); c.lineTo(cx + r * 0.85, cy - r * 1.05); c.lineTo(cx + r * 0.15, cy - r * 0.7); c.fill();
+      }
+      c.fillStyle = "#222";
+      const eyeY = cy - r * 0.12;
+      if (kind === "face-joy") {
+        c.lineWidth = 3; c.beginPath(); c.arc(cx - r * 0.28, eyeY, 6, Math.PI, 0); c.stroke();
+        c.beginPath(); c.arc(cx + r * 0.28, eyeY, 6, Math.PI, 0); c.stroke();
+        c.beginPath(); c.arc(cx, cy + r * 0.18, r * 0.28, 0.15, Math.PI - 0.15); c.stroke();
+      } else if (kind === "face-angry") {
+        c.beginPath(); c.arc(cx - r * 0.28, eyeY + 2, 4, 0, Math.PI * 2); c.arc(cx + r * 0.28, eyeY + 2, 4, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.moveTo(cx - r * 0.48, eyeY - 8); c.lineTo(cx - r * 0.12, eyeY - 2); c.moveTo(cx + r * 0.48, eyeY - 8); c.lineTo(cx + r * 0.12, eyeY - 2); c.stroke();
+        c.beginPath(); c.moveTo(cx - r * 0.18, cy + r * 0.28); c.lineTo(cx + r * 0.18, cy + r * 0.22); c.stroke();
+      } else if (kind === "face-sad") {
+        c.beginPath(); c.arc(cx - r * 0.28, eyeY, 4, 0, Math.PI * 2); c.arc(cx + r * 0.28, eyeY, 4, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.arc(cx, cy + r * 0.38, r * 0.22, Math.PI + 0.2, -0.2); c.stroke();
+      } else if (kind === "face-surprise") {
+        c.beginPath(); c.arc(cx - r * 0.28, eyeY, 6, 0, Math.PI * 2); c.arc(cx + r * 0.28, eyeY, 6, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.arc(cx, cy + r * 0.28, r * 0.18, 0, Math.PI * 2); c.stroke();
+      } else {
+        c.fillRect(cx - r * 0.38, eyeY - 2, 14, 3); c.fillRect(cx + r * 0.18, eyeY - 2, 14, 3);
+        c.beginPath(); c.moveTo(cx - r * 0.16, cy + r * 0.28); c.lineTo(cx + r * 0.16, cy + r * 0.28); c.stroke();
+        if (kind === "char-cat") {
+          c.beginPath();
+          c.moveTo(cx, cy); c.lineTo(cx - r * 0.9, cy - 4); c.moveTo(cx, cy); c.lineTo(cx - r * 0.9, cy + 6);
+          c.moveTo(cx, cy); c.lineTo(cx + r * 0.9, cy - 4); c.moveTo(cx, cy); c.lineTo(cx + r * 0.9, cy + 6);
+          c.stroke();
+        }
+      }
+    }
+    function wrapText(c, text, maxW) {
+      const lines = [];
+      String(text || "").split("\n").forEach((para) => {
+        let line = "";
+        for (const ch of para) {
+          const next = line + ch;
+          if (c.measureText(next).width > maxW && line) { lines.push(line); line = ch; }
+          else line = next;
+        }
+        lines.push(line);
+      });
+      return lines;
+    }
+    function drawText(c, obj) {
+      const size = obj.fontSize || 28;
+      c.font = `700 ${size}px ${obj.fontFamily}`;
+      c.textBaseline = "top";
+      const lines = wrapText(c, obj.text, obj.w);
+      const ow = obj.outlineWidth || 0;
+      lines.forEach((line, i) => {
+        const tx = obj.x, ty = obj.y + i * size * 1.25;
+        if (ow > 0 && obj.outline && obj.outline !== "none") {
+          c.lineJoin = "round"; c.miterLimit = 2;
+          c.strokeStyle = obj.outline; c.lineWidth = ow * 2;
+          c.strokeText(line, tx, ty);
+        }
+        c.fillStyle = obj.fill || "#111";
+        c.fillText(line, tx, ty);
+      });
+    }
+    function drawObject(c, obj) {
+      if (obj.type === "shape") {
+        if (obj.kind === "speed") drawSpeed(c, obj);
+        else if (obj.kind === "novel") drawNovel(c, obj);
+        else paintPath(c, obj, shapePath(obj.kind, obj.x, obj.y, obj.w, obj.h));
+      } else if (obj.type === "text") {
+        drawText(c, obj);
+      } else if (obj.type === "template") {
+        drawTemplate(c, obj.kind, obj.x, obj.y, obj.w, obj.h);
+      }
+    }
+    function checker(c, x, y, w, h, s) {
+      c.fillStyle = "#fff"; c.fillRect(x, y, w, h);
+      c.fillStyle = "#eceff4";
+      for (let yy = 0; yy < h; yy += s) for (let xx = 0; xx < w; xx += s) {
+        if (((xx / s) + (yy / s)) % 2 === 0) c.fillRect(x + xx, y + yy, s, s);
+      }
+    }
+    function resizeView() {
+      const wrap = view.parentElement.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      view.width = Math.max(1, wrap.width * dpr);
+      view.height = Math.max(1, wrap.height * dpr);
+      view.style.width = wrap.width + "px";
+      view.style.height = wrap.height + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
+    }
+    function draw() {
+      const wrap = view.parentElement.getBoundingClientRect();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, view.width, view.height);
+      const dpr = view.width / wrap.width;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "#c8d4de";
+      ctx.fillRect(0, 0, wrap.width, wrap.height);
+      ctx.save();
+      ctx.translate(state.panX, state.panY);
+      ctx.scale(state.zoom, state.zoom);
+      checker(ctx, 0, 0, state.w, state.h, 16);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, state.w, state.h); ctx.clip();
+      state.objects.forEach((o) => drawObject(ctx, o));
+      ctx.restore();
+      ctx.strokeStyle = "#4c97ff"; ctx.lineWidth = 1.5 / state.zoom;
+      ctx.strokeRect(0, 0, state.w, state.h);
+      const sel = selected();
+      if (sel) {
+        ctx.strokeStyle = "#4c97ff";
+        ctx.setLineDash([6 / state.zoom, 4 / state.zoom]);
+        ctx.strokeRect(sel.x, sel.y, sel.w, sel.h);
+        ctx.setLineDash([]);
+        const hs = 8 / state.zoom;
+        handles(sel).forEach((h) => {
+          ctx.fillStyle = "#fff"; ctx.strokeStyle = "#4c97ff";
+          ctx.fillRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+          ctx.strokeRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+        });
+      }
+      ctx.restore();
+      document.getElementById("zoom-label").textContent = Math.round(state.zoom * 100) + "%";
+    }
+    function selected() { return state.objects.find((o) => o.id === state.selected) || null; }
+    function handles(o) {
+      return [
+        { k: "nw", x: o.x, y: o.y }, { k: "n", x: o.x + o.w / 2, y: o.y }, { k: "ne", x: o.x + o.w, y: o.y },
+        { k: "e", x: o.x + o.w, y: o.y + o.h / 2 }, { k: "se", x: o.x + o.w, y: o.y + o.h },
+        { k: "s", x: o.x + o.w / 2, y: o.y + o.h }, { k: "sw", x: o.x, y: o.y + o.h }, { k: "w", x: o.x, y: o.y + o.h / 2 }
+      ];
+    }
+    function toWorld(e) {
+      const r = view.getBoundingClientRect();
+      return {
+        x: (e.clientX - r.left - state.panX) / state.zoom,
+        y: (e.clientY - r.top - state.panY) / state.zoom
+      };
+    }
+    function hitHandle(o, p) {
+      const s = 10 / state.zoom;
+      return handles(o).find((h) => Math.abs(p.x - h.x) <= s && Math.abs(p.y - h.y) <= s);
+    }
+    function hitObject(p) {
+      for (let i = state.objects.length - 1; i >= 0; i--) {
+        const o = state.objects[i];
+        if (p.x >= o.x && p.x <= o.x + o.w && p.y >= o.y && p.y <= o.y + o.h) return o;
+      }
+      return null;
+    }
+    function addShape(kind) {
+      const obj = {
+        id: uid(), type: "shape", kind,
+        x: state.w * 0.22, y: state.h * 0.2, w: 220, h: 130,
+        fill: kind === "speed" ? "none" : "#ffffff",
+        stroke: "#222222", strokeWidth: kind === "speed" ? 2 : 4
+      };
+      if (kind === "novel") { obj.x = 16; obj.y = state.h - 92; obj.w = state.w - 32; obj.h = 76; obj.fill = "#fff8e8"; }
+      if (kind === "heart" || kind === "star" || kind === "diamond") { obj.w = 140; obj.h = 140; obj.fill = "#ff6b9a"; }
+      if (kind === "arrow") { obj.w = 180; obj.h = 80; obj.fill = "#ffbf00"; }
+      if (kind === "speed") { obj.x = 0; obj.y = 0; obj.w = state.w; obj.h = state.h; obj.stroke = "#111111"; }
+      state.objects.push(obj); state.selected = obj.id; syncProps(); draw();
+    }
+    function addText() {
+      const obj = {
+        id: uid(), type: "text",
+        x: state.w * 0.28, y: state.h * 0.32, w: 200, h: 80,
+        text: "セリフを入力", fontFamily: FONTS[0].id, fontSize: 28,
+        fill: "#222222", outline: "#ffffff", outlineWidth: 4
+      };
+      state.objects.push(obj); state.selected = obj.id; syncProps(); draw();
+    }
+    function addTemplate(kind, group) {
+      const obj = { id: uid(), type: "template", kind, x: 0, y: 0, w: 96, h: 96, fill: "none", stroke: "none", strokeWidth: 0 };
+      if (group === "bg") { obj.w = state.w; obj.h = state.h; state.objects.unshift(obj); }
+      else { obj.x = state.w / 2 - 48; obj.y = state.h / 2 - 70; state.objects.push(obj); }
+      state.selected = obj.id; syncProps(); draw();
+    }
+    function syncProps() {
+      const o = selected();
+      const box = document.getElementById("props-box");
+      const empty = document.getElementById("props-empty");
+      const tf = document.getElementById("text-fields");
+      const sf = document.getElementById("shape-fields");
+      if (!o) { box.hidden = true; empty.hidden = false; return; }
+      empty.hidden = true; box.hidden = false;
+      state.applying = true;
+      tf.hidden = o.type !== "text";
+      sf.hidden = o.type === "template";
+      if (o.type === "text") {
+        document.getElementById("p-text").value = o.text;
+        document.getElementById("p-font").value = o.fontFamily;
+        document.getElementById("p-font-size").value = o.fontSize;
+        document.getElementById("p-fill").value = o.fill;
+        document.getElementById("p-fill-hex").value = o.fill;
+        document.getElementById("p-outline").value = o.outline;
+        document.getElementById("p-outline-hex").value = o.outline;
+        document.getElementById("p-outline-w").value = o.outlineWidth;
+      } else if (o.type === "shape") {
+        const noFill = o.fill === "none";
+        const noStroke = o.stroke === "none";
+        document.getElementById("p-nofill").checked = noFill;
+        document.getElementById("p-nostroke").checked = noStroke;
+        document.getElementById("p-sfill").value = noFill ? "#ffffff" : o.fill;
+        document.getElementById("p-sfill-hex").value = noFill ? "none" : o.fill;
+        document.getElementById("p-sstroke").value = noStroke ? "#222222" : o.stroke;
+        document.getElementById("p-sstroke-hex").value = noStroke ? "none" : o.stroke;
+        document.getElementById("p-sw").value = o.strokeWidth;
+      }
+      state.applying = false;
+    }
+    function applyProps() {
+      if (state.applying) return;
+      const o = selected();
+      if (!o) return;
+      if (o.type === "text") {
+        o.text = document.getElementById("p-text").value;
+        o.fontFamily = document.getElementById("p-font").value;
+        o.fontSize = Number(document.getElementById("p-font-size").value) || 28;
+        o.fill = document.getElementById("p-fill").value;
+        o.outline = document.getElementById("p-outline").value;
+        o.outlineWidth = Number(document.getElementById("p-outline-w").value) || 0;
+        document.getElementById("p-fill-hex").value = o.fill;
+        document.getElementById("p-outline-hex").value = o.outline;
+      } else if (o.type === "shape") {
+        o.fill = document.getElementById("p-nofill").checked ? "none" : document.getElementById("p-sfill").value;
+        o.stroke = document.getElementById("p-nostroke").checked ? "none" : document.getElementById("p-sstroke").value;
+        o.strokeWidth = Number(document.getElementById("p-sw").value) || 0;
+        document.getElementById("p-sfill-hex").value = o.fill;
+        document.getElementById("p-sstroke-hex").value = o.stroke;
+      }
+      draw();
+    }
+
+    document.querySelectorAll(".tabs button").forEach((btn) => btn.addEventListener("click", () => {
+      document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b === btn));
+      ["shapes", "text", "temps"].forEach((id) => {
+        document.getElementById("tab-" + id).hidden = btn.dataset.tab !== id;
+      });
+    }));
+    const fontSel = document.getElementById("p-font");
+    FONTS.forEach((f) => {
+      const opt = document.createElement("option");
+      opt.value = f.id; opt.textContent = f.name; opt.style.fontFamily = f.id;
+      fontSel.append(opt);
+    });
+    function thumbButton(label, drawThumb) {
+      const b = document.createElement("button");
+      b.className = "tile"; b.type = "button";
+      const c = document.createElement("canvas"); c.width = 144; c.height = 72;
+      drawThumb(c.getContext("2d"));
+      b.append(c, document.createTextNode(label));
+      return b;
+    }
+    SHAPES.forEach((s) => {
+      const b = thumbButton(s.name, (c) => {
+        c.clearRect(0, 0, 144, 72);
+        const dummy = { kind: s.kind, x: 18, y: 10, w: 108, h: 50, fill: "#fff", stroke: "#222", strokeWidth: 3 };
+        if (s.kind === "speed") { dummy.x = 8; dummy.y = 8; dummy.w = 128; dummy.h = 56; dummy.stroke = "#333"; dummy.strokeWidth = 1.5; drawSpeed(c, dummy); }
+        else if (s.kind === "novel") { dummy.y = 22; dummy.h = 36; dummy.fill = "#fff8e8"; drawNovel(c, dummy); }
+        else paintPath(c, dummy, shapePath(s.kind, dummy.x, dummy.y, dummy.w, dummy.h));
+      });
+      b.addEventListener("click", () => addShape(s.kind));
+      document.getElementById("shape-grid").append(b);
+    });
+    TEMPLATES.forEach((t) => {
+      const b = thumbButton(t.name, (c) => { c.clearRect(0, 0, 144, 72); drawTemplate(c, t.kind, 0, 0, 144, 72); });
+      b.addEventListener("click", () => addTemplate(t.kind, t.group));
+      document.getElementById(t.group === "bg" ? "bg-grid" : "char-grid").append(b);
+    });
+    document.getElementById("btn-add-text").addEventListener("click", addText);
+    ["p-text", "p-font", "p-font-size", "p-fill", "p-outline", "p-outline-w", "p-sfill", "p-sstroke", "p-sw", "p-nofill", "p-nostroke"].forEach((id) => {
+      const el = document.getElementById(id);
+      el.addEventListener("input", applyProps);
+      el.addEventListener("change", applyProps);
+    });
+    document.getElementById("p-fill-hex").addEventListener("change", (e) => {
+      const o = selected(); if (!o || o.type !== "text") return;
+      o.fill = e.target.value; document.getElementById("p-fill").value = e.target.value; draw();
+    });
+    document.getElementById("p-outline-hex").addEventListener("change", (e) => {
+      const o = selected(); if (!o || o.type !== "text") return;
+      o.outline = e.target.value; document.getElementById("p-outline").value = e.target.value; draw();
+    });
+    document.getElementById("btn-del").addEventListener("click", () => {
+      if (!state.selected) return;
+      state.objects = state.objects.filter((o) => o.id !== state.selected);
+      state.selected = null; syncProps(); draw();
+    });
+    document.getElementById("btn-dup").addEventListener("click", () => {
+      const o = selected(); if (!o) return;
+      const n = { ...o, id: uid(), x: o.x + 16, y: o.y + 16 };
+      state.objects.push(n); state.selected = n.id; syncProps(); draw();
+    });
+    document.getElementById("btn-front").addEventListener("click", () => {
+      const o = selected(); if (!o) return;
+      state.objects = state.objects.filter((x) => x.id !== o.id).concat(o); draw();
+    });
+    document.getElementById("btn-back").addEventListener("click", () => {
+      const o = selected(); if (!o) return;
+      state.objects = [o].concat(state.objects.filter((x) => x.id !== o.id)); draw();
+    });
+    document.getElementById("canvas-size").addEventListener("change", (e) => {
+      const [w, h] = e.target.value.split("x").map(Number);
+      state.w = w; state.h = h; centerView(); draw();
+    });
+    document.getElementById("btn-reset-view").addEventListener("click", () => { centerView(); draw(); });
+    document.getElementById("btn-png").addEventListener("click", () => {
+      const out = document.createElement("canvas");
+      out.width = state.w; out.height = state.h;
+      const octx = out.getContext("2d");
+      state.objects.forEach((o) => drawObject(octx, o));
+      out.toBlob((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "serif.png";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+    });
+
+    view.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      if (e.ctrlKey) {
+        const r = view.getBoundingClientRect();
+        const mx = e.clientX - r.left, my = e.clientY - r.top;
+        const wx = (mx - state.panX) / state.zoom, wy = (my - state.panY) / state.zoom;
+        const next = clamp(state.zoom * (e.deltaY > 0 ? 0.9 : 1.1), 0.2, 6);
+        state.zoom = next;
+        state.panX = mx - wx * next;
+        state.panY = my - wy * next;
+      } else if (e.shiftKey) {
+        state.panX -= e.deltaY;
+      } else {
+        state.panY -= e.deltaY;
+      }
+      draw();
+    }, { passive: false });
+
+    view.addEventListener("pointerdown", (e) => {
+      view.setPointerCapture(e.pointerId);
+      const p = toWorld(e);
+      const sel = selected();
+      if (sel) {
+        const h = hitHandle(sel, p);
+        if (h) { state.drag = { mode: "resize", key: h.k, start: p, box: { ...sel } }; return; }
+      }
+      const hit = hitObject(p);
+      state.selected = hit ? hit.id : null;
+      syncProps();
+      if (hit) state.drag = { mode: "move", start: p, ox: hit.x, oy: hit.y };
+      draw();
+    });
+    view.addEventListener("pointermove", (e) => {
+      if (!state.drag) return;
+      const p = toWorld(e);
+      const o = selected();
+      if (!o) return;
+      if (state.drag.mode === "move") {
+        o.x = state.drag.ox + (p.x - state.drag.start.x);
+        o.y = state.drag.oy + (p.y - state.drag.start.y);
+      } else {
+        const b = state.drag.box, k = state.drag.key;
+        let x = b.x, y = b.y, w = b.w, h = b.h;
+        if (k.includes("e")) w = Math.max(24, b.w + (p.x - state.drag.start.x));
+        if (k.includes("s")) h = Math.max(24, b.h + (p.y - state.drag.start.y));
+        if (k.includes("w")) { const dx = p.x - state.drag.start.x; x = b.x + dx; w = Math.max(24, b.w - dx); }
+        if (k.includes("n")) { const dy = p.y - state.drag.start.y; y = b.y + dy; h = Math.max(24, b.h - dy); }
+        o.x = x; o.y = y; o.w = w; o.h = h;
+      }
+      draw();
+    });
+    view.addEventListener("pointerup", () => { state.drag = null; });
+
+    window.addEventListener("keydown", (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "Delete" || e.key === "Backspace") document.getElementById("btn-del").click();
+    });
+
+    function centerView() {
+      const r = view.parentElement.getBoundingClientRect();
+      const z = Math.min((r.width - 48) / state.w, (r.height - 48) / state.h, 1.4);
+      state.zoom = clamp(z, 0.3, 2);
+      state.panX = (r.width - state.w * state.zoom) / 2;
+      state.panY = (r.height - state.h * state.zoom) / 2;
+    }
+    document.getElementById("p-sfill-hex").addEventListener("change", (e) => {
+      const o = selected(); if (!o || o.type !== "shape") return;
+      if (e.target.value === "none") { o.fill = "none"; document.getElementById("p-nofill").checked = true; }
+      else { o.fill = e.target.value; document.getElementById("p-sfill").value = e.target.value; document.getElementById("p-nofill").checked = false; }
+      draw();
+    });
+    document.getElementById("p-sstroke-hex").addEventListener("change", (e) => {
+      const o = selected(); if (!o || o.type !== "shape") return;
+      if (e.target.value === "none") { o.stroke = "none"; document.getElementById("p-nostroke").checked = true; }
+      else { o.stroke = e.target.value; document.getElementById("p-sstroke").value = e.target.value; document.getElementById("p-nostroke").checked = false; }
+      draw();
+    });
+    window.addEventListener("resize", () => { resizeView(); });
+    centerView();
+    addShape("bubble-roundrect");
+    addText();
+    document.fonts.ready.then(() => draw());
+    resizeView();
+  </script>
+</body>
+</html>
