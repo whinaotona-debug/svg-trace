@@ -553,6 +553,7 @@
       textAlign: "start",
       textVertical: false,
       textEdit: null,
+      reshapeNode: null,
       costumes: [{ id: "c0", name: "costume1", objects: [] }],
       currentCostume: 0,
       playingCostumes: false,
@@ -1235,6 +1236,7 @@
     }
     function selectIds(ids, additive) {
       state.selectedIds = additive ? Array.from(new Set(state.selectedIds.concat(ids))) : ids.slice();
+      if (!additive) state.reshapeNode = null;
       if (state.tool === "reshape") convertSelectedRectsToPaths();
       const obj = selected();
       if (obj) loadPropertiesFrom(obj);
@@ -1501,12 +1503,17 @@
       if (next?.c === "Q") { next.x1 += dx * 0.5; next.y1 += dy * 0.5; }
       obj.d = serializePathCommands(cmds);
     }
-    function deletePathAnchor(obj, cmdIndex) {
+    function canDeletePathAnchor(obj, cmdIndex) {
       ensurePath(obj);
       const cmds = parsePathCommands(obj.d);
-      const anchors = cmds.filter((c) => c.c !== "Z");
-      if (anchors.length <= 2) return false;
-      if (!cmds[cmdIndex] || cmds[cmdIndex].c === "Z") return false;
+      if (!cmds[cmdIndex] || cmds[cmdIndex].c === "Z" || cmds[cmdIndex].x == null) return false;
+      const closed = cmds.some((c) => c.c === "Z");
+      const n = cmds.filter((c) => c.c !== "Z" && c.x != null).length;
+      return n > (closed ? 3 : 2);
+    }
+    function deletePathAnchor(obj, cmdIndex) {
+      if (!canDeletePathAnchor(obj, cmdIndex)) return false;
+      const cmds = parsePathCommands(obj.d);
       if (cmds[cmdIndex].c === "M") {
         const next = cmds[cmdIndex + 1];
         if (next && next.c !== "Z" && next.c !== "M") {
@@ -1515,6 +1522,21 @@
       }
       cmds.splice(cmdIndex, 1);
       obj.d = serializePathCommands(cmds);
+      return true;
+    }
+    function removeReshapeCorner(obj, cmdIndex) {
+      ensurePath(obj);
+      if (!canDeletePathAnchor(obj, cmdIndex)) {
+        toast("閉じた形は角が3つまでです");
+        return false;
+      }
+      snapshot();
+      deletePathAnchor(obj, cmdIndex);
+      const anchors = reshapeAnchors(obj);
+      const next = anchors.find((a) => a.cmd >= cmdIndex) || anchors.at(-1);
+      state.reshapeNode = next ? { objId: obj.id, cmd: next.cmd } : null;
+      renderObjects();
+      drawSelection();
       return true;
     }
     function segmentMids(obj) {
@@ -1594,9 +1616,9 @@
     }
     function drawReshape() {
       const items = listReshapeItems();
-      const r = 8 / state.zoom;
-      const hitR = 20 / state.zoom;
-      const midS = 13 / state.zoom;
+      const midS = 11 / state.zoom;
+      const nodeS = 13 / state.zoom;
+      const nodeHit = 22 / state.zoom;
       const midHit = 40;
       const total = items.reduce((n, it) => n + reshapeAnchors(it.obj).length, 0);
       const showMids = total <= 180;
@@ -1641,12 +1663,15 @@
         }
         reshapeAnchors(obj).forEach((a) => {
           const wp = applyMat(mat, a.x, a.y);
-          selectionLayer.append(createEl("circle", {
-            class:"node", cx:wp.x, cy:wp.y, r:hitR, fill:"transparent", stroke:"none",
+          const on = state.reshapeNode && state.reshapeNode.objId === obj.id && state.reshapeNode.cmd === a.cmd;
+          selectionLayer.append(createEl("rect", {
+            class:"node", x:wp.x-nodeHit/2, y:wp.y-nodeHit/2, width:nodeHit, height:nodeHit,
+            fill:"transparent", stroke:"none",
             "data-node":"1", "data-obj": obj.id, "data-cmd": String(a.cmd), "pointer-events":"all",
           }));
-          selectionLayer.append(createEl("circle", {
-            cx:wp.x, cy:wp.y, r, fill:"#fff", stroke:"#855cd6", "stroke-width": 2 / state.zoom, "pointer-events":"none",
+          selectionLayer.append(createEl("rect", {
+            x:wp.x-nodeS/2, y:wp.y-nodeS/2, width:nodeS, height:nodeS,
+            fill: on ? "#855cd6" : "#fff", stroke:"#855cd6", "stroke-width": 2 / state.zoom, "pointer-events":"none",
           }));
         });
         if (obj.type !== "path") return;
@@ -1725,10 +1750,16 @@
       document.querySelectorAll(".tool[data-tool]").forEach((btn) => btn.classList.toggle("active", btn.dataset.tool === tool));
       applyCanvasToolClass();
       if (tool === "reshape") convertSelectedRectsToPaths();
+      else state.reshapeNode = null;
       drawSelection();
     }
 
     function deleteSelected() {
+      if (state.tool === "reshape" && state.reshapeNode) {
+        const obj = findById(state.objects, state.reshapeNode.objId);
+        if (obj) removeReshapeCorner(obj, state.reshapeNode.cmd);
+        return;
+      }
       if (!state.selectedIds.length) return;
       snapshot();
       state.objects = state.objects.filter((o) => !state.selectedIds.includes(o.id));
@@ -2373,38 +2404,40 @@
         if (node) {
           const obj = findById(state.objects, node.getAttribute("data-obj"));
           if (obj) {
+            const cmd = +node.getAttribute("data-cmd");
             if (evt.altKey && (obj.type === "path" || obj.type === "rect")) {
-              snapshot();
-              ensurePath(obj);
-              deletePathAnchor(obj, +node.getAttribute("data-cmd"));
-              renderObjects(); drawSelection();
+              removeReshapeCorner(obj, cmd);
               return;
             }
-            snapshot();
             if (obj.type === "rect") ensurePath(obj);
-            state.gesture = { type:"reshape", objId: obj.id, cmd: +node.getAttribute("data-cmd") };
+            state.reshapeNode = { objId: obj.id, cmd };
+            state.gesture = { type:"reshape", objId: obj.id, cmd, recorded: false };
+            drawSelection();
           }
         } else if (mid) {
           const near = nearestReshapeAnchor(p, 18 / state.zoom);
           if (near) {
-            snapshot();
             if (near.obj.type === "rect") ensurePath(near.obj);
-            state.gesture = { type:"reshape", objId: near.obj.id, cmd: near.cmd };
+            state.reshapeNode = { objId: near.obj.id, cmd: near.cmd };
+            state.gesture = { type:"reshape", objId: near.obj.id, cmd: near.cmd, recorded: false };
+            drawSelection();
           } else {
             const obj = findById(state.objects, mid.getAttribute("data-obj"));
             if (obj) {
               snapshot();
               const cmd = insertAtWorldPoint(obj, +mid.getAttribute("data-after"), Number(mid.getAttribute("data-t")) || 0.5, p);
+              state.reshapeNode = { objId: obj.id, cmd };
               renderObjects(); drawSelection();
-              state.gesture = { type:"reshape", objId: obj.id, cmd };
+              state.gesture = { type:"reshape", objId: obj.id, cmd, recorded: false };
             }
           }
         } else {
           const near = nearestReshapeAnchor(p, 18 / state.zoom);
           if (near) {
-            snapshot();
             if (near.obj.type === "rect") ensurePath(near.obj);
-            state.gesture = { type:"reshape", objId: near.obj.id, cmd: near.cmd };
+            state.reshapeNode = { objId: near.obj.id, cmd: near.cmd };
+            state.gesture = { type:"reshape", objId: near.obj.id, cmd: near.cmd, recorded: false };
+            drawSelection();
             return;
           }
           const items = listReshapeItems();
@@ -2412,8 +2445,9 @@
           if (hitSeg) {
             snapshot();
             const cmd = insertAtWorldPoint(hitSeg.obj, hitSeg.after, hitSeg.t, p);
+            state.reshapeNode = { objId: hitSeg.obj.id, cmd };
             renderObjects(); drawSelection();
-            state.gesture = { type:"reshape", objId: hitSeg.obj.id, cmd };
+            state.gesture = { type:"reshape", objId: hitSeg.obj.id, cmd, recorded: false };
           } else {
             const hit = findObjectAt(evt);
             selectObject(hit?.id || null);
@@ -2543,6 +2577,7 @@
       if (state.gesture?.type === "reshape") {
         const obj = findById(state.objects, state.gesture.objId);
         if (!obj) return;
+        if (!state.gesture.recorded) { snapshot(); state.gesture.recorded = true; }
         const local = applyMat(invert(worldMatrixOf(obj.id)), p.x, p.y);
         applyReshapeMove(obj, state.gesture, local);
         renderObjects(); drawSelection();
@@ -2766,10 +2801,8 @@
         const node = eventEl(e, "[data-node]");
         if (node) {
           const obj = findById(state.objects, node.getAttribute("data-obj"));
-          if (obj && obj.type === "path") {
-            snapshot();
-            deletePathAnchor(obj, +node.getAttribute("data-cmd"));
-            renderObjects(); drawSelection();
+          if (obj && (obj.type === "path" || obj.type === "rect")) {
+            removeReshapeCorner(obj, +node.getAttribute("data-cmd"));
           }
           return;
         }
@@ -2981,6 +3014,11 @@
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="v") { e.preventDefault(); pasteClipboard(); return; }
       if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="g") { e.preventDefault(); e.shiftKey?ungroupSelected():groupSelected(); return; }
       if (e.key==="Enter" && state.drawing?.mode==="curve") { e.preventDefault(); finishCurve(false); return; }
+      if ((e.key==="Delete"||e.key==="Backspace") && state.tool === "reshape" && state.reshapeNode) {
+        e.preventDefault();
+        deleteSelected();
+        return;
+      }
       const only = selectedObjects();
       const textObj = only.length === 1 && only[0].type === "text" ? only[0] : null;
       if (textObj && !e.ctrlKey && !e.metaKey && !e.altKey) {
