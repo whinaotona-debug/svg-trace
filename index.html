@@ -38,13 +38,14 @@
     .ibtn:hover { background: #e6eef5; }
     .ibtn:disabled { opacity: .35; cursor: default; }
     .align-bar .ibtn, .text-align-bar .ibtn { font-size: 11px; font-weight: 700; }
+    .align-bar .ibtn svg, .text-align-bar .ibtn svg { width: 18px; height: 18px; stroke-width: 2.55; }
     .ibtn-txt {
       width: auto; min-width: 32px; height: 32px; padding: 0 8px; font-size: 11px; font-weight: 700;
       display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
     }
     .ibtn-txt svg { width: 16px; height: 16px; }
     .align-bar, .text-align-bar { display: flex; align-items: center; gap: 2px; }
-    .text-align-bar button.on { background: #d9e8ff; color: #2d5aa0; }
+    .text-align-bar button.on, .align-bar button.on { background: #d9e8ff; color: #2d5aa0; }
     .text-edit {
       position: fixed; z-index: 45; min-width: 140px; min-height: 32px;
       border: 2px solid #4c97ff; border-radius: 6px; padding: 6px 8px;
@@ -279,8 +280,14 @@
     #selection-ui { pointer-events: none; }
     svg.canvas.select #selection-ui .handle, svg.canvas.select #selection-ui .rot-handle,
     svg.canvas.reshape #selection-ui .node,
-    svg.canvas.reshape #selection-ui .mid { pointer-events: auto; cursor: pointer; }
-    svg.canvas.reshape #selection-ui .mid { cursor: copy; }
+    svg.canvas.reshape #selection-ui .mid,
+    svg.canvas.reshape #selection-ui .mid-hit { pointer-events: auto; cursor: pointer; }
+    svg.canvas.reshape #selection-ui .mid,
+    svg.canvas.reshape #selection-ui .mid-hit { cursor: copy; }
+    svg.canvas.reshape #selection-ui .mid-hit {
+      vector-effect: non-scaling-stroke;
+      stroke: rgba(76, 151, 255, 0.01);
+    }
     svg.canvas.reshape #selection-ui .bez-handle { pointer-events: auto; cursor: grab; }
     .hidden { display: none !important; }
     @media (max-width: 640px) { .preview-row { grid-template-columns: 1fr; } }
@@ -323,9 +330,9 @@
         <select class="font-select" id="font-family" title="Google Fonts（OFL/Apache）。選んだフォントを読み込み、作品への利用・公開可"></select>
         <input class="width-num" id="font-size" type="number" min="8" max="240" value="28" title="サイズ" />
         <div class="text-align-bar" title="文字揃え">
-          <button class="ibtn" id="btn-text-left" type="button" title="左揃え">左</button>
-          <button class="ibtn" id="btn-text-center" type="button" title="中央">中</button>
-          <button class="ibtn" id="btn-text-right" type="button" title="右揃え">右</button>
+          <button class="ibtn" id="btn-text-left" type="button" title="左揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M3 12h10M3 17.5h15"/></svg></button>
+          <button class="ibtn" id="btn-text-center" type="button" title="中央"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M7 12h10M4.5 17.5h15"/></svg></button>
+          <button class="ibtn" id="btn-text-right" type="button" title="右揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M11 12h10M6 17.5h15"/></svg></button>
           <button class="ibtn" id="btn-text-vert" type="button" title="縦書き">縦</button>
         </div>
       </div>
@@ -338,12 +345,12 @@
       <button class="ibtn" id="btn-flip-v" title="上下反転"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M8 5l4 7-4 7"/><path d="M16 5l-4 7 4 7"/></svg></button>
       <div class="sep"></div>
       <div class="align-bar">
-        <button class="ibtn" id="btn-align-left" title="左揃え">左</button>
-        <button class="ibtn" id="btn-align-center" title="左右中央">中</button>
-        <button class="ibtn" id="btn-align-right" title="右揃え">右</button>
-        <button class="ibtn" id="btn-align-top" title="上揃え">上</button>
-        <button class="ibtn" id="btn-align-middle" title="上下中央">央</button>
-        <button class="ibtn" id="btn-align-bottom" title="下揃え">下</button>
+        <button class="ibtn" id="btn-align-left" title="左揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M3 12h10M3 17.5h15"/></svg></button>
+        <button class="ibtn" id="btn-align-center" title="左右中央"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M7 12h10M4.5 17.5h15"/></svg></button>
+        <button class="ibtn" id="btn-align-right" title="右揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M11 12h10M6 17.5h15"/></svg></button>
+        <button class="ibtn" id="btn-align-top" title="上揃え"><svg viewBox="0 0 24 24"><path d="M3 5h18M3 9h10M3 13h15"/></svg></button>
+        <button class="ibtn" id="btn-align-middle" title="上下中央"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M3 12h10M3 17.5h15"/></svg></button>
+        <button class="ibtn" id="btn-align-bottom" title="下揃え"><svg viewBox="0 0 24 24"><path d="M3 11h18M3 15h10M3 19h15"/></svg></button>
       </div>
       <div class="grow"></div>
       <a class="ai-btn" href="speech-generator/">吹き出し</a>
@@ -1177,8 +1184,19 @@
       document.getElementById("btn-ungroup").disabled = !selectedObjects().some(canUngroup);
     }
 
+    function convertSelectedRectsToPaths() {
+      let changed = false;
+      const walk = (obj) => {
+        if (obj.type === "group") (obj.children || []).forEach(walk);
+        else if (obj.type === "rect") { ensurePath(obj); changed = true; }
+      };
+      selectedObjects().forEach(walk);
+      if (changed) renderObjects();
+      return changed;
+    }
     function selectIds(ids, additive) {
       state.selectedIds = additive ? Array.from(new Set(state.selectedIds.concat(ids))) : ids.slice();
+      if (state.tool === "reshape") convertSelectedRectsToPaths();
       const obj = selected();
       if (obj) loadPropertiesFrom(obj);
       refreshSelectionButtons();
@@ -1222,7 +1240,26 @@
       for (const n of path) {
         if (n && n.matches && n.matches(selector)) return n;
       }
-      return evt.target?.closest?.(selector) || null;
+      const closest = evt.target?.closest?.(selector);
+      if (closest) return closest;
+      if (typeof evt.clientX === "number" && document.elementsFromPoint) {
+        const stack = document.elementsFromPoint(evt.clientX, evt.clientY);
+        for (const n of stack) {
+          if (n && n.matches && n.matches(selector)) return n;
+        }
+      }
+      return null;
+    }
+    function nearestReshapeAnchor(p, threshold) {
+      let best = null, bestD = threshold;
+      listReshapeItems().forEach(({ obj, mat }) => {
+        reshapeAnchors(obj).forEach((a) => {
+          const wp = applyMat(mat, a.x, a.y);
+          const d = Math.hypot(p.x - wp.x, p.y - wp.y);
+          if (d < bestD) { bestD = d; best = { obj, cmd: a.cmd }; }
+        });
+      });
+      return best;
     }
     function findById(list, id) {
       for (const o of list || []) {
@@ -1510,23 +1547,59 @@
       return best;
     }
     function insertAtWorldPoint(obj, after, t, worldPt) {
-      const was = obj.type;
-      const mat = worldMatrixOf(obj.id);
       ensurePath(obj);
-      if (was !== "path") {
-        const hit = closestSegment([{ obj, mat }], worldPt, 48 / state.zoom);
-        if (hit) return insertPathPoint(obj, hit.after, hit.t);
-      }
+      const mat = worldMatrixOf(obj.id);
+      const hit = closestSegment([{ obj, mat }], worldPt, 56 / state.zoom);
+      if (hit) return insertPathPoint(obj, hit.after, hit.t);
       return insertPathPoint(obj, after, t);
     }
     function drawReshape() {
       const items = listReshapeItems();
-      const r = 7 / state.zoom;
-      const hitR = 12 / state.zoom;
-      const midS = 8 / state.zoom;
+      const r = 8 / state.zoom;
+      const hitR = 20 / state.zoom;
+      const midS = 13 / state.zoom;
+      const midHit = 40;
       const total = items.reduce((n, it) => n + reshapeAnchors(it.obj).length, 0);
       const showMids = total <= 180;
       items.forEach(({ obj, mat }) => {
+        if (showMids) {
+          segmentMids(obj).forEach((m) => {
+            const wp = applyMat(mat, m.x, m.y);
+            const cmds = obj.type === "path" ? parsePathCommands(obj.d) : null;
+            let a = null, b = null;
+            if (obj.type === "rect") {
+              const pts = [{x:obj.x,y:obj.y},{x:obj.x+obj.width,y:obj.y},{x:obj.x+obj.width,y:obj.y+obj.height},{x:obj.x,y:obj.y+obj.height}];
+              a = pts[m.after]; b = pts[(m.after + 1) % 4];
+            } else if (obj.type === "line") {
+              a = { x: obj.x1, y: obj.y1 }; b = { x: obj.x2, y: obj.y2 };
+            } else if (cmds) {
+              const from = cmds[m.after];
+              const next = cmds[m.after + 1];
+              if (from && from.x != null) {
+                a = from;
+                if (!next || next.c === "Z" || next.c === "M") b = subpathStart(cmds, m.after);
+                else if (next.x != null) b = next;
+              }
+            }
+            if (a && b) {
+              const wa = applyMat(mat, a.x, a.y), wb = applyMat(mat, b.x, b.y);
+              selectionLayer.append(createEl("line", {
+                class:"mid-hit", x1:wa.x, y1:wa.y, x2:wb.x, y2:wb.y,
+                stroke:"rgba(76,151,255,0.01)", "stroke-width": midHit, "stroke-linecap":"round",
+                "data-mid":"1", "data-obj": obj.id, "data-after": String(m.after), "data-t": String(m.t),
+                "pointer-events":"stroke",
+                "vector-effect":"non-scaling-stroke",
+              }));
+            }
+            selectionLayer.append(createEl("rect", {
+              class:"mid", x:wp.x-midS/2, y:wp.y-midS/2, width:midS, height:midS,
+              fill:"#fff", stroke:"#4c97ff", "stroke-width": 1.6 / state.zoom,
+              transform:`rotate(45 ${wp.x} ${wp.y})`,
+              "data-mid":"1", "data-obj": obj.id, "data-after": String(m.after), "data-t": String(m.t),
+              "pointer-events":"all",
+            }));
+          });
+        }
         reshapeAnchors(obj).forEach((a) => {
           const wp = applyMat(mat, a.x, a.y);
           selectionLayer.append(createEl("circle", {
@@ -1535,17 +1608,6 @@
           }));
           selectionLayer.append(createEl("circle", {
             cx:wp.x, cy:wp.y, r, fill:"#fff", stroke:"#855cd6", "stroke-width": 2 / state.zoom, "pointer-events":"none",
-          }));
-        });
-        if (!showMids) return;
-        segmentMids(obj).forEach((m) => {
-          const wp = applyMat(mat, m.x, m.y);
-          selectionLayer.append(createEl("rect", {
-            class:"mid", x:wp.x-midS/2, y:wp.y-midS/2, width:midS, height:midS,
-            fill:"#fff", stroke:"#4c97ff", "stroke-width": 1.4 / state.zoom,
-            transform:`rotate(45 ${wp.x} ${wp.y})`,
-            "data-mid":"1", "data-obj": obj.id, "data-after": String(m.after), "data-t": String(m.t),
-            "pointer-events":"all",
           }));
         });
         if (obj.type !== "path") return;
@@ -1587,10 +1649,8 @@
         if (gesture.cmd === 0) { obj.x1=local.x; obj.y1=local.y; }
         else { obj.x2=local.x; obj.y2=local.y; }
       } else if (obj.type === "rect") {
-        const pts = [{x:obj.x,y:obj.y},{x:obj.x+obj.width,y:obj.y},{x:obj.x+obj.width,y:obj.y+obj.height},{x:obj.x,y:obj.y+obj.height}];
-        pts[gesture.cmd] = local;
-        obj.x=Math.min(pts[0].x,pts[2].x); obj.y=Math.min(pts[0].y,pts[2].y);
-        obj.width=Math.abs(pts[2].x-pts[0].x)||1; obj.height=Math.abs(pts[2].y-pts[0].y)||1;
+        ensurePath(obj);
+        movePathAnchor(obj, gesture.cmd, local.x, local.y);
       } else if (obj.type === "ellipse") {
         if (gesture.cmd < 2) obj.rx=Math.abs(local.x-obj.cx)||1;
         else obj.ry=Math.abs(local.y-obj.cy)||1;
@@ -1625,6 +1685,7 @@
       state.tool = tool;
       document.querySelectorAll(".tool[data-tool]").forEach((btn) => btn.classList.toggle("active", btn.dataset.tool === tool));
       applyCanvasToolClass();
+      if (tool === "reshape") convertSelectedRectsToPaths();
       drawSelection();
     }
 
@@ -2273,26 +2334,42 @@
         if (node) {
           const obj = findById(state.objects, node.getAttribute("data-obj"));
           if (obj) {
-            if (evt.altKey && obj.type === "path") {
+            if (evt.altKey && (obj.type === "path" || obj.type === "rect")) {
               snapshot();
+              ensurePath(obj);
               deletePathAnchor(obj, +node.getAttribute("data-cmd"));
               renderObjects(); drawSelection();
               return;
             }
             snapshot();
+            if (obj.type === "rect") ensurePath(obj);
             state.gesture = { type:"reshape", objId: obj.id, cmd: +node.getAttribute("data-cmd") };
           }
         } else if (mid) {
-          const obj = findById(state.objects, mid.getAttribute("data-obj"));
-          if (obj) {
+          const near = nearestReshapeAnchor(p, 18 / state.zoom);
+          if (near) {
             snapshot();
-            const cmd = insertAtWorldPoint(obj, +mid.getAttribute("data-after"), Number(mid.getAttribute("data-t")) || 0.5, p);
-            renderObjects(); drawSelection();
-            state.gesture = { type:"reshape", objId: obj.id, cmd };
+            if (near.obj.type === "rect") ensurePath(near.obj);
+            state.gesture = { type:"reshape", objId: near.obj.id, cmd: near.cmd };
+          } else {
+            const obj = findById(state.objects, mid.getAttribute("data-obj"));
+            if (obj) {
+              snapshot();
+              const cmd = insertAtWorldPoint(obj, +mid.getAttribute("data-after"), Number(mid.getAttribute("data-t")) || 0.5, p);
+              renderObjects(); drawSelection();
+              state.gesture = { type:"reshape", objId: obj.id, cmd };
+            }
           }
         } else {
+          const near = nearestReshapeAnchor(p, 18 / state.zoom);
+          if (near) {
+            snapshot();
+            if (near.obj.type === "rect") ensurePath(near.obj);
+            state.gesture = { type:"reshape", objId: near.obj.id, cmd: near.cmd };
+            return;
+          }
           const items = listReshapeItems();
-          const hitSeg = items.length ? closestSegment(items, p, 12 / state.zoom) : null;
+          const hitSeg = items.length ? closestSegment(items, p, 44 / state.zoom) : null;
           if (hitSeg) {
             snapshot();
             const cmd = insertAtWorldPoint(hitSeg.obj, hitSeg.after, hitSeg.t, p);
@@ -2483,7 +2560,7 @@
           const obj = { id:uid(), ...geo, matrix:identity() };
           applyCurrentPaint(obj);
           if (geo.type === "line") obj.fill = "none";
-          state.objects.push(obj); renderObjects();
+          state.objects.push(obj); renderObjects(); selectObject(obj.id);
         }
         state.drawing=null; return;
       }
