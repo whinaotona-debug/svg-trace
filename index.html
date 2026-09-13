@@ -17,35 +17,50 @@
       --line: #c2d0db;
       --text: #575e75;
       --ink: #222;
-      --tool: 42px;
+      --tool: 38px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Noto Sans JP", sans-serif; user-select: none; overscroll-behavior: none; }
-    button, input, select, textarea { font-family: inherit; }
+    html, body { height: 100%; max-height: 100dvh; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Noto Sans JP", sans-serif; user-select: none; overscroll-behavior: none; }
+    button, input, select, textarea { font-family: inherit; line-height: 1; }
     input, textarea, select, .text-edit { user-select: text; -webkit-user-select: text; }
-    .app { height: 100%; display: grid; grid-template-rows: 48px 1fr 112px; }
-    .topbar {
-      display: flex; align-items: center; gap: 8px; padding: 0 10px;
-      background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto;
+    .app {
+      height: 100%; max-height: 100dvh; min-height: 0; overflow: hidden;
+      display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
     }
-    .name-wrap { display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
-    .name-wrap input { width: 110px; height: 28px; border: 1px solid var(--line); border-radius: 4px; padding: 0 8px; }
-    .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; flex: 0 0 auto; }
+    .topbar {
+      display: flex; flex-direction: column; gap: 0;
+      background: var(--panel); border-bottom: 1px solid var(--line);
+      overflow: hidden; min-width: 0; flex: 0 0 auto;
+    }
+    .top-row {
+      display: flex; align-items: center; gap: 6px;
+      height: 38px; padding: 0 8px; min-width: 0; overflow: hidden;
+      flex-wrap: nowrap;
+    }
+    .top-row + .top-row { border-top: 1px solid var(--line); height: 40px; }
+    .cluster {
+      display: flex; align-items: center; gap: 2px;
+      flex: 0 1 auto; min-width: 0; overflow: hidden; height: 32px;
+    }
+    .cluster:has(.ai-btn) { gap: 4px; }
+    .name-wrap {
+      display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap;
+      flex: 0 1 auto; min-width: 0; overflow: hidden; line-height: 1;
+    }
+    .name-wrap input { width: 96px; max-width: 18vw; min-width: 72px; height: 28px; border: 1px solid var(--line); border-radius: 4px; padding: 0 8px; }
+    .sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; flex: 0 0 auto; }
     .ibtn {
-      width: 32px; height: 32px; border: 0; background: transparent; border-radius: 4px; cursor: pointer;
-      color: var(--text); display: grid; place-items: center;
+      width: 30px; height: 30px; border: 0; background: transparent; border-radius: 4px; cursor: pointer;
+      color: var(--text); display: grid; place-items: center; flex: 0 0 auto;
+      overflow: hidden; line-height: 1;
     }
     .ibtn:hover { background: #e6eef5; }
     .ibtn:disabled { opacity: .35; cursor: default; }
     .align-bar .ibtn, .text-align-bar .ibtn { font-size: 11px; font-weight: 700; }
-    .align-bar .ibtn svg, .text-align-bar .ibtn svg { width: 18px; height: 18px; stroke-width: 2.55; }
-    .ibtn-txt {
-      width: auto; min-width: 32px; height: 32px; padding: 0 8px; font-size: 11px; font-weight: 700;
-      display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
-    }
-    .ibtn-txt svg { width: 16px; height: 16px; }
-    .align-bar, .text-align-bar { display: flex; align-items: center; gap: 2px; }
+    .align-bar .ibtn svg, .text-align-bar .ibtn svg { width: 16px; height: 16px; stroke-width: 2.55; }
+    .align-bar, .text-align-bar { display: flex; align-items: center; gap: 1px; flex: 0 0 auto; }
     .text-align-bar button.on, .align-bar button.on { background: #d9e8ff; color: #2d5aa0; }
+    #btn-text-vert { font-size: 11px; font-weight: 700; }
     .text-edit {
       position: fixed; z-index: 45; min-width: 140px; min-height: 32px;
       border: 2px solid #4c97ff; border-radius: 6px; padding: 6px 8px;
@@ -53,12 +68,12 @@
       box-shadow: 0 8px 22px rgba(0,0,0,.16); line-height: 1.3;
       pointer-events: auto;
     }
-    .ibtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-    .color-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #575e75; white-space: nowrap; }
-    .color-lab { line-height: 1; }
+    .ibtn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .color-field { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #575e75; white-space: nowrap; min-width: 0; overflow: hidden; }
+    .color-lab { line-height: 1; flex: 0 0 auto; font-size: 11px; }
     .scratch-swatch {
       display: flex; align-items: stretch;
-      width: 54px; height: 32px; padding: 0; flex: 0 0 auto;
+      width: 48px; height: 28px; padding: 0; flex: 0 0 auto;
       border: 1px solid #c2d0db; border-radius: 8px; background: #fff; cursor: pointer; overflow: hidden;
     }
     .scratch-swatch:hover { border-color: #9eb1c0; }
@@ -110,33 +125,39 @@
     }
     .pop-foot svg { width: 18px; height: 18px; }
     svg.canvas.eyedrop { cursor: crosshair; }
-    .width-num { width: 42px; height: 26px; border: 1px solid var(--line); border-radius: 4px; text-align: center; color: #575e75; }
+    .width-num { width: 36px; height: 28px; border: 1px solid var(--line); border-radius: 4px; text-align: center; color: #575e75; flex: 0 0 auto; }
     #stroke-width {
-      width: 40px; height: 32px; border-radius: 999px; font-size: 13px; background: #fff;
+      width: 36px; height: 28px; border-radius: 999px; font-size: 12px; background: #fff;
       -moz-appearance: textfield; appearance: textfield;
     }
     #stroke-width::-webkit-outer-spin-button, #stroke-width::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .font-select {
-      height: 28px; max-width: 210px; border: 1px solid var(--line); border-radius: 4px;
+      height: 28px; width: 120px; max-width: min(140px, 16vw); min-width: 72px; flex: 1 1 88px;
+      border: 1px solid var(--line); border-radius: 4px;
       background: #fff; color: var(--ink); font-size: 12px; padding: 0 4px;
+      overflow: hidden; text-overflow: ellipsis;
     }
-    .grow { flex: 1; }
+    .grow { flex: 1 1 0; min-width: 4px; }
     .ai-btn, .save-btn {
-      height: 30px; padding: 0 10px; border: 0; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 700;
+      height: 28px; padding: 0 8px; border: 0; border-radius: 4px; cursor: pointer;
+      font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap;
+      flex: 0 0 auto; overflow: hidden;
     }
     .ai-btn { background: #ffbf00; color: #111; }
     a.ai-btn { display: inline-flex; align-items: center; text-decoration: none; }
     .save-btn { background: var(--purple); color: #fff; }
     .save-btn.sprite { background: #4c97ff; }
 
-    .workspace { display: grid; grid-template-columns: 58px 1fr; min-height: 0; }
+    .workspace { display: grid; grid-template-columns: 52px minmax(0, 1fr); min-height: 0; min-width: 0; overflow: hidden; }
     .toolbar {
       background: var(--panel); border-right: 1px solid var(--line);
-      display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0;
+      display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0;
+      min-height: 0; overflow-x: hidden; overflow-y: auto;
     }
     .tool {
       width: var(--tool); height: var(--tool); border: 0; background: transparent; border-radius: 8px;
       color: var(--text); cursor: pointer; display: grid; place-items: center; position: relative;
+      flex: 0 0 auto;
     }
     .tool svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .tool:hover { background: #e6eef5; }
@@ -148,7 +169,7 @@
     }
     .tool:hover .hint { opacity: 1; }
 
-    .stage { min-width: 0; min-height: 0; position: relative; background: #c8d4de; }
+    .stage { min-width: 0; min-height: 0; position: relative; background: #c8d4de; overflow: hidden; }
     .paper {
       position: absolute; inset: 0; overflow: hidden;
       background-color: #fff;
@@ -181,7 +202,8 @@
 
     .bottombar {
       display: flex; align-items: stretch; gap: 8px;
-      padding: 8px 10px; background: var(--panel); border-top: 1px solid var(--line);
+      height: 96px; max-height: 96px; min-height: 0; overflow: hidden;
+      padding: 6px 10px; background: var(--panel); border-top: 1px solid var(--line);
     }
     .costume-scroller {
       display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0; align-items: stretch;
@@ -193,7 +215,7 @@
     }
     .c-thumb.active { border-color: var(--purple); }
     .c-thumb .c-preview {
-      height: 54px; border-radius: 4px; overflow: hidden;
+      height: 48px; border-radius: 4px; overflow: hidden;
       background-color: #fff;
       background-image:
         linear-gradient(45deg, #eceff4 25%, transparent 25%),
@@ -205,10 +227,14 @@
     }
     .c-thumb .c-preview svg { width: 100%; height: 100%; display: block; }
     .c-thumb span { display: block; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .costume-actions { display: flex; flex-direction: column; gap: 4px; justify-content: center; flex: 0 0 auto; }
+    .costume-actions {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px; align-content: center;
+      flex: 0 0 auto; min-width: 0; overflow: hidden;
+    }
     .costume-actions button {
-      height: 26px; padding: 0 8px; border: 1px solid var(--line); background: #fff;
-      border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700; color: var(--text); font-family: inherit; white-space: nowrap;
+      height: 28px; padding: 0 8px; border: 1px solid var(--line); background: #fff;
+      border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700; color: var(--text);
+      font-family: inherit; white-space: nowrap; line-height: 1; overflow: hidden; text-overflow: ellipsis;
     }
     .costume-actions button:hover { background: #e6eef5; }
     .zoom-cluster { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
@@ -217,7 +243,7 @@
     }
     .zoom-label { min-width: 48px; text-align: center; font-size: 12px; }
     .tmpl-pop {
-      position: fixed; left: 68px; bottom: 122px; z-index: 48;
+      position: fixed; left: 68px; bottom: 108px; z-index: 48;
       width: min(540px, calc(100vw - 24px));
       background: #fff; border: 1px solid var(--line); border-radius: 12px;
       padding: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.16);
@@ -235,7 +261,7 @@
     .tmpl-card span { font-size: 11px; color: #667; }
 
     .toast {
-      position: fixed; right: 16px; bottom: 124px; background: #333; color: #fff; padding: 8px 12px; border-radius: 8px;
+      position: fixed; right: 16px; bottom: 108px; background: #333; color: #fff; padding: 8px 12px; border-radius: 8px;
       font-size: 13px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: .25s; z-index: 50;
     }
     .toast.show { opacity: 1; transform: none; }
@@ -290,73 +316,86 @@
     }
     svg.canvas.reshape #selection-ui .bez-handle { pointer-events: auto; cursor: grab; }
     .hidden { display: none !important; }
+    @media (max-width: 980px) {
+      .name-wrap { font-size: 0; gap: 0; }
+      .name-wrap input { font-size: 12px; width: 84px; }
+    }
     @media (max-width: 640px) { .preview-row { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="app">
     <header class="topbar">
-      <label class="name-wrap">コスチューム <input id="costume-name" value="costume1" /></label>
-      <div class="sep"></div>
-      <button class="ibtn" id="btn-undo" title="元に戻す" disabled><svg viewBox="0 0 24 24"><path d="M9 7H5V3"/><path d="M5 7a8 8 0 1 1-1.3 6.2"/></svg></button>
-      <button class="ibtn" id="btn-redo" title="やり直す" disabled><svg viewBox="0 0 24 24"><path d="M15 7h4V3"/><path d="M19 7a8 8 0 1 0 1.3 6.2"/></svg></button>
-      <div class="sep"></div>
-      <button class="ibtn" id="btn-group" title="グループ化"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="10" height="8"/><rect x="10" y="11" width="10" height="8"/></svg></button>
-      <button class="ibtn" id="btn-ungroup" title="グループ解除"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="8" height="7"/><rect x="13" y="11" width="8" height="7"/></svg></button>
-      <button class="ibtn" id="btn-clean-junk" title="周りのゴミを消す"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="1.15" fill="currentColor" stroke="none"/><circle cx="10.5" cy="5.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="8" cy="11" r="0.8" fill="currentColor" stroke="none"/><path d="M14 6l2.2 2.2L9 15.4 6.8 13.2z"/><path d="M16.6 8.6l1.8 1.8-2.1 2.1-1.8-1.8z"/><path d="M6.2 13.8L5 19l5.2-1.2"/></svg></button>
-      <div class="sep"></div>
-      <button class="ibtn" id="btn-forward" title="ひとつ前面へ"><svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></button>
-      <button class="ibtn" id="btn-backward" title="ひとつ背面へ"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></button>
-      <button class="ibtn" id="btn-front" title="最前面へ"><svg viewBox="0 0 24 24"><rect x="7" y="8" width="11" height="10"/><rect x="4" y="4" width="11" height="10"/></svg></button>
-      <button class="ibtn" id="btn-back" title="最背面へ"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="10"/><rect x="7" y="8" width="11" height="10"/></svg></button>
-      <div class="sep"></div>
-      <div class="color-field">
-        <span class="color-lab">塗りつぶし</span>
-        <button class="scratch-swatch" id="fill-wrap" type="button" title="塗りつぶしの色">
-          <span id="fill-chip" class="chip" style="background:#cf63cf"></span>
-          <span class="swatch-caret"></span>
-        </button>
-      </div>
-      <div class="color-field">
-        <span class="color-lab">枠線</span>
-        <button class="scratch-swatch" id="stroke-wrap" type="button" title="枠線の色">
-          <span id="stroke-chip" class="chip" style="background:#111111"></span>
-          <span class="swatch-caret"></span>
-        </button>
-        <input class="width-num" id="stroke-width" type="number" min="0" max="80" value="4" title="枠線の太さ" />
-      </div>
-      <div class="sep"></div>
-      <div class="color-field">フォント
-        <select class="font-select" id="font-family" title="Google Fonts（OFL/Apache）。選んだフォントを読み込み、作品への利用・公開可"></select>
-        <input class="width-num" id="font-size" type="number" min="8" max="240" value="28" title="サイズ" />
-        <div class="text-align-bar" title="文字揃え">
-          <button class="ibtn" id="btn-text-left" type="button" title="左揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M3 12h10M3 17.5h15"/></svg></button>
-          <button class="ibtn" id="btn-text-center" type="button" title="中央"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M7 12h10M4.5 17.5h15"/></svg></button>
-          <button class="ibtn" id="btn-text-right" type="button" title="右揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M11 12h10M6 17.5h15"/></svg></button>
-          <button class="ibtn" id="btn-text-vert" type="button" title="縦書き">縦</button>
+      <div class="top-row">
+        <label class="name-wrap">コスチューム <input id="costume-name" value="costume1" /></label>
+        <div class="sep"></div>
+        <div class="cluster" title="履歴">
+          <button class="ibtn" id="btn-undo" title="元に戻す" disabled><svg viewBox="0 0 24 24"><path d="M9 7H5V3"/><path d="M5 7a8 8 0 1 1-1.3 6.2"/></svg></button>
+          <button class="ibtn" id="btn-redo" title="やり直す" disabled><svg viewBox="0 0 24 24"><path d="M15 7h4V3"/><path d="M19 7a8 8 0 1 0 1.3 6.2"/></svg></button>
+        </div>
+        <div class="sep"></div>
+        <div class="cluster" title="編集">
+          <button class="ibtn" id="btn-group" title="グループ化"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="10" height="8"/><rect x="10" y="11" width="10" height="8"/></svg></button>
+          <button class="ibtn" id="btn-ungroup" title="グループ解除"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="8" height="7"/><rect x="13" y="11" width="8" height="7"/></svg></button>
+          <button class="ibtn" id="btn-clean-junk" title="周りのゴミを消す"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="1.15" fill="currentColor" stroke="none"/><circle cx="10.5" cy="5.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="8" cy="11" r="0.8" fill="currentColor" stroke="none"/><path d="M14 6l2.2 2.2L9 15.4 6.8 13.2z"/><path d="M16.6 8.6l1.8 1.8-2.1 2.1-1.8-1.8z"/><path d="M6.2 13.8L5 19l5.2-1.2"/></svg></button>
+          <button class="ibtn" id="btn-copy" title="コピー (Ctrl+C)"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="10" height="11"/><path d="M7 16V5h10"/></svg></button>
+          <button class="ibtn" id="btn-paste" title="貼り付け (Ctrl+V)"><svg viewBox="0 0 24 24"><path d="M9 4h6"/><path d="M8 4h8v4H8z"/><rect x="6" y="8" width="12" height="12"/><path d="M12 12v5"/><path d="M9.5 15.5L12 18l2.5-2.5"/></svg></button>
+          <button class="ibtn" id="btn-delete" title="削除"><svg viewBox="0 0 24 24"><path d="M6 8h12"/><path d="M9 8V6h6v2"/><path d="M8 8l1 12h6l1-12"/></svg></button>
+        </div>
+        <div class="sep"></div>
+        <div class="cluster" title="重ね順">
+          <button class="ibtn" id="btn-forward" title="ひとつ前面へ"><svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></button>
+          <button class="ibtn" id="btn-backward" title="ひとつ背面へ"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg></button>
+          <button class="ibtn" id="btn-front" title="最前面へ"><svg viewBox="0 0 24 24"><rect x="7" y="8" width="11" height="10"/><rect x="4" y="4" width="11" height="10"/></svg></button>
+          <button class="ibtn" id="btn-back" title="最背面へ"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="10"/><rect x="7" y="8" width="11" height="10"/></svg></button>
+        </div>
+        <div class="grow"></div>
+        <div class="cluster">
+          <a class="ai-btn" href="speech-generator/" title="吹き出しジェネレーター">吹き出し</a>
+          <button class="ai-btn" id="btn-ai" type="button" title="画像から取込">取込</button>
+          <button class="save-btn" id="btn-export" type="button" title="SVG保存">SVG</button>
+          <button class="save-btn sprite" id="btn-export-sprite" type="button" title="sprite3保存">sprite3</button>
         </div>
       </div>
-      <div class="sep"></div>
-      <button class="ibtn ibtn-txt" id="btn-copy" title="コピー (Ctrl+C)"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="10" height="11"/><path d="M7 16V5h10"/></svg>コピー</button>
-      <button class="ibtn ibtn-txt" id="btn-paste" title="貼り付け (Ctrl+V)"><svg viewBox="0 0 24 24"><path d="M9 4h6"/><path d="M8 4h8v4H8z"/><rect x="6" y="8" width="12" height="12"/><path d="M12 12v5"/><path d="M9.5 15.5L12 18l2.5-2.5"/></svg>貼り付け</button>
-      <button class="ibtn" id="btn-delete" title="削除"><svg viewBox="0 0 24 24"><path d="M6 8h12"/><path d="M9 8V6h6v2"/><path d="M8 8l1 12h6l1-12"/></svg></button>
-      <div class="sep"></div>
-      <button class="ibtn" id="btn-flip-h" title="左右反転"><svg viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M5 8l7 4-7 4z"/><path d="M19 8l-7 4 7 4z"/></svg></button>
-      <button class="ibtn" id="btn-flip-v" title="上下反転"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M8 5l4 7-4 7"/><path d="M16 5l-4 7 4 7"/></svg></button>
-      <div class="sep"></div>
-      <div class="align-bar">
-        <button class="ibtn" id="btn-align-left" title="左揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M3 12h10M3 17.5h15"/></svg></button>
-        <button class="ibtn" id="btn-align-center" title="左右中央"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M7 12h10M4.5 17.5h15"/></svg></button>
-        <button class="ibtn" id="btn-align-right" title="右揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M11 12h10M6 17.5h15"/></svg></button>
-        <button class="ibtn" id="btn-align-top" title="上揃え"><svg viewBox="0 0 24 24"><path d="M3 5h18M3 9h10M3 13h15"/></svg></button>
-        <button class="ibtn" id="btn-align-middle" title="上下中央"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M3 12h10M3 17.5h15"/></svg></button>
-        <button class="ibtn" id="btn-align-bottom" title="下揃え"><svg viewBox="0 0 24 24"><path d="M3 11h18M3 15h10M3 19h15"/></svg></button>
+      <div class="top-row">
+        <div class="cluster" title="色">
+          <button class="scratch-swatch" id="fill-wrap" type="button" title="塗りつぶしの色">
+            <span id="fill-chip" class="chip" style="background:#cf63cf"></span>
+            <span class="swatch-caret"></span>
+          </button>
+          <button class="scratch-swatch" id="stroke-wrap" type="button" title="枠線の色">
+            <span id="stroke-chip" class="chip" style="background:#111111"></span>
+            <span class="swatch-caret"></span>
+          </button>
+          <input class="width-num" id="stroke-width" type="number" min="0" max="80" value="4" title="枠線の太さ" />
+        </div>
+        <div class="sep"></div>
+        <div class="cluster grow-cluster" title="文字">
+          <select class="font-select" id="font-family" title="フォント"></select>
+          <input class="width-num" id="font-size" type="number" min="8" max="240" value="28" title="サイズ" />
+          <div class="text-align-bar" title="文字揃え">
+            <button class="ibtn" id="btn-text-left" type="button" title="左揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M3 12h10M3 17.5h15"/></svg></button>
+            <button class="ibtn" id="btn-text-center" type="button" title="中央"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M7 12h10M4.5 17.5h15"/></svg></button>
+            <button class="ibtn" id="btn-text-right" type="button" title="右揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M11 12h10M6 17.5h15"/></svg></button>
+            <button class="ibtn" id="btn-text-vert" type="button" title="縦書き">縦</button>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="cluster" title="反転">
+          <button class="ibtn" id="btn-flip-h" title="左右反転"><svg viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M5 8l7 4-7 4z"/><path d="M19 8l-7 4 7 4z"/></svg></button>
+          <button class="ibtn" id="btn-flip-v" title="上下反転"><svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M8 5l4 7-4 7"/><path d="M16 5l-4 7 4 7"/></svg></button>
+        </div>
+        <div class="cluster" title="整列">
+          <div class="align-bar">
+            <button class="ibtn" id="btn-align-left" title="左揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M3 12h10M3 17.5h15"/></svg></button>
+            <button class="ibtn" id="btn-align-center" title="左右中央"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M7 12h10M4.5 17.5h15"/></svg></button>
+            <button class="ibtn" id="btn-align-right" title="右揃え"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M11 12h10M6 17.5h15"/></svg></button>
+            <button class="ibtn" id="btn-align-top" title="上揃え"><svg viewBox="0 0 24 24"><path d="M3 5h18M3 9h10M3 13h15"/></svg></button>
+            <button class="ibtn" id="btn-align-middle" title="上下中央"><svg viewBox="0 0 24 24"><path d="M3 6.5h18M3 12h10M3 17.5h15"/></svg></button>
+            <button class="ibtn" id="btn-align-bottom" title="下揃え"><svg viewBox="0 0 24 24"><path d="M3 11h18M3 15h10M3 19h15"/></svg></button>
+          </div>
+        </div>
       </div>
-      <div class="grow"></div>
-      <a class="ai-btn" href="speech-generator/">吹き出し</a>
-      <button class="ai-btn" id="btn-ai" type="button">画像から取込</button>
-      <button class="save-btn" id="btn-export" type="button">SVG保存</button>
-      <button class="save-btn sprite" id="btn-export-sprite" type="button">sprite3保存</button>
     </header>
 
     <div class="workspace">
@@ -387,10 +426,10 @@
     <footer class="bottombar">
       <div class="costume-scroller" id="costume-list"></div>
       <div class="costume-actions">
-        <button type="button" id="btn-add-costume">コスチューム追加</button>
-        <button type="button" id="btn-templates">テンプレート</button>
-        <button type="button" id="btn-play-costumes">再生</button>
-        <button type="button" id="btn-del-costume">このコマを削除</button>
+        <button type="button" id="btn-add-costume" title="空のコスチュームを追加">追加</button>
+        <button type="button" id="btn-templates" title="ベクターのテンプレート">テンプレート</button>
+        <button type="button" id="btn-play-costumes" title="コマを再生">再生</button>
+        <button type="button" id="btn-del-costume" title="このコマを削除">削除</button>
       </div>
       <div class="zoom-cluster">
         <button class="zoom-btn" id="zoom-out" title="縮小">−</button>
