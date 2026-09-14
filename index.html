@@ -4075,19 +4075,57 @@
       const dot = Math.max(-1, Math.min(1, (v1x * v2x + v1y * v2y) / (n1 * n2)));
       return Math.acos(dot);
     }
+    function collapsePixelStairs(pts, gentle) {
+      let p = stripClosed(pts);
+      if (p.length < 5) return closeLoop(p);
+      const maxDev = gentle ? 0.4 : 0.8;
+      const maxEdge = gentle ? 1.05 : 1.4;
+      for (let pass = 0; pass < 3; pass++) {
+        const n = p.length;
+        if (n < 6) break;
+        const keep = [];
+        let dropped = 0;
+        for (let i = 0; i < n; i++) {
+          const a = p[(i - 1 + n) % n], b = p[i], c = p[(i + 1) % n];
+          const e1 = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          const e2 = Math.hypot(c[0] - b[0], c[1] - b[1]);
+          const dev = distPointSeg(b, a, c);
+          const stair = e1 <= maxEdge && e2 <= maxEdge && dev > 0.04 && dev <= maxDev;
+          const collinear = dev < 0.16 && e1 < 6 && e2 < 6;
+          if (stair || collinear) { dropped++; continue; }
+          keep.push(b);
+        }
+        if (!dropped || keep.length < 4) break;
+        p = keep;
+      }
+      return closeLoop(p);
+    }
+    function absorbOnePixelSeams(labels, w, h) {
+      const src = labels;
+      const out = new Int16Array(src);
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        const nbs = [src[i - 1], src[i + 1], src[i - w], src[i + w]];
+        if (nbs.some((v) => v < 0)) continue;
+        if (nbs[0] === nbs[1] && nbs[0] === nbs[2] && nbs[0] === nbs[3] && nbs[0] !== src[i]) out[i] = nbs[0];
+      }
+      src.set(out);
+    }
     function loopToAdaptivePath(pts, smoothAmt) {
       let p = stripClosed(pts);
       if (p.length < 3) return loopToPath(closeLoop(p));
       if (smoothAmt < 0.18 || p.length < 5) return loopToPath(closeLoop(p));
       const n = p.length;
       let d = `M ${p[0][0].toFixed(2)} ${p[0][1].toFixed(2)}`;
-      const t = 0.16 + 0.28 * smoothAmt;
+      const t = 0.12 + 0.1 * smoothAmt;
       for (let i = 0; i < n; i++) {
-        const a = p[i], b = p[(i + 1) % n], c = p[(i + 2) % n], prev = p[(i - 1 + n) % n];
+        const prev = p[(i - 1 + n) % n], a = p[i], b = p[(i + 1) % n], c = p[(i + 2) % n];
         const ang = turnAngle(a, b, c);
-        const sharp = ang < Math.PI * 0.58;
-        const almostLine = ang > Math.PI - 0.16;
-        if (smoothAmt < 0.35 || sharp || almostLine) {
+        const e1 = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const e2 = Math.hypot(c[0] - b[0], c[1] - b[1]);
+        const corner = ang > Math.PI * 0.42 || (e1 < 2.2 && e2 < 2.2 && ang > Math.PI * 0.28);
+        const straight = ang < 0.14;
+        if (corner || straight) {
           d += ` L ${b[0].toFixed(2)} ${b[1].toFixed(2)}`;
           continue;
         }
@@ -4101,8 +4139,10 @@
     }
     function loopsToCompound(loops, ox, oy, rdp, smoothAmt, dark) {
       const shifted = loops.map((loop) => {
-        let s = simplifyClosed(loop, dark ? Math.max(0.22, rdp * 0.45) : rdp);
-        if (s.length > 28 && !dark && smoothAmt > 0.55) s = simplifyClosed(chaikinClosed(s, 1), rdp * 0.55);
+        const raw = stripClosed(loop);
+        const gentle = dark || raw.length < 22 || Math.abs(loopArea(closeLoop(raw))) < 110;
+        let s = collapsePixelStairs(loop, gentle);
+        s = simplifyClosed(s, dark ? Math.max(0.22, rdp * 0.45) : rdp);
         return s.map((pt) => [pt[0] + ox, pt[1] + oy]);
       }).filter((loop) => Math.abs(loopArea(loop)) >= (dark ? 0.8 : 3));
       if (!shifted.length) return null;
@@ -4148,6 +4188,7 @@
         minPixelsAbs: Math.max(opts.minPixelsAbs, Math.round(w * h * opts.minAreaFrac)),
         keepContrast: opts.keepContrast
       });
+      absorbOnePixelSeams(labels, w, h);
       labels = majoritySmooth(labels, w, h, 1);
       const used = new Uint8Array(palette.length);
       for (let i = 0; i < labels.length; i++) if (labels[i] >= 0) used[labels[i]] = 1;
