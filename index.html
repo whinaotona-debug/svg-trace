@@ -114,6 +114,16 @@
       -webkit-appearance: none; appearance: none; width: 100%; height: 12px; border-radius: 8px;
       border: 1px solid #c2d0db; outline: none; background: #ddd;
     }
+    #hsv-a {
+      background-image:
+        linear-gradient(90deg, transparent, #855cd6),
+        linear-gradient(45deg, #eceff4 25%, transparent 25%),
+        linear-gradient(-45deg, #eceff4 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eceff4 75%),
+        linear-gradient(-45deg, transparent 75%, #eceff4 75%);
+      background-size: auto, 8px 8px, 8px 8px, 8px 8px, 8px 8px;
+      background-color: #fff;
+    }
     .color-pop input[type="range"]::-moz-range-thumb {
       width: 16px; height: 16px; border-radius: 50%;
       background: #fff; border: 1px solid #b9c4ce; box-shadow: 0 1px 2px rgba(0,0,0,.2); cursor: pointer;
@@ -170,16 +180,16 @@
     .tool:hover .hint { opacity: 1; }
 
     .stage { min-width: 0; min-height: 0; position: relative; background: #c8d4de; overflow: hidden; }
-    .paper {
-      position: absolute; inset: 0; overflow: hidden;
-      background-color: #fff;
+    .paper { position: absolute; inset: 0; overflow: hidden; background: transparent; }
+    #board-ui, #onion, #center-mark { pointer-events: none; }
+    .scratch-swatch .chip {
       background-image:
         linear-gradient(45deg, #eceff4 25%, transparent 25%),
         linear-gradient(-45deg, #eceff4 25%, transparent 25%),
         linear-gradient(45deg, transparent 75%, #eceff4 75%),
         linear-gradient(-45deg, transparent 75%, #eceff4 75%);
-      background-size: 20px 20px;
-      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0;
     }
     svg.canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
     svg.canvas.select, svg.canvas.reshape, svg.canvas.fill { cursor: default; }
@@ -211,9 +221,22 @@
     .c-thumb {
       width: 96px; flex: 0 0 auto; border: 2px solid transparent; background: #fff;
       border-radius: 8px; padding: 4px; font-size: 10px; color: var(--ink);
-      cursor: pointer; text-align: center; font-family: inherit;
+      cursor: pointer; text-align: center; font-family: inherit; position: relative;
     }
     .c-thumb.active { border-color: var(--purple); }
+    .c-thumb.off .c-preview { opacity: .38; }
+    .c-eye {
+      position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0;
+      border: 0; border-radius: 6px; background: rgba(255,255,255,.92); color: #575e75;
+      cursor: pointer; display: grid; place-items: center; box-shadow: 0 0 0 1px #c2d0db;
+    }
+    .c-eye svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .c-eye.on { color: #855cd6; background: #f3eaff; }
+    .onion-op {
+      display: flex; align-items: center; gap: 4px; flex: 0 0 auto; min-width: 0;
+      font-size: 11px; color: var(--text); white-space: nowrap;
+    }
+    .onion-op input { width: 72px; accent-color: #855cd6; }
     .c-thumb .c-preview {
       height: 48px; border-radius: 4px; overflow: hidden;
       background-color: #fff;
@@ -414,9 +437,22 @@
       <main class="stage">
         <div class="paper">
           <svg class="canvas select" id="canvas" xmlns="http://www.w3.org/2000/svg">
+            <defs id="board-defs">
+              <pattern id="board-check" width="20" height="20" patternUnits="userSpaceOnUse">
+                <rect width="20" height="20" fill="#fff"/>
+                <rect width="10" height="10" fill="#eceff4"/>
+                <rect x="10" y="10" width="10" height="10" fill="#eceff4"/>
+              </pattern>
+            </defs>
             <defs id="paint-defs"></defs>
+            <g id="board-ui" pointer-events="none">
+              <rect id="stage-fill" fill="#c8d4de"/>
+              <rect id="artboard" x="0" y="0" width="480" height="360" fill="url(#board-check)" stroke="#9aa8b4" stroke-width="1" vector-effect="non-scaling-stroke"/>
+            </g>
+            <g id="onion" pointer-events="none"></g>
             <g id="objects"></g>
             <g id="preview"></g>
+            <g id="center-mark" pointer-events="none"></g>
             <g id="selection-ui"></g>
           </svg>
         </div>
@@ -431,9 +467,12 @@
         <button type="button" id="btn-play-costumes" title="コマを再生">再生</button>
         <button type="button" id="btn-del-costume" title="このコマを削除">削除</button>
       </div>
+      <div class="onion-op" title="他のコスチュームを重ねて見る濃さ">
+        重ね<input id="onion-opacity" type="range" min="8" max="80" value="38" />
+      </div>
       <div class="zoom-cluster">
         <button class="zoom-btn" id="zoom-out" title="縮小">−</button>
-        <button class="zoom-btn" id="zoom-reset" title="100%">=</button>
+        <button class="zoom-btn" id="zoom-reset" title="キャンバス全体">=</button>
         <button class="zoom-btn" id="zoom-in" title="拡大">+</button>
         <div class="zoom-label" id="zoom-label">100%</div>
       </div>
@@ -463,6 +502,10 @@
     <div class="slider-block">
       <div class="slider-lab"><span>明るさ</span><span id="hsv-v-val">100</span></div>
       <input id="hsv-v" type="range" min="0" max="100" value="100" />
+    </div>
+    <div class="slider-block">
+      <div class="slider-lab"><span>透明度</span><span id="hsv-a-val">100</span></div>
+      <input id="hsv-a" type="range" min="0" max="100" value="100" />
     </div>
     <div class="pop-foot">
       <button type="button" id="pop-none" title="塗りなし">
@@ -518,10 +561,13 @@
     const svgNS = "http://www.w3.org/2000/svg";
     const canvas = document.getElementById("canvas");
     const defsLayer = document.getElementById("paint-defs");
+    const onionLayer = document.getElementById("onion");
     const objectsLayer = document.getElementById("objects");
     const previewLayer = document.getElementById("preview");
     const selectionLayer = document.getElementById("selection-ui");
+    const centerLayer = document.getElementById("center-mark");
     const HANDLE_POS = { nw:[0,0], n:[.5,0], ne:[1,0], e:[1,.5], se:[1,1], s:[.5,1], sw:[0,1], w:[0,.5] };
+    const STAGE_W = 480, STAGE_H = 360, STAGE_CX = 240, STAGE_CY = 180;
 
     const state = {
       tool: "select",
@@ -535,6 +581,8 @@
       strokeNone: false,
       strokeWidth: 4,
       hsv: { h: 83, s: 52, v: 81 },
+      fillOpacity: 100,
+      strokeOpacity: 100,
       colorTarget: "fill",
       eyedrop: null,
       objects: [],
@@ -554,9 +602,10 @@
       textVertical: false,
       textEdit: null,
       reshapeNode: null,
-      costumes: [{ id: "c0", name: "costume1", objects: [] }],
+      costumes: [{ id: "c0", name: "costume1", objects: [], visible: false }],
       currentCostume: 0,
       playingCostumes: false,
+      onionOpacity: 38,
     };
 
     function sanitizeFontFamily(ff) {
@@ -639,6 +688,7 @@
       obj.fill = currentFill();
       obj.fillStyle = state.fillNone ? "solid" : state.fillStyle;
       obj.fill2 = state.fill2;
+      obj.fillOpacity = state.fillOpacity;
     }
     function applyCurrentPaint(obj) {
       if (obj.type !== "line") {
@@ -650,6 +700,8 @@
       obj.strokeStyle = state.strokeNone ? "solid" : state.strokeStyle;
       obj.stroke2 = state.stroke2;
       obj.strokeWidth = state.strokeWidth;
+      obj.fillOpacity = state.fillOpacity;
+      obj.strokeOpacity = state.strokeOpacity;
     }
 
     function multiply(a, b) {
@@ -684,12 +736,52 @@
       const w = Math.max(1, r.width / state.zoom);
       const h = Math.max(1, r.height / state.zoom);
       canvas.setAttribute("viewBox", `${state.panX} ${state.panY} ${w} ${h}`);
+      const pad = Math.max(w, h) * 4 + 2000;
+      const fill = document.getElementById("stage-fill");
+      if (fill) {
+        fill.setAttribute("x", state.panX - pad);
+        fill.setAttribute("y", state.panY - pad);
+        fill.setAttribute("width", w + pad * 2);
+        fill.setAttribute("height", h + pad * 2);
+      }
+      drawCenterMark();
       document.getElementById("zoom-label").textContent = Math.round(state.zoom * 100) + "%";
       const ta = document.querySelector("textarea.text-edit");
       if (ta && state.textEdit) {
         const obj = findById(state.objects, state.textEdit.id);
         if (obj) positionTextEdit(obj, ta);
       }
+    }
+    function drawCenterMark() {
+      if (!centerLayer) return;
+      const s = 11 / state.zoom;
+      const sw = 1.7 / state.zoom;
+      centerLayer.replaceChildren(
+        createEl("line", { x1: STAGE_CX - s, y1: STAGE_CY, x2: STAGE_CX + s, y2: STAGE_CY, stroke: "#855cd6", "stroke-width": sw, "stroke-linecap": "round" }),
+        createEl("line", { x1: STAGE_CX, y1: STAGE_CY - s, x2: STAGE_CX, y2: STAGE_CY + s, stroke: "#855cd6", "stroke-width": sw, "stroke-linecap": "round" }),
+        createEl("circle", { cx: STAGE_CX, cy: STAGE_CY, r: 3.4 / state.zoom, fill: "#fff", stroke: "#855cd6", "stroke-width": sw })
+      );
+    }
+    function zoomAroundView(nextZoom) {
+      const r = canvas.getBoundingClientRect();
+      const cx = state.panX + (r.width / 2) / state.zoom;
+      const cy = state.panY + (r.height / 2) / state.zoom;
+      state.zoom = Math.max(0.2, Math.min(8, nextZoom));
+      state.panX = cx - (r.width / 2) / state.zoom;
+      state.panY = cy - (r.height / 2) / state.zoom;
+      applyView();
+      drawSelection();
+    }
+    function fitScratchCanvas() {
+      const r = canvas.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8) return;
+      const pad = 28;
+      const z = Math.min((r.width - pad * 2) / STAGE_W, (r.height - pad * 2) / STAGE_H);
+      state.zoom = Math.max(0.2, Math.min(8, z || 1));
+      state.panX = STAGE_CX - (r.width / 2) / state.zoom;
+      state.panY = STAGE_CY - (r.height / 2) / state.zoom;
+      applyView();
+      drawSelection();
     }
     function wheelPixels(e) {
       let dx = e.deltaX, dy = e.deltaY;
@@ -795,6 +887,8 @@
         stroke2: "#ffffff",
         strokeStyle: "solid",
         strokeWidth: shape.sw || 0,
+        fillOpacity: 100,
+        strokeOpacity: 100,
         matrix: shape.matrix ? shape.matrix.slice() : identity()
       };
       if (shape.t === "path") {
@@ -813,7 +907,7 @@
     }
     function saveCurrentCostume() {
       if (!state.costumes.length) {
-        state.costumes = [{ id: uid(), name: document.getElementById("costume-name").value || "costume1", objects: clone(state.objects) }];
+        state.costumes = [{ id: uid(), name: document.getElementById("costume-name").value || "costume1", objects: clone(state.objects), visible: false }];
         state.currentCostume = 0;
         return;
       }
@@ -828,6 +922,8 @@
       state.playingCostumes = false;
       const btn = document.getElementById("btn-play-costumes");
       if (btn) btn.textContent = "再生";
+      renderOnion();
+      syncCostumeList();
     }
     function showCostume(i, skipSave) {
       if (state.textEdit) commitTextEdit();
@@ -864,29 +960,47 @@
       return box;
     }
     function costumePreviewMarkup(objects) {
-      const box = measureObjectsBox(objects);
-      const pad = Math.max(8, Math.max(box.w, box.h) * 0.08);
-      const x = box.x - pad, y = box.y - pad, w = box.w + pad * 2, h = box.h + pad * 2;
       const defs = [];
       (objects || []).forEach((o) => collectSerializeDefs(o, defs));
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" preserveAspectRatio="xMidYMid meet">${defs.length ? `<defs>${defs.join("")}</defs>` : ""}${(objects || []).map(serializeObj).join("")}</svg>`;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" preserveAspectRatio="xMidYMid meet">${defs.length ? `<defs>${defs.join("")}</defs>` : ""}${(objects || []).map(serializeObj).join("")}</svg>`;
+    }
+    function eyeSvg(on) {
+      return on
+        ? `<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`
+        : `<svg viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 6.2A9.8 9.8 0 0 1 12 5c6 0 10 7 10 7a16 16 0 0 1-3.2 3.8"/><path d="M6.5 6.5C4 8.4 2 12 2 12s4 7 10 7c1.3 0 2.5-.3 3.6-.8"/></svg>`;
+    }
+    function toggleCostumeVisible(i) {
+      const c = state.costumes[i];
+      if (!c) return;
+      c.visible = !c.visible;
+      renderOnion();
+      syncCostumeList();
     }
     function syncCostumeList() {
       const box = document.getElementById("costume-list");
       if (!box) return;
       box.innerHTML = "";
       state.costumes.forEach((c, i) => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "c-thumb" + (i === state.currentCostume ? " active" : "");
+        const b = document.createElement("div");
+        b.className = "c-thumb" + (i === state.currentCostume ? " active" : "") + (c.visible || i === state.currentCostume ? "" : " off");
+        b.tabIndex = 0;
         const prev = document.createElement("div");
         prev.className = "c-preview";
         const objs = i === state.currentCostume ? state.objects : (c.objects || []);
         if (objs.length) prev.innerHTML = costumePreviewMarkup(objs);
         const cap = document.createElement("span");
         cap.textContent = c.name || ("costume" + (i + 1));
-        b.append(prev, cap);
+        const eye = document.createElement("button");
+        eye.type = "button";
+        eye.className = "c-eye" + (c.visible ? " on" : "");
+        eye.title = c.visible ? "キャンバスから隠す" : "キャンバスに重ねて表示";
+        eye.innerHTML = eyeSvg(!!c.visible);
+        eye.addEventListener("click", (e) => { e.stopPropagation(); toggleCostumeVisible(i); });
+        b.append(prev, cap, eye);
         b.addEventListener("click", () => { stopCostumePlay(); showCostume(i); });
+        b.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); stopCostumePlay(); showCostume(i); }
+        });
         box.appendChild(b);
       });
     }
@@ -895,7 +1009,7 @@
       if (state.textEdit) commitTextEdit();
       saveCurrentCostume();
       snapshot();
-      const n = { id: uid(), name: "costume" + (state.costumes.length + 1), objects: [] };
+      const n = { id: uid(), name: "costume" + (state.costumes.length + 1), objects: [], visible: false };
       state.costumes.push(n);
       showCostume(state.costumes.length - 1, true);
       toast("空のコスチュームを追加しました。ここに描けます");
@@ -918,13 +1032,7 @@
       showCostume(Math.min(idx, state.costumes.length - 1), true);
     }
     function templateAnchor() {
-      const r = canvas.getBoundingClientRect();
-      const size = Math.max(140, Math.min(r.width, r.height) / state.zoom * 0.42);
-      return {
-        x: state.panX + r.width / (2 * state.zoom),
-        y: state.panY + r.height / (2 * state.zoom),
-        size
-      };
+      return { x: STAGE_CX, y: STAGE_CY, size: 150 };
     }
     function applyVectorTemplate(id, frames, name) {
       stopCostumePlay();
@@ -936,7 +1044,7 @@
         : [];
       const all = geom.map((shapes) => (shapes || []).map(hydrateVecShape).filter(Boolean));
       if (!all.length) { toast("テンプレートを読み込めませんでした"); return; }
-      state.costumes = all.map((objs, i) => ({ id: uid(), name: "costume" + (i + 1), objects: objs }));
+      state.costumes = all.map((objs, i) => ({ id: uid(), name: "costume" + (i + 1), objects: objs, visible: false }));
       state.currentCostume = 0;
       state._spriteName = name;
       state.objects = clone(all[0]);
@@ -1027,7 +1135,13 @@
     }
 
     function shapeNode(obj) {
-      const common = { class:"shape", fill: paintFor(obj, "fill"), stroke: paintFor(obj, "stroke"), "stroke-width":obj.strokeWidth, "stroke-linecap":"round", "stroke-linejoin":"round" };
+      const fo = (obj.fillOpacity ?? 100) / 100;
+      const so = (obj.strokeOpacity ?? 100) / 100;
+      const common = {
+        class:"shape", fill: paintFor(obj, "fill"), stroke: paintFor(obj, "stroke"),
+        "stroke-width":obj.strokeWidth, "stroke-linecap":"round", "stroke-linejoin":"round",
+        "fill-opacity": fo, "stroke-opacity": so
+      };
       if (obj.type === "path") return createEl("path", { ...common, d: obj.d, "fill-rule": obj.fillRule || "evenodd" });
       if (obj.type === "rect") return createEl("rect", { ...common, x:obj.x, y:obj.y, width:obj.width, height:obj.height });
       if (obj.type === "ellipse") return createEl("ellipse", { ...common, cx:obj.cx, cy:obj.cy, rx:obj.rx, ry:obj.ry });
@@ -1064,7 +1178,27 @@
       objectsLayer.replaceChildren();
       state.objects.forEach((obj) => collectGradients(obj));
       state.objects.forEach((obj) => objectsLayer.append(renderOne(obj)));
+      renderOnion();
       scheduleCostumeThumbs();
+    }
+    function renderOnion() {
+      if (!onionLayer) return;
+      onionLayer.replaceChildren();
+      if (state.playingCostumes) return;
+      const alpha = Math.max(0.08, Math.min(0.8, (state.onionOpacity || 38) / 100));
+      state.costumes.forEach((c, i) => {
+        if (i === state.currentCostume || !c.visible) return;
+        const wrap = createEl("g", { class: "onion-costume", opacity: String(alpha), "pointer-events": "none" });
+        (c.objects || []).forEach((o) => {
+          const n = clone(o);
+          reIdTree(n);
+          collectGradients(n);
+          const node = renderOne(n);
+          node.querySelectorAll(".hit").forEach((h) => h.remove());
+          wrap.append(node);
+        });
+        onionLayer.append(wrap);
+      });
     }
     function scheduleCostumeThumbs() {
       clearTimeout(scheduleCostumeThumbs._t);
@@ -1164,16 +1298,20 @@
       const fillChip = document.getElementById("fill-chip");
       if (state.fillNone) {
         fillChip.style.background = "";
+        fillChip.style.opacity = "";
       } else {
         fillChip.style.background = gradientCss(state.fillStyle, state.fill, state.fill2);
+        fillChip.style.opacity = String((state.fillOpacity ?? 100) / 100);
       }
       document.getElementById("fill-wrap").classList.toggle("none", state.fillNone);
       const strokeChip = document.getElementById("stroke-chip");
       if (state.strokeNone) {
         strokeChip.style.background = "";
+        strokeChip.style.opacity = "";
         document.getElementById("stroke-wrap").classList.add("none");
       } else {
         strokeChip.style.background = gradientCss(state.strokeStyle, state.stroke, state.stroke2);
+        strokeChip.style.opacity = String((state.strokeOpacity ?? 100) / 100);
         document.getElementById("stroke-wrap").classList.remove("none");
       }
       document.getElementById("stroke-width").value = state.strokeWidth;
@@ -1194,6 +1332,8 @@
       if (obj.stroke === "none") state.strokeNone = true;
       else { state.strokeNone = false; state.stroke = obj.stroke; state.strokeStyle = obj.strokeStyle || "solid"; if (obj.stroke2) state.stroke2 = obj.stroke2; }
       state.strokeWidth = obj.strokeWidth;
+      state.fillOpacity = obj.fillOpacity ?? 100;
+      state.strokeOpacity = obj.strokeOpacity ?? 100;
       if (obj.fill === "none") state.fillNone = true;
       else {
         state.fillNone = false;
@@ -1861,7 +2001,7 @@
       const objs = selectedObjects();
       if (!objs.length) return;
       snapshot();
-      const box = objs.length === 1 ? currentViewBox() : unionBox(objs);
+      const box = objs.length === 1 ? { x: 0, y: 0, w: STAGE_W, h: STAGE_H } : unionBox(objs);
       objs.forEach((o) => {
         const b = unionBox([o]);
         let dx = 0, dy = 0;
@@ -2351,7 +2491,7 @@
     }
     function showPreview(objLike) {
       previewLayer.replaceChildren();
-      const dummy = { ...objLike, fill: objLike.fill ?? currentFill(), fillStyle: objLike.fillStyle ?? state.fillStyle, fill2: objLike.fill2 ?? state.fill2, stroke: objLike.stroke ?? currentStroke(), strokeStyle: state.strokeStyle, stroke2: state.stroke2, strokeWidth: state.strokeWidth, matrix: identity() };
+      const dummy = { ...objLike, fill: objLike.fill ?? currentFill(), fillStyle: objLike.fillStyle ?? state.fillStyle, fill2: objLike.fill2 ?? state.fill2, stroke: objLike.stroke ?? currentStroke(), strokeStyle: state.strokeStyle, stroke2: state.stroke2, strokeWidth: state.strokeWidth, fillOpacity: state.fillOpacity, strokeOpacity: state.strokeOpacity, matrix: identity() };
       if (dummy.type === "line") dummy.fill = "none";
       dummy.id = "preview";
       [...defsLayer.querySelectorAll("[id^='g-fill-preview'], [id^='g-stroke-preview']")].forEach((n) => n.remove());
@@ -2659,7 +2799,15 @@
           const a = axisLockDelta(dx, dy);
           dx = a.dx; dy = a.dy;
         }
-        if (state.gesture.type==="move") objs.forEach((o,i)=> { o.matrix = multiply(mTranslate(dx,dy), state.gesture.startMatrices[i]); });
+        if (state.gesture.type==="move") {
+          objs.forEach((o,i)=> { o.matrix = multiply(mTranslate(dx,dy), state.gesture.startMatrices[i]); });
+          const box = unionBox(objs);
+          const dcx = STAGE_CX - (box.x + box.w / 2);
+          const dcy = STAGE_CY - (box.y + box.h / 2);
+          if (Math.hypot(dcx, dcy) < 8 / state.zoom) {
+            objs.forEach((o) => { o.matrix = multiply(mTranslate(dcx, dcy), o.matrix); });
+          }
+        }
         else if (state.gesture.type==="rotate") {
           const c=state.gesture.center;
           let ang = Math.atan2(p.y-c.y,p.x-c.x) - Math.atan2(state.gesture.start.y-c.y, state.gesture.start.x-c.x);
@@ -2748,7 +2896,8 @@
     }
     function serializeShape(obj) {
       if (obj.type==="group") return obj.children.map(serializeObj).join("");
-      const f=`fill="${paintFor(obj,"fill")}"`, s=`stroke="${paintFor(obj,"stroke")}" stroke-width="${obj.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
+      const fo = (obj.fillOpacity ?? 100) / 100, so = (obj.strokeOpacity ?? 100) / 100;
+      const f=`fill="${paintFor(obj,"fill")}" fill-opacity="${fo}"`, s=`stroke="${paintFor(obj,"stroke")}" stroke-opacity="${so}" stroke-width="${obj.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"`;
       const rule = obj.fillRule ? ` fill-rule="${obj.fillRule}"` : "";
       if (obj.type==="path") return `<path d="${obj.d}" ${f} ${s}${rule}/>`;
       if (obj.type==="rect") return `<rect x="${obj.x}" y="${obj.y}" width="${obj.width}" height="${obj.height}" ${f} ${s}/>`;
@@ -2777,38 +2926,50 @@
       }
       (obj.children || []).forEach((ch) => collectFontFamilies(ch, set));
     }
-    function exportSVG() {
+    function costumeSvgForScratch(objects) {
+      const list = objects || [];
+      const defs = [];
+      list.forEach((o) => collectSerializeDefs(o, defs));
+      const fonts = new Set();
+      list.forEach((o) => collectFontFamilies(o, fonts));
+      const fontCss = fonts.size
+        ? `<style>@import url("https://fonts.googleapis.com/css2?${[...fonts].map((n) => "family=" + googleFontQuery(n)).join("&amp;")}&amp;display=swap");</style>`
+        : "";
+      const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="${STAGE_W}" height="${STAGE_H}" viewBox="0 0 ${STAGE_W} ${STAGE_H}">${fontCss}${defs.length ? `<defs>${defs.join("")}</defs>` : ""}${list.map(serializeObj).join("")}</svg>`;
+      return { markup, w: STAGE_W, h: STAGE_H, cx: STAGE_CX, cy: STAGE_CY };
+    }
+    async function saveBlobToDesktop(blob, filename, mime) {
+      if (window.showSaveFilePicker) {
+        try {
+          const ext = filename.includes(".") ? filename.slice(filename.lastIndexOf(".")) : "";
+          const handle = await window.showSaveFilePicker({
+            suggestedName: filename,
+            startIn: "desktop",
+            types: [{ description: filename, accept: { [mime]: [ext || ".bin"] } }]
+          });
+          const w = await handle.createWritable();
+          await w.write(blob);
+          await w.close();
+          return "ok";
+        } catch (err) {
+          if (err && err.name === "AbortError") return "cancel";
+        }
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      return "download";
+    }
+    async function exportSVG() {
       if (state.textEdit) commitTextEdit();
       saveCurrentCostume();
       const packed = costumeSvgForScratch(state.objects);
       const name = (document.getElementById("costume-name").value || "costume").replace(/[^\w\-]+/g,"_");
-      const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([packed.markup],{type:"image/svg+xml"})); a.download=name+".svg"; a.click(); URL.revokeObjectURL(a.href);
-      toast("SVGを保存しました");
-    }
-    function costumeSvgForScratch(objects) {
-      const list = objects || [];
-      if (!list.length) {
-        return { markup: `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360"></svg>`, w: 480, h: 360, cx: 240, cy: 180 };
-      }
-      const box = measureObjectsBox(list);
-      const pad = 12;
-      const bx = box.x - pad, by = box.y - pad;
-      const w = Math.max(8, Math.round(box.w + pad * 2));
-      const h = Math.max(8, Math.round(box.h + pad * 2));
-      const shifted = list.map((o) => {
-        const c = clone(o);
-        c.matrix = multiply(mTranslate(-bx, -by), c.matrix || identity());
-        return c;
-      });
-      const defs = [];
-      shifted.forEach((o) => collectSerializeDefs(o, defs));
-      const fonts = new Set();
-      shifted.forEach((o) => collectFontFamilies(o, fonts));
-      const fontCss = fonts.size
-        ? `<style>@import url("https://fonts.googleapis.com/css2?${[...fonts].map((n) => "family=" + googleFontQuery(n)).join("&amp;")}&amp;display=swap");</style>`
-        : "";
-      const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${fontCss}${defs.length ? `<defs>${defs.join("")}</defs>` : ""}${shifted.map(serializeObj).join("")}</svg>`;
-      return { markup, w, h, cx: w / 2, cy: h / 2 };
+      const how = await saveBlobToDesktop(new Blob([packed.markup], { type: "image/svg+xml" }), name + ".svg", "image/svg+xml");
+      if (how === "cancel") return;
+      toast(how === "ok" ? "デスクトップにSVGを保存しました" : "SVGを保存しました");
     }
     async function sha32(buf) {
       const d = await crypto.subtle.digest("SHA-256", buf);
@@ -2847,12 +3008,9 @@
       };
       zip.file("sprite.json", JSON.stringify(json));
       const out = await zip.generateAsync({ type: "blob" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(out);
-      a.download = spriteName.replace(/[^\w\-]+/g, "_") + ".sprite3";
-      a.click();
-      URL.revokeObjectURL(a.href);
-      toast("ベクターの .sprite3 を保存しました");
+      const how = await saveBlobToDesktop(out, spriteName.replace(/[^\w\-]+/g, "_") + ".sprite3", "application/zip");
+      if (how === "cancel") return;
+      toast(how === "ok" ? "デスクトップに .sprite3 を保存しました" : "ベクターの .sprite3 を保存しました");
     }
 
     canvas.addEventListener("pointerdown", onPointerDown);
@@ -2915,6 +3073,9 @@
       document.getElementById("hsv-h-val").textContent = hsv.h;
       document.getElementById("hsv-s-val").textContent = hsv.s;
       document.getElementById("hsv-v-val").textContent = hsv.v;
+      const alpha = state.colorTarget === "stroke" ? state.strokeOpacity : state.fillOpacity;
+      document.getElementById("hsv-a").value = alpha;
+      document.getElementById("hsv-a-val").textContent = alpha;
       document.getElementById("hsv-h").style.background = "linear-gradient(90deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000)";
       const hueHex = hsvToHex(hsv.h, 100, 100);
       document.getElementById("hsv-s").style.background = `linear-gradient(90deg,#ffffff,${hueHex})`;
@@ -2928,6 +3089,9 @@
     }
     function commitPickerColor(snapshotIfNeeded) {
       setActivePaintColor(hsvToHex(state.hsv.h, state.hsv.s, state.hsv.v));
+      const alpha = +document.getElementById("hsv-a").value;
+      if (state.colorTarget === "stroke") state.strokeOpacity = alpha;
+      else state.fillOpacity = alpha;
       updateChips();
       if (snapshotIfNeeded && styleTargets().length) snapshot();
       applyStyleToSelected();
@@ -2967,11 +3131,13 @@
         state.stroke = color;
         if (hit.strokeStyle) state.strokeStyle = hit.strokeStyle;
         if (hit.stroke2) state.stroke2 = hit.stroke2;
+        if (hit.strokeOpacity != null) state.strokeOpacity = hit.strokeOpacity;
       } else {
         state.fillNone = false;
         state.fill = color;
         if (hit.fillStyle) state.fillStyle = hit.fillStyle;
         if (hit.fill2) state.fill2 = hit.fill2;
+        if (hit.fillOpacity != null) state.fillOpacity = hit.fillOpacity;
       }
       state.hsv = hexToHsv(color);
       updateChips();
@@ -2995,7 +3161,7 @@
       else { state.fillStyle = mode; state.fillNone = false; }
       commitPickerColor(true);
     }));
-    ["hsv-h","hsv-s","hsv-v"].forEach((id) => {
+    ["hsv-h","hsv-s","hsv-v","hsv-a"].forEach((id) => {
       const el = document.getElementById(id);
       el.addEventListener("input", () => {
         state.hsv = { h:+document.getElementById("hsv-h").value, s:+document.getElementById("hsv-s").value, v:+document.getElementById("hsv-v").value };
@@ -3027,7 +3193,7 @@
     document.getElementById("font-size").addEventListener("change", (e)=>{ if (selected()) snapshot(); state.fontSize=Math.max(8, Number(e.target.value)||28); applyFontToSelected(); });
     document.getElementById("btn-undo").addEventListener("click", undo);
     document.getElementById("btn-redo").addEventListener("click", redo);
-    document.getElementById("btn-export").addEventListener("click", exportSVG);
+    document.getElementById("btn-export").addEventListener("click", () => { exportSVG().catch((err) => toast(err.message || "保存に失敗しました")); });
     document.getElementById("btn-export-sprite").addEventListener("click", () => { exportSprite3().catch((err) => toast(err.message || "保存に失敗しました")); });
     document.getElementById("btn-add-costume").addEventListener("click", addBlankCostume);
     document.getElementById("btn-templates").addEventListener("click", (e) => {
@@ -3072,9 +3238,13 @@
     document.getElementById("btn-group").addEventListener("click", groupSelected);
     document.getElementById("btn-ungroup").addEventListener("click", ungroupSelected);
     document.getElementById("btn-clean-junk").addEventListener("click", cleanHaloJunkSelected);
-    document.getElementById("zoom-in").addEventListener("click", ()=>{ state.zoom=Math.min(8, state.zoom*1.25); applyView(); drawSelection(); });
-    document.getElementById("zoom-out").addEventListener("click", ()=>{ state.zoom=Math.max(.2, state.zoom/1.25); applyView(); drawSelection(); });
-    document.getElementById("zoom-reset").addEventListener("click", ()=>{ state.zoom=1; state.panX=0; state.panY=0; applyView(); drawSelection(); });
+    document.getElementById("zoom-in").addEventListener("click", ()=> zoomAroundView(state.zoom * 1.25));
+    document.getElementById("zoom-out").addEventListener("click", ()=> zoomAroundView(state.zoom / 1.25));
+    document.getElementById("zoom-reset").addEventListener("click", ()=> fitScratchCanvas());
+    document.getElementById("onion-opacity").addEventListener("input", (e) => {
+      state.onionOpacity = Number(e.target.value) || 38;
+      renderOnion();
+    });
 
     window.addEventListener("keydown", (e) => {
       if (isTypingField(document.activeElement)) return;
@@ -3134,7 +3304,9 @@
 
     fillGoogleFontSelect(document.getElementById("font-family"));
     _googleFontsLoaded["Noto Sans JP"] = true;
-    updateChips(); updateFontUI(); setTool("select"); refreshHistoryButtons(); refreshSelectionButtons(); applyView();
+    updateChips(); updateFontUI(); setTool("select"); refreshHistoryButtons(); refreshSelectionButtons();
+    fitScratchCanvas();
+    requestAnimationFrame(() => requestAnimationFrame(() => fitScratchCanvas()));
     syncCostumeList();
 
     const ai = { sourceDataUrl:null, svgMarkup:null, busy:false };
@@ -3698,7 +3870,11 @@
       const fill=el.getAttribute("fill")||style.fill||inherited.fill; const stroke=el.getAttribute("stroke")||style.stroke||inherited.stroke;
       const swRaw=el.getAttribute("stroke-width")||style["stroke-width"]; const strokeWidth=swRaw?parseFloat(swRaw):inherited.strokeWidth;
       const rule=el.getAttribute("fill-rule")||style["fill-rule"]||inherited.fillRule;
-      return { fill: fill||"#000", stroke: stroke||"none", strokeWidth: Number.isFinite(strokeWidth)?strokeWidth:0, fillRule: rule||"evenodd" };
+      const foRaw=el.getAttribute("fill-opacity")||style["fill-opacity"];
+      const soRaw=el.getAttribute("stroke-opacity")||style["stroke-opacity"];
+      const fillOpacity = foRaw != null ? Math.round(Math.max(0, Math.min(1, parseFloat(foRaw))) * 100) : (inherited.fillOpacity ?? 100);
+      const strokeOpacity = soRaw != null ? Math.round(Math.max(0, Math.min(1, parseFloat(soRaw))) * 100) : (inherited.strokeOpacity ?? 100);
+      return { fill: fill||"#000", stroke: stroke||"none", strokeWidth: Number.isFinite(strokeWidth)?strokeWidth:0, fillRule: rule||"evenodd", fillOpacity, strokeOpacity };
     }
     function polygonToPath(points, close) {
       const nums=String(points||"").trim().split(/[\s,]+/).filter(Boolean); if(nums.length<4) return "";
@@ -3731,28 +3907,28 @@
             vertical: /vertical/.test(el.getAttribute("writing-mode") || ""),
           };
         }
-        if (obj) imported.push({ id:uid(), ...obj, fill: obj.type==="line"?"none":paint.fill, stroke:paint.stroke, strokeWidth:paint.strokeWidth, matrix:mat });
+        if (obj) imported.push({
+          id:uid(), ...obj,
+          fill: obj.type==="line"?"none":paint.fill, stroke:paint.stroke, strokeWidth:paint.strokeWidth,
+          fillOpacity: paint.fillOpacity, strokeOpacity: paint.strokeOpacity,
+          matrix:mat
+        });
         [...el.children].forEach((child)=>walk(child,paint,mat));
       }
-      [...root.children].forEach((child)=>walk(child,{fill:"#000",stroke:"none",strokeWidth:0,fillRule:"evenodd"},identity()));
+      [...root.children].forEach((child)=>walk(child,{fill:"#000",stroke:"none",strokeWidth:0,fillRule:"evenodd",fillOpacity:100,strokeOpacity:100},identity()));
       if (!imported.length) throw new Error("取り込み可能な図形が見つかりませんでした");
       return imported;
     }
     function placeImportedGroup(group) {
       applyView();
       const el = document.getElementById(group.id);
-      const r = canvas.getBoundingClientRect();
-      if (!el || r.width < 8 || r.height < 8) return;
+      if (!el) return;
       const bbox = el.getBBox();
-      const vw = r.width / state.zoom;
-      const vh = r.height / state.zoom;
-      const target = Math.min(vw, vh) * 0.62;
+      const target = Math.min(STAGE_W, STAGE_H) * 0.72;
       const scale = target / Math.max(bbox.width || 1, bbox.height || 1, 1);
-      const cx = state.panX + vw / 2;
-      const cy = state.panY + vh / 2;
       const bx = bbox.x + (bbox.width || 0) / 2;
       const by = bbox.y + (bbox.height || 0) / 2;
-      group.matrix = multiply(multiply(mTranslate(cx, cy), mScale(scale, scale)), mTranslate(-bx, -by));
+      group.matrix = multiply(multiply(mTranslate(STAGE_CX, STAGE_CY), mScale(scale, scale)), mTranslate(-bx, -by));
     }
     function afterLayout(fn) {
       requestAnimationFrame(() => requestAnimationFrame(() => {
