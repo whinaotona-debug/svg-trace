@@ -400,8 +400,8 @@
 
     <div class="workspace">
       <aside class="toolbar">
-        <button class="tool active" data-tool="select"><svg viewBox="0 0 24 24"><path d="M5 4l6 16 2.2-6.2L19.5 12z"/></svg><span class="hint">選択</span></button>
-        <button class="tool" data-tool="reshape"><svg viewBox="0 0 24 24"><path d="M5 5l8 14 1.5-6L21 11z"/><circle cx="18" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg><span class="hint">再変形</span></button>
+        <button class="tool active" data-tool="select" title="選択　Alt+ドラッグで複製 / Shift+ドラッグで平行移動 / Alt+拡大で中心固定"><svg viewBox="0 0 24 24"><path d="M5 4l6 16 2.2-6.2L19.5 12z"/></svg><span class="hint">選択　Alt複製 / Shift平行</span></button>
+        <button class="tool" data-tool="reshape" title="再変形　角はAlt+ドラッグで複製、Shift+ドラッグで平行移動"><svg viewBox="0 0 24 24"><path d="M5 5l8 14 1.5-6L21 11z"/><circle cx="18" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg><span class="hint">再変形　Alt複製 / Shift平行</span></button>
         <button class="tool" data-tool="pen"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg><span class="hint">筆</span></button>
         <button class="tool" data-tool="curve"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l4 4"/></svg><span class="hint">ペン（ドラッグで曲線）</span></button>
         <button class="tool" data-tool="eraser"><svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7-4 4H9z"/></svg><span class="hint">消しゴム</span></button>
@@ -1811,6 +1811,37 @@
       selectIds(pasted.map((o) => o.id));
       renderObjects();
     }
+    function axisLockDelta(dx, dy) {
+      if (Math.abs(dx) >= Math.abs(dy)) return { dx, dy: 0 };
+      return { dx: 0, dy };
+    }
+    function duplicateSelectedInPlace() {
+      const src = selectedObjects();
+      if (!src.length) return [];
+      const copies = src.map((o) => {
+        const n = clone(o);
+        reIdTree(n);
+        return n;
+      });
+      state.objects.push(...copies);
+      selectIds(copies.map((o) => o.id));
+      return copies;
+    }
+    function duplicatePathAnchor(obj, cmdIndex) {
+      ensurePath(obj);
+      const cmds = parsePathCommands(obj.d);
+      const cmd = cmds[cmdIndex];
+      if (!cmd || cmd.x == null) return cmdIndex;
+      cmds.splice(cmdIndex + 1, 0, { c: "L", x: cmd.x, y: cmd.y });
+      obj.d = serializePathCommands(cmds);
+      return cmdIndex + 1;
+    }
+    function worldDragPoint(evt, gesture) {
+      const p = svgPoint(evt);
+      if (!evt.shiftKey || !gesture.startWorld) return p;
+      const a = axisLockDelta(p.x - gesture.startWorld.x, p.y - gesture.startWorld.y);
+      return { x: gesture.startWorld.x + a.dx, y: gesture.startWorld.y + a.dy };
+    }
     function flipSelected(axis) {
       const objs = selectedObjects();
       if (!objs.length) return;
@@ -2330,15 +2361,23 @@
       previewLayer.append(n);
     }
 
-    function handleScaleAll(objs, gesture, mouse, shiftKey) {
+    function handleScaleAll(objs, gesture, mouse, shiftKey, fromCenter) {
       const box = gesture.box;
       const [hx,hy] = HANDLE_POS[gesture.handle];
-      const fixed = { x: box.x + box.w*(1-hx), y: box.y + box.h*(1-hy) };
-      let sx = hx===.5 ? 1 : (mouse.x-fixed.x) / ((hx*2-1)*box.w || 1);
-      let sy = hy===.5 ? 1 : (mouse.y-fixed.y) / ((hy*2-1)*box.h || 1);
+      const origin = fromCenter
+        ? { x: box.x + box.w / 2, y: box.y + box.h / 2 }
+        : { x: box.x + box.w * (1 - hx), y: box.y + box.h * (1 - hy) };
+      let sx, sy;
+      if (fromCenter) {
+        sx = hx === .5 ? 1 : (mouse.x - origin.x) / ((hx - 0.5) * box.w || 1);
+        sy = hy === .5 ? 1 : (mouse.y - origin.y) / ((hy - 0.5) * box.h || 1);
+      } else {
+        sx = hx === .5 ? 1 : (mouse.x - origin.x) / ((hx * 2 - 1) * box.w || 1);
+        sy = hy === .5 ? 1 : (mouse.y - origin.y) / ((hy * 2 - 1) * box.h || 1);
+      }
       if (shiftKey) { const u = Math.abs(sx)>Math.abs(sy)?sx:sy; if (hx!==.5) sx=Math.sign(sx||1)*Math.abs(u); if (hy!==.5) sy=Math.sign(sy||1)*Math.abs(u); }
       sx = sx || 0.01; sy = sy || 0.01;
-      const around = multiply(mTranslate(fixed.x,fixed.y), multiply(mScale(sx,sy), mTranslate(-fixed.x,-fixed.y)));
+      const around = multiply(mTranslate(origin.x,origin.y), multiply(mScale(sx,sy), mTranslate(-origin.x,-origin.y)));
       objs.forEach((o,i) => { o.matrix = multiply(around, gesture.startMatrices[i]); });
     }
 
@@ -2390,6 +2429,13 @@
         return;
       }
       if (state.tool === "reshape") {
+        if (evt.altKey) evt.preventDefault();
+        const startAnchorDrag = (obj, cmd) => {
+          if (obj.type === "rect") ensurePath(obj);
+          state.reshapeNode = { objId: obj.id, cmd };
+          state.gesture = { type:"reshape", objId: obj.id, cmd, recorded: false, duplicated: false, startWorld: { x:p.x, y:p.y } };
+          drawSelection();
+        };
         const bez = eventEl(evt, "[data-bez]");
         const node = eventEl(evt, "[data-node]");
         const mid = eventEl(evt, "[data-mid]");
@@ -2397,47 +2443,41 @@
           const obj = findById(state.objects, bez.getAttribute("data-obj"));
           if (obj) {
             snapshot();
-            state.gesture = { type:"reshape", objId: obj.id, cmd: +bez.getAttribute("data-cmd"), bez: bez.getAttribute("data-bez") };
+            state.gesture = { type:"reshape", objId: obj.id, cmd: +bez.getAttribute("data-cmd"), bez: bez.getAttribute("data-bez"), recorded: true, startWorld: { x:p.x, y:p.y } };
           }
           return;
         }
         if (node) {
           const obj = findById(state.objects, node.getAttribute("data-obj"));
-          if (obj) {
-            const cmd = +node.getAttribute("data-cmd");
-            if (evt.altKey && (obj.type === "path" || obj.type === "rect")) {
-              removeReshapeCorner(obj, cmd);
-              return;
-            }
-            if (obj.type === "rect") ensurePath(obj);
-            state.reshapeNode = { objId: obj.id, cmd };
-            state.gesture = { type:"reshape", objId: obj.id, cmd, recorded: false };
-            drawSelection();
-          }
+          if (obj) startAnchorDrag(obj, +node.getAttribute("data-cmd"));
         } else if (mid) {
           const near = nearestReshapeAnchor(p, 18 / state.zoom);
-          if (near) {
-            if (near.obj.type === "rect") ensurePath(near.obj);
-            state.reshapeNode = { objId: near.obj.id, cmd: near.cmd };
-            state.gesture = { type:"reshape", objId: near.obj.id, cmd: near.cmd, recorded: false };
-            drawSelection();
+          if (near) startAnchorDrag(near.obj, near.cmd);
+          else if (evt.altKey) {
+            const near2 = nearestReshapeAnchor(p, 80 / state.zoom);
+            if (near2) startAnchorDrag(near2.obj, near2.cmd);
           } else {
             const obj = findById(state.objects, mid.getAttribute("data-obj"));
             if (obj) {
               snapshot();
               const cmd = insertAtWorldPoint(obj, +mid.getAttribute("data-after"), Number(mid.getAttribute("data-t")) || 0.5, p);
-              state.reshapeNode = { objId: obj.id, cmd };
-              renderObjects(); drawSelection();
-              state.gesture = { type:"reshape", objId: obj.id, cmd, recorded: false };
+              renderObjects();
+              startAnchorDrag(obj, cmd);
             }
           }
         } else {
           const near = nearestReshapeAnchor(p, 18 / state.zoom);
           if (near) {
-            if (near.obj.type === "rect") ensurePath(near.obj);
-            state.reshapeNode = { objId: near.obj.id, cmd: near.cmd };
-            state.gesture = { type:"reshape", objId: near.obj.id, cmd: near.cmd, recorded: false };
-            drawSelection();
+            startAnchorDrag(near.obj, near.cmd);
+            return;
+          }
+          if (evt.altKey) {
+            const near2 = nearestReshapeAnchor(p, 80 / state.zoom);
+            if (near2) startAnchorDrag(near2.obj, near2.cmd);
+            else {
+              const hit = findObjectAt(evt);
+              selectObject(hit?.id || null);
+            }
             return;
           }
           const items = listReshapeItems();
@@ -2445,9 +2485,8 @@
           if (hitSeg) {
             snapshot();
             const cmd = insertAtWorldPoint(hitSeg.obj, hitSeg.after, hitSeg.t, p);
-            state.reshapeNode = { objId: hitSeg.obj.id, cmd };
-            renderObjects(); drawSelection();
-            state.gesture = { type:"reshape", objId: hitSeg.obj.id, cmd, recorded: false };
+            renderObjects();
+            startAnchorDrag(hitSeg.obj, cmd);
           } else {
             const hit = findObjectAt(evt);
             selectObject(hit?.id || null);
@@ -2456,7 +2495,8 @@
         return;
       }
       if (state.tool === "select") {
-        const handle = evt.target.closest?.("[data-handle]")?.getAttribute("data-handle");
+        if (evt.altKey) evt.preventDefault();
+        const handle = eventEl(evt, "[data-handle]")?.getAttribute("data-handle");
         const objs = selectedObjects();
         if (handle && objs.length) {
           state.gesture = {
@@ -2470,14 +2510,15 @@
         }
         const hit = findObjectAt(evt);
         if (hit) {
-          const additive = evt.shiftKey;
+          const additive = evt.shiftKey && !evt.altKey;
           const already = state.selectedIds.includes(hit.id);
           if (!already) selectObject(hit.id, additive);
-          else if (additive) selectIds(state.selectedIds.filter((id)=>id!==hit.id));
+          else if (additive && already) { /* shift+drag keeps selection; toggle on click is handled on pointerup */ }
           state.gesture = {
-            type:"move", start:p, recorded:false,
+            type:"move", start:p, recorded:false, duplicated:false,
             startMatrices: selectedObjects().map((o)=>o.matrix.slice()),
-            editOnClick: already && !additive && hit.type === "text"
+            editOnClick: already && !additive && hit.type === "text",
+            shiftToggleId: already && additive && !evt.altKey ? hit.id : null
           };
         } else {
           if (!evt.shiftKey) selectObject(null);
@@ -2577,16 +2618,47 @@
       if (state.gesture?.type === "reshape") {
         const obj = findById(state.objects, state.gesture.objId);
         if (!obj) return;
-        if (!state.gesture.recorded) { snapshot(); state.gesture.recorded = true; }
-        const local = applyMat(invert(worldMatrixOf(obj.id)), p.x, p.y);
+        const dx0 = p.x - (state.gesture.startWorld?.x ?? p.x);
+        const dy0 = p.y - (state.gesture.startWorld?.y ?? p.y);
+        if (!state.gesture.recorded && Math.hypot(dx0, dy0) > 1.5) {
+          snapshot();
+          state.gesture.recorded = true;
+          if (evt.altKey && !state.gesture.duplicated && !state.gesture.bez) {
+            const wasType = obj.type;
+            ensurePath(obj);
+            let cmdIndex = state.gesture.cmd;
+            if (wasType === "ellipse") cmdIndex = [0, 2, 1, 3][cmdIndex] ?? 0;
+            const cmd = duplicatePathAnchor(obj, cmdIndex);
+            state.gesture.cmd = cmd;
+            state.gesture.duplicated = true;
+            state.reshapeNode = { objId: obj.id, cmd };
+          }
+        }
+        if (!state.gesture.recorded) return;
+        const wp = worldDragPoint(evt, state.gesture);
+        const local = applyMat(invert(worldMatrixOf(obj.id)), wp.x, wp.y);
         applyReshapeMove(obj, state.gesture, local);
         renderObjects(); drawSelection();
         return;
       }
       if (state.gesture) {
+        const rawDx = p.x-state.gesture.start.x, rawDy=p.y-state.gesture.start.y;
+        if (!state.gesture.recorded && Math.hypot(rawDx,rawDy)>1.5) {
+          snapshot();
+          state.gesture.recorded=true;
+          if (state.gesture.type==="move" && evt.altKey && !state.gesture.duplicated) {
+            duplicateSelectedInPlace();
+            state.gesture.duplicated = true;
+            state.gesture.startMatrices = selectedObjects().map((o)=>o.matrix.slice());
+          }
+        }
+        if (state.gesture.type==="move" && !state.gesture.recorded) return;
         const objs = selectedObjects();
-        const dx = p.x-state.gesture.start.x, dy=p.y-state.gesture.start.y;
-        if (!state.gesture.recorded && Math.hypot(dx,dy)>1.5) { snapshot(); state.gesture.recorded=true; }
+        let dx = rawDx, dy = rawDy;
+        if (state.gesture.type==="move" && evt.shiftKey) {
+          const a = axisLockDelta(dx, dy);
+          dx = a.dx; dy = a.dy;
+        }
         if (state.gesture.type==="move") objs.forEach((o,i)=> { o.matrix = multiply(mTranslate(dx,dy), state.gesture.startMatrices[i]); });
         else if (state.gesture.type==="rotate") {
           const c=state.gesture.center;
@@ -2594,7 +2666,7 @@
           if (evt.shiftKey) ang = Math.round(ang/(Math.PI/12))*(Math.PI/12);
           const rot = multiply(mTranslate(c.x,c.y), multiply(mRotate(ang), mTranslate(-c.x,-c.y)));
           objs.forEach((o,i)=> { o.matrix = multiply(rot, state.gesture.startMatrices[i]); });
-        } else if (state.gesture.type==="scale") handleScaleAll(objs, state.gesture, p, evt.shiftKey);
+        } else if (state.gesture.type==="scale") handleScaleAll(objs, state.gesture, p, evt.shiftKey, evt.altKey);
         renderObjects(); drawSelection();
         return;
       }
@@ -2648,6 +2720,11 @@
         }).map((o)=>o.id);
         if (ids.length) selectIds(ids, evt.shiftKey);
         state.drawing=null; return;
+      }
+      if (state.gesture?.type === "move" && state.gesture.shiftToggleId && !state.gesture.recorded) {
+        selectIds(state.selectedIds.filter((id) => id !== state.gesture.shiftToggleId));
+        state.gesture = null; state.drawing = null;
+        return;
       }
       if (state.gesture?.type === "move" && state.gesture.editOnClick && !state.gesture.recorded) {
         const obj = selected();
