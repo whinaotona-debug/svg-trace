@@ -1976,7 +1976,6 @@
       const pasted = state.clipboard.map((o) => {
         const n = clone(o);
         reIdTree(n);
-        n.matrix = multiply(mTranslate(20, 20), n.matrix);
         return n;
       });
       state.objects.push(...pasted);
