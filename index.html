@@ -534,7 +534,7 @@
     </header>
     <div class="import-wrap">
       <h2>画像からキャンバスへ</h2>
-      <p class="lead">色のまとまりと輪郭を捉えて、粒ではなく少ない滑らかなパスで再現します。スライダーで精度と簡略化を分けて調整できます。</p>
+      <p class="lead">色と輪郭を読み取り、形がほぼ変わらない範囲だけを自動で圧縮します。耳・目・口などの特徴は残し、見た目に差がない点と粒だけを減らします。</p>
       <div class="import-tabs">
         <button type="button" class="active" data-tab="upload">画像をアップロード</button>
         <button type="button" data-tab="generate">AIで画像を生成</button>
@@ -551,14 +551,6 @@
         </div>
         <button class="go" id="btn-generate" type="button">画像を生成</button>
       </div>
-      <div class="trace-settings" id="trace-settings">
-        <label class="trace-set">精度 <span id="tr-precision-val">6</span><input id="tr-precision" type="range" min="1" max="10" value="6" /></label>
-        <label class="trace-set">ノイズ除去 <span id="tr-noise-val">5</span><input id="tr-noise" type="range" min="0" max="10" value="5" /></label>
-        <label class="trace-set">パス簡略化 <span id="tr-simplify-val">6</span><input id="tr-simplify" type="range" min="1" max="10" value="6" /></label>
-        <label class="trace-set">色の統合 <span id="tr-color-val">6</span><input id="tr-color" type="range" min="1" max="10" value="6" /></label>
-        <label class="trace-set">最小領域サイズ <span id="tr-minarea-val">5</span><input id="tr-minarea" type="range" min="1" max="10" value="5" /></label>
-        <label class="trace-set">曲線の滑らかさ <span id="tr-smooth-val">7</span><input id="tr-smooth" type="range" min="0" max="10" value="7" /></label>
-      </div>
       <div class="preview-row trace-compare">
         <div>
           <div class="lead">元画像</div>
@@ -573,7 +565,7 @@
         <div>
           <div class="lead">改善後のトレース</div>
           <div class="pv" id="svg-frame">まだありません</div>
-          <div class="trace-stats" id="stats-new">スライダーを動かすと再トレースします</div>
+          <div class="trace-stats" id="stats-new">形を保ったまま自動で圧縮します</div>
         </div>
       </div>
       <div class="import-status" id="ai-status">画像を用意してから変換してください</div>
@@ -3383,7 +3375,6 @@
       const gen = ++ai.traceGen;
       setAiBusy(true, "再トレース中...");
       try {
-        readTraceSliders();
         const previewOpts = { preview: true };
         const [nextSvg, oldSvg] = await Promise.all([
           traceBitmapToSvg(ai.sourceDataUrl, previewOpts),
@@ -3396,10 +3387,12 @@
         ai.statsOld = svgStats(oldSvg);
         putSvg("svg-frame", nextSvg);
         putSvg("svg-frame-old", oldSvg);
+        const score = ai._score;
         const cut = ai.statsOld.paths ? Math.round((1 - ai.statsNew.paths / ai.statsOld.paths) * 100) : 0;
+        const match = score ? `　一致 ${Math.round(score.match * 1000) / 10}%　色差 ${score.meanDelta.toFixed(1)}　輪郭 ${Math.round(score.edge * 1000) / 10}%` : "";
         document.getElementById("stats-old").innerHTML = statsHtml("旧方式", ai.statsOld);
-        document.getElementById("stats-new").innerHTML = statsHtml("改善後", ai.statsNew, cut > 0 ? `　パス ${cut}%減` : "");
-        aiStatus("プレビューを更新しました。スライダーで比較できます");
+        document.getElementById("stats-new").innerHTML = statsHtml("改善後", ai.statsNew, (cut > 0 ? `　パス ${cut}%減` : "") + match);
+        aiStatus("形を保ったまま圧縮しました");
       } catch (err) {
         if (gen === ai.traceGen) aiStatus(err.message || "トレースに失敗しました", true);
       } finally {
@@ -4001,7 +3994,7 @@
         if (!changed) break;
       }
     }
-    function mergeTouchingSimilarColors(labels, w, h, palLab, mergeLab) {
+    function mergeTouchingSimilarColors(labels, w, h, palLab, mergeLab, palLuma) {
       const n = palLab.length;
       const parent = Array.from({ length: n }, (_, i) => i);
       const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
@@ -4023,6 +4016,7 @@
       for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
         if (border[i][j] < 12) continue;
         if (labDist2(palLab[i], palLab[j]) > thr2) continue;
+        if (palLuma && Math.abs(palLuma[i] - palLuma[j]) > 7) continue;
         unite(i, j);
       }
       let changed = false;
@@ -4034,8 +4028,9 @@
       }
       return changed;
     }
-    function majoritySmooth(labels, w, h, times) {
+    function majoritySmooth(labels, w, h, times, need) {
       let cur = labels;
+      const minC = need || 7;
       for (let t = 0; t < times; t++) {
         const out = new Int16Array(cur);
         for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
@@ -4049,7 +4044,7 @@
           }
           let best = cur[i], bc = 0;
           counts.forEach((c, l) => { if (c > bc) { bc = c; best = l; } });
-          if (bc >= 5) out[i] = best;
+          if (bc >= minC) out[i] = best;
         }
         cur = out;
       }
@@ -4136,106 +4131,479 @@
       }
       return d + " Z";
     }
-    function loopsToCompound(loops, ox, oy, rdp, smoothAmt, dark) {
-      const shifted = loops.map((loop) => {
-        const raw = stripClosed(loop);
-        const gentle = dark || raw.length < 22 || Math.abs(loopArea(closeLoop(raw))) < 110;
-        let s = collapsePixelStairs(loop, gentle);
-        s = simplifyClosed(s, dark ? Math.max(0.22, rdp * 0.45) : rdp);
-        return s.map((pt) => [pt[0] + ox, pt[1] + oy]);
-      }).filter((loop) => Math.abs(loopArea(loop)) >= (dark ? 0.8 : 3));
-      if (!shifted.length) return null;
-      shifted.sort((a, b) => Math.abs(loopArea(b)) - Math.abs(loopArea(a)));
-      const outerSign = Math.sign(loopArea(shifted[0])) || 1;
-      const parts = shifted.map((loop, i) => {
-        let pts = loop;
-        if (i > 0 && Math.sign(loopArea(pts)) === outerSign) {
-          const p = stripClosed(pts).reverse();
-          p.push([p[0][0], p[0][1]]);
-          pts = p;
+    function ptFmt(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+    function bezAt(p0, p1, p2, p3, t) {
+      const u = 1 - t, uu = u * u, tt = t * t;
+      return [
+        uu * u * p0[0] + 3 * uu * t * p1[0] + 3 * u * tt * p2[0] + tt * t * p3[0],
+        uu * u * p0[1] + 3 * uu * t * p1[1] + 3 * u * tt * p2[1] + tt * t * p3[1]
+      ];
+    }
+    function unitVec(dx, dy) {
+      const n = Math.hypot(dx, dy) || 1;
+      return [dx / n, dy / n];
+    }
+    function chordError(pts) {
+      let max = 0;
+      const a = pts[0], b = pts[pts.length - 1];
+      for (let i = 1; i < pts.length - 1; i++) {
+        const d = distPointSeg(pts[i], a, b);
+        if (d > max) max = d;
+      }
+      return max;
+    }
+    function lookTangent(pts, fromEnd) {
+      const n = pts.length;
+      const span = Math.max(1, Math.min(6, Math.floor((n - 1) / 3)));
+      if (!fromEnd) return unitVec(pts[span][0] - pts[0][0], pts[span][1] - pts[0][1]);
+      return unitVec(pts[n - 1 - span][0] - pts[n - 1][0], pts[n - 1 - span][1] - pts[n - 1][1]);
+    }
+    function fitCubicHandles(pts) {
+      const n = pts.length;
+      const p0 = pts[0], p3 = pts[n - 1];
+      const t0 = lookTangent(pts, false);
+      const t1 = lookTangent(pts, true);
+      const ts = [0];
+      let total = 0;
+      for (let i = 1; i < n; i++) {
+        total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+        ts.push(total);
+      }
+      const inv = total > 1e-6 ? 1 / total : 0;
+      let c00 = 0, c01 = 0, c11 = 0, x0 = 0, x1 = 0;
+      for (let i = 1; i < n - 1; i++) {
+        const t = ts[i] * inv, u = 1 - t;
+        const b1 = 3 * u * u * t, b2 = 3 * u * t * t, b0 = u * u * u, b3 = t * t * t;
+        const rx = pts[i][0] - (b0 + b1) * p0[0] - (b2 + b3) * p3[0];
+        const ry = pts[i][1] - (b0 + b1) * p0[1] - (b2 + b3) * p3[1];
+        const a0x = b1 * t0[0], a0y = b1 * t0[1], a1x = b2 * t1[0], a1y = b2 * t1[1];
+        c00 += a0x * a0x + a0y * a0y;
+        c01 += a0x * a1x + a0y * a1y;
+        c11 += a1x * a1x + a1y * a1y;
+        x0 += a0x * rx + a0y * ry;
+        x1 += a1x * rx + a1y * ry;
+      }
+      const det = c00 * c11 - c01 * c01;
+      const chord = Math.hypot(p3[0] - p0[0], p3[1] - p0[1]) || 1;
+      let alpha = chord * 0.4, beta = chord * 0.4;
+      if (Math.abs(det) > 1e-8) {
+        alpha = (x0 * c11 - c01 * x1) / det;
+        beta = (c00 * x1 - c01 * x0) / det;
+      }
+      alpha = Math.max(0, Math.min(chord, alpha));
+      beta = Math.max(0, Math.min(chord, beta));
+      return [
+        [p0[0] + alpha * t0[0], p0[1] + alpha * t0[1]],
+        [p3[0] + beta * t1[0], p3[1] + beta * t1[1]]
+      ];
+    }
+    function bestCubic(pts, maxErr) {
+      const ls = fitCubicHandles(pts);
+      if (maxFitError(pts, ls[0], ls[1]) <= maxErr) return ls;
+      const p0 = pts[0], p3 = pts[pts.length - 1];
+      const t0 = lookTangent(pts, false);
+      const t1 = lookTangent(pts, true);
+      const chord = Math.hypot(p3[0] - p0[0], p3[1] - p0[1]) || 1;
+      const scales = [0.15, 0.3, 0.45, 0.6, 0.8];
+      let best = null, bestE = maxErr;
+      for (const a of scales) for (const b of scales) {
+        const h1 = [p0[0] + a * chord * t0[0], p0[1] + a * chord * t0[1]];
+        const h2 = [p3[0] + b * chord * t1[0], p3[1] + b * chord * t1[1]];
+        const e = maxFitError(pts, h1, h2);
+        if (e <= bestE) { bestE = e; best = [h1, h2]; }
+      }
+      return best;
+    }
+    function closestOnBezier(p, p0, p1, p2, p3) {
+      let bestT = 0, bestD = 1e9;
+      for (let k = 0; k <= 16; k++) {
+        const c = bezAt(p0, p1, p2, p3, k / 16);
+        const d = Math.hypot(c[0] - p[0], c[1] - p[1]);
+        if (d < bestD) { bestD = d; bestT = k / 16; }
+      }
+      let lo = Math.max(0, bestT - 1 / 16), hi = Math.min(1, bestT + 1 / 16);
+      for (let i = 0; i < 8; i++) {
+        const m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
+        const c1 = bezAt(p0, p1, p2, p3, m1), c2 = bezAt(p0, p1, p2, p3, m2);
+        const d1 = Math.hypot(c1[0] - p[0], c1[1] - p[1]);
+        const d2 = Math.hypot(c2[0] - p[0], c2[1] - p[1]);
+        if (d1 < d2) { hi = m2; if (d1 < bestD) bestD = d1; }
+        else { lo = m1; if (d2 < bestD) bestD = d2; }
+      }
+      return bestD;
+    }
+    function maxFitError(pts, p1, p2) {
+      const p0 = pts[0], p3 = pts[pts.length - 1];
+      let max = 0;
+      for (let i = 1; i < pts.length - 1; i++) {
+        const d = closestOnBezier(pts[i], p0, p1, p2, p3);
+        if (d > max) max = d;
+      }
+      for (let k = 1; k < 16; k++) {
+        const c = bezAt(p0, p1, p2, p3, k / 16);
+        let best = 1e9;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const d = distPointSeg(c, pts[i], pts[i + 1]);
+          if (d < best) best = d;
         }
-        return loopToAdaptivePath(pts, dark ? Math.min(0.35, smoothAmt) : smoothAmt);
+        if (best > max) max = best;
+      }
+      return max;
+    }
+    function fitSpan(pts, maxErr) {
+      const n = pts.length;
+      if (n < 2) return "";
+      if (n === 2 || chordError(pts) <= maxErr) return ` L ${ptFmt(pts[n - 1][0])} ${ptFmt(pts[n - 1][1])}`;
+      if (n > 160) {
+        const mid = n >> 1;
+        return fitSpan(pts.slice(0, mid + 1), maxErr) + fitSpan(pts.slice(mid), maxErr);
+      }
+      if (n >= 4) {
+        const cubic = bestCubic(pts, maxErr);
+        if (cubic) {
+          const [h1, h2] = cubic;
+          return ` C ${ptFmt(h1[0])} ${ptFmt(h1[1])} ${ptFmt(h2[0])} ${ptFmt(h2[1])} ${ptFmt(pts[n - 1][0])} ${ptFmt(pts[n - 1][1])}`;
+        }
+      }
+      let far = 1, farD = -1;
+      for (let i = 1; i < n - 1; i++) {
+        const d = distPointSeg(pts[i], pts[0], pts[n - 1]);
+        if (d > farD) { farD = d; far = i; }
+      }
+      if (far < 1 || far > n - 2) far = n >> 1;
+      return fitSpan(pts.slice(0, far + 1), maxErr) + fitSpan(pts.slice(far), maxErr);
+    }
+    function isFeatureCorner(a, b, c) {
+      const e1 = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const e2 = Math.hypot(c[0] - b[0], c[1] - b[1]);
+      const ang = turnAngle(a, b, c);
+      if (e1 <= 1.15 && e2 <= 1.15) return false;
+      if (ang > 1.15 && Math.max(e1, e2) >= 1.8) return true;
+      if (ang > 0.85 && Math.min(e1, e2) >= 2.2) return true;
+      return false;
+    }
+    function fitClosedToPath(pts, maxErr, ox, oy) {
+      let p = stripClosed(pts).map((pt) => [pt[0] + (ox || 0), pt[1] + (oy || 0)]);
+      if (p.length < 3) return loopToPath(closeLoop(p));
+      const corners = [];
+      for (let i = 0; i < p.length; i++) {
+        if (isFeatureCorner(p[(i - 1 + p.length) % p.length], p[i], p[(i + 1) % p.length])) corners.push(i);
+      }
+      if (!corners.length) corners.push(0);
+      if (corners.length < 2) {
+        const origin = p[corners[0]];
+        let far = corners[0], farD = -1;
+        for (let i = 0; i < p.length; i++) {
+          const d = Math.hypot(p[i][0] - origin[0], p[i][1] - origin[1]);
+          if (d > farD) { farD = d; far = i; }
+        }
+        if (far !== corners[0]) corners.push(far);
+        corners.sort((a, b) => a - b);
+      }
+      let d = `M ${ptFmt(p[corners[0]][0])} ${ptFmt(p[corners[0]][1])}`;
+      for (let i = 0; i < corners.length; i++) {
+        const a = corners[i], b = corners[(i + 1) % corners.length];
+        const span = [];
+        if (b > a) for (let k = a; k <= b; k++) span.push(p[k]);
+        else {
+          for (let k = a; k < p.length; k++) span.push(p[k]);
+          for (let k = 0; k <= b; k++) span.push(p[k]);
+        }
+        d += fitSpan(span, maxErr);
+      }
+      return d + " Z";
+    }
+    function contourBudget(loop, dark) {
+      const p = stripClosed(loop);
+      const area = Math.abs(loopArea(closeLoop(p)));
+      if (dark || area < 90 || p.length < 18) return 0.28;
+      if (area < 420) return 0.4;
+      return 0.52;
+    }
+    function localMaskMismatch(d, mask, w, h) {
+      const empty = { rate: 0, deep: 0 };
+      if (!mask || w < 2 || h < 2 || w * h > 280000) return empty;
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      try { ctx.fill(new Path2D(d), "evenodd"); } catch (_) { return null; }
+      const pix = ctx.getImageData(0, 0, w, h).data;
+      let miss = 0, tot = 0, deep = 0, area = 0;
+      const step = w * h > 140000 ? 2 : 1;
+      for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
+        const i = y * w + x;
+        const on = mask[i] ? 1 : 0;
+        const filled = pix[i * 4 + 3] > 128 ? 1 : 0;
+        if (on) area++;
+        if (!on && !filled) continue;
+        tot++;
+        if (on === filled) continue;
+        miss++;
+        let edge = x === 0 || y === 0 || x === w - 1 || y === h - 1;
+        if (!edge) {
+          const nbs = [i - 1, i + 1, i - w, i + w];
+          for (const ni of nbs) if ((mask[ni] ? 1 : 0) !== on) edge = true;
+        }
+        if (!edge) deep++;
+      }
+      if (!tot) return null;
+      return { rate: miss / tot, deep: area ? deep / area : 0 };
+    }
+    function bridgeSimilarGaps(labels, w, h, palLab) {
+      const out = new Int16Array(labels);
+      const ok = (a, b) => a >= 0 && b >= 0 && a !== b && labDist2(palLab[a], palLab[b]) < 36;
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        const cur = labels[i];
+        if (cur < 0) continue;
+        const L = labels[i - 1], R = labels[i + 1], U = labels[i - w], D = labels[i + w];
+        if (L === R && ok(L, cur)) out[i] = L;
+        else if (U === D && ok(U, cur)) out[i] = U;
+      }
+      labels.set(out);
+    }
+    function mergeFlatSpecks(labels, imgData, palLuma) {
+      const w = imgData.width, h = imgData.height, d = imgData.data;
+      const comps = listLabelComponents(labels, w, h);
+      for (const c of comps) {
+        if (c.cells.length < 2 || c.cells.length > 14) continue;
+        if (palLuma[c.label] < 52) continue;
+        const thin = (c.border * c.border) / (4 * Math.PI * c.cells.length) > 3.2;
+        if (thin) continue;
+        let minX = w, minY = h, maxX = 0, maxY = 0;
+        for (const p of c.cells) {
+          const x = p % w, y = (p / w) | 0;
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+        }
+        const x0 = Math.max(0, minX - 2), y0 = Math.max(0, minY - 2);
+        const x1 = Math.min(w - 1, maxX + 2), y1 = Math.min(h - 1, maxY + 2);
+        let sum = 0, sum2 = 0, n = 0;
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+          const i = (y * w + x) * 4;
+          const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          sum += lum; sum2 += lum * lum; n++;
+        }
+        const mean = sum / Math.max(1, n);
+        const std = Math.sqrt(Math.max(0, sum2 / Math.max(1, n) - mean * mean));
+        if (std > 14) continue;
+        const votes = neighborVotes(labels, w, h, c.cells, c.label);
+        let best = -1, bn = 0;
+        votes.forEach((cnt, lab) => { if (cnt > bn) { bn = cnt; best = lab; } });
+        if (best < 0) continue;
+        c.cells.forEach((i) => { labels[i] = best; });
+      }
+    }
+    async function scoreTrace(imgData, markup) {
+      const w = imgData.width, h = imgData.height;
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      const url = URL.createObjectURL(new Blob([markup], { type: "image/svg+xml" }));
+      try {
+        const img = new Image();
+        img.src = url;
+        await img.decode();
+        ctx.drawImage(img, 0, 0, w, h);
+      } catch (_) {
+        URL.revokeObjectURL(url);
+        return null;
+      }
+      URL.revokeObjectURL(url);
+      const out = ctx.getImageData(0, 0, w, h).data;
+      const src = imgData.data;
+      let sum = 0, n = 0, miss = 0, edgeMiss = 0, edgeN = 0;
+      const step = w * h > 450000 ? 2 : 1;
+      for (let y = 1; y < h - 1; y += step) for (let x = 1; x < w - 1; x += step) {
+        const i = (y * w + x) * 4;
+        if (src[i + 3] < 32 && out[i + 3] < 32) continue;
+        const dlt = Math.abs(src[i] - out[i]) + Math.abs(src[i + 1] - out[i + 1]) + Math.abs(src[i + 2] - out[i + 2]);
+        sum += dlt; n++;
+        if (dlt > 40) miss++;
+        const j = i + step * 4;
+        if (Math.abs(src[i] - src[j]) + Math.abs(src[i + 1] - src[j + 1]) + Math.abs(src[i + 2] - src[j + 2]) > 48) {
+          edgeN++;
+          if (dlt > 40) edgeMiss++;
+        }
+      }
+      return { match: n ? 1 - miss / n : 1, meanDelta: n ? sum / n / 3 : 0, edge: edgeN ? 1 - edgeMiss / edgeN : 1 };
+    }
+    function cross2(a, b, c) {
+      return (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    }
+    function dropContourNoise(pts) {
+      let p = [];
+      for (const pt of stripClosed(pts)) {
+        const prev = p[p.length - 1];
+        if (prev && Math.hypot(pt[0] - prev[0], pt[1] - prev[1]) < 0.05) continue;
+        p.push(pt);
+      }
+      if (p.length > 2 && Math.hypot(p[0][0] - p[p.length - 1][0], p[0][1] - p[p.length - 1][1]) < 0.05) p.pop();
+      if (p.length < 6) return closeLoop(p);
+      for (let pass = 0; pass < 4; pass++) {
+        const n = p.length;
+        if (n < 6) break;
+        const keep = [];
+        let dropped = 0;
+        for (let i = 0; i < n; i++) {
+          const a = p[(i - 1 + n) % n], b = p[i], c = p[(i + 1) % n], d = p[(i + 2) % n];
+          const prev = p[(i - 2 + n) % n];
+          if (isFeatureCorner(a, b, c)) { keep.push(b); continue; }
+          const e1 = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          const e2 = Math.hypot(c[0] - b[0], c[1] - b[1]);
+          const e3 = Math.hypot(d[0] - c[0], d[1] - c[1]);
+          const e0 = Math.hypot(a[0] - prev[0], a[1] - prev[1]);
+          const dev = distPointSeg(b, a, c);
+          const s0 = Math.sign(cross2(prev, a, b));
+          const s1 = Math.sign(cross2(a, b, c));
+          const s2 = Math.sign(cross2(b, c, d));
+          const short = e0 <= 1.15 && e1 <= 1.15 && e2 <= 1.15 && e3 <= 1.15;
+          const residual = e0 <= 2.5 && e1 <= 2.5 && e2 <= 2.5 && e3 <= 2.5 && distPointSeg(b, prev, d) <= 0.9 && distPointSeg(c, prev, d) <= 0.9;
+          const stair = s0 && s1 && s2 && s0 === -s1 && s1 === -s2 && (short || residual);
+          if (dev < 0.12 || stair) { dropped++; continue; }
+          keep.push(b);
+        }
+        if (!dropped || keep.length < 4) break;
+        p = keep;
+      }
+      return closeLoop(p);
+    }
+    function offsetPath(d, ox, oy) {
+      if (!ox && !oy) return d;
+      return d.replace(/([MLC])([^MLCZ]*)/gi, (_, cmd, rest) => {
+        const nums = rest.trim().split(/[\s,]+/).filter(Boolean).map(Number);
+        const out = [];
+        for (let i = 0; i + 1 < nums.length; i += 2) out.push(ptFmt(nums[i] + ox), ptFmt(nums[i + 1] + oy));
+        return cmd + " " + out.join(" ");
       });
-      return { d: parts.join(" "), area: Math.abs(loopArea(shifted[0])), box: loopBBox(shifted[0]) };
+    }
+    function shiftBox(box, ox, oy) {
+      if (!box) return box;
+      return { minX: box.minX + ox, minY: box.minY + oy, maxX: box.maxX + ox, maxY: box.maxY + oy, cx: box.cx + ox, cy: box.cy + oy };
+    }
+    function worseFit(a, b) {
+      if (!a || !b) return true;
+      return a.deep > b.deep + 0.004 || a.rate > b.rate + 0.012;
+    }
+    function loopsToCompound(loops, ox, oy, dark, mask, mw, mh) {
+      const build = (scale) => {
+        const parts = [];
+        for (const loop of loops) {
+          const cleaned = dropContourNoise(loop);
+          const area = Math.abs(loopArea(cleaned));
+          if (area < (dark ? 0.6 : 1.2) || cleaned.length < 4) continue;
+          const d = fitClosedToPath(cleaned, contourBudget(cleaned, dark) * scale, 0, 0);
+          if (!d) continue;
+          parts.push({ d, area, box: loopBBox(cleaned) });
+        }
+        if (!parts.length) return null;
+        parts.sort((a, b) => b.area - a.area);
+        return { d: parts.map((p) => p.d).join(" "), area: parts[0].area, box: parts[0].box };
+      };
+      let packed = build(1);
+      if (!packed) return null;
+      const canScore = mask && mw > 2 && mh > 2 && packed.area > 80;
+      if (canScore) {
+        const base = localMaskMismatch(packed.d, mask, mw, mh);
+        if (base && (base.deep > 0.01 || base.rate > 0.07)) {
+          const tighter = build(0.55);
+          if (tighter) {
+            const next = localMaskMismatch(tighter.d, mask, mw, mh);
+            if (next && !worseFit(next, base)) packed = tighter;
+          }
+        } else if (base) {
+          const looser = build(1.22);
+          if (looser) {
+            const next = localMaskMismatch(looser.d, mask, mw, mh);
+            if (next && !worseFit(next, base)) packed = looser;
+          }
+        }
+      }
+      return { d: offsetPath(packed.d, ox, oy), area: packed.area, box: shiftBox(packed.box, ox, oy) };
     }
     async function traceBitmapToSvg(dataUrl, options = {}) {
-      const opts = Object.assign(getTraceSettings(), options);
-      const maxSize = options.preview ? Math.min(opts.previewMax, opts.maxSize) : opts.maxSize;
+      const preview = !!options.preview;
+      const maxSize = preview ? 700 : 1024;
       aiStatus("領域をまとめてトレースしています...");
       await tick();
-      let { imgData, w, h } = await loadImageData(dataUrl, maxSize);
-      if (opts.medianRadius > 0) {
-        aiStatus("ノイズを取り除いています...");
-        await tick();
-        imgData = medianFilterRgb(imgData, opts.medianRadius);
-      }
+      let loaded = await loadImageData(dataUrl, maxSize);
+      const source = loaded.imgData;
+      let { imgData, w, h } = loaded;
+      aiStatus("ノイズを取り除いています...");
+      await tick();
+      imgData = medianFilterRgb(imgData, 1);
       aiStatus("色のまとまりを分析しています...");
       await tick();
       const labImg = imageLab(imgData);
-      let palette = medianCutPalette(imgData, opts.maxColors);
-      palette = await refinePaletteKMeans(imgData, labImg, palette, options.preview ? Math.min(3, opts.kmeansRounds) : opts.kmeansRounds);
-      palette = ensureKeyColors(dedupePalette(palette, opts.mergeLab));
+      const mergeLab = 5.2;
+      let palette = medianCutPalette(imgData, 20);
+      palette = await refinePaletteKMeans(imgData, labImg, palette, preview ? 3 : 4);
+      palette = dedupePalette(palette, mergeLab);
       if (!palette.length) throw new Error("トレーできる色が見つかりませんでした");
       aiStatus("同じ色の領域にまとめています...");
       await tick();
       let labels = quantize(imgData, labImg, palette);
-      labels = majoritySmooth(labels, w, h, opts.noise >= 7 ? 2 : 1);
+      labels = majoritySmooth(labels, w, h, 1, 7);
       const palLab = palette.map((p) => rgbToLab(p[0], p[1], p[2]));
       const palLuma = palette.map(lumaOf);
-      mergeTouchingSimilarColors(labels, w, h, palLab, opts.mergeLab);
+      mergeTouchingSimilarColors(labels, w, h, palLab, mergeLab, palLuma);
+      bridgeSimilarGaps(labels, w, h, palLab);
       mergeSmallRegions(labels, w, h, palLab, palLuma, {
-        minPixelsAbs: Math.max(opts.minPixelsAbs, Math.round(w * h * opts.minAreaFrac)),
-        keepContrast: opts.keepContrast
+        minPixelsAbs: Math.max(8, Math.round(w * h * 0.00004)),
+        keepContrast: 18
       });
+      mergeFlatSpecks(labels, imgData, palLuma);
       absorbOnePixelSeams(labels, w, h);
-      labels = majoritySmooth(labels, w, h, 1);
+      labels = majoritySmooth(labels, w, h, 1, 8);
       const used = new Uint8Array(palette.length);
       for (let i = 0; i < labels.length; i++) if (labels[i] >= 0) used[labels[i]] = 1;
-      const minComp = Math.max(4, Math.round(opts.minPixelsAbs * 0.6));
       const byFill = new Map();
       for (let pi = 0; pi < palette.length; pi++) {
         if (!used[pi]) continue;
-        aiStatus(`輪郭を滑らかにしています (${pi + 1}/${palette.length})...`);
+        aiStatus(`輪郭を正確に近似しています (${pi + 1}/${palette.length})...`);
         await tick();
         const dark = palLuma[pi] < 50;
-        let mask = colorMask(labels, pi, w, h, dark ? 2 : minComp);
+        let mask = colorMask(labels, pi, w, h, 2);
         if (!mask) continue;
-        if (!dark) {
-          mask = morphClose(mask, w, h, opts.noise >= 6 ? 2 : 1);
-          removeSpeckles(mask, w, h, Math.max(6, Math.round(minComp * 0.7)));
-        } else {
-          removeSpeckles(mask, w, h, 2);
-        }
-        const comps = connectedComponents(mask, w, h, dark ? 2 : minComp);
+        if (!dark) mask = morphClose(mask, w, h, 1);
+        removeSpeckles(mask, w, h, dark ? 2 : 3);
+        const comps = connectedComponents(mask, w, h, dark ? 2 : 3);
         const fill = rgbHex(palette[pi][0], palette[pi][1], palette[pi][2]);
         for (const comp of comps) {
           const segs = extractSegments(comp.mask, comp.w, comp.h);
           if (!segs.length) continue;
           const loops = stitchLoops(segs);
-          const packed = loopsToCompound(loops, comp.ox, comp.oy, opts.rdp, opts.smoothAmt, dark);
+          const packed = loopsToCompound(loops, comp.ox, comp.oy, dark, comp.mask, comp.w, comp.h);
           if (!packed) continue;
           if (!byFill.has(fill)) byFill.set(fill, []);
-          byFill.get(fill).push({ ...packed, dark, fill });
+          byFill.get(fill).push({ ...packed, dark });
         }
       }
       const packedColors = [];
       byFill.forEach((group, fill) => {
-        const d = group.map((g) => g.d).join(" ");
-        const area = group.reduce((s, g) => s + g.area, 0);
-        packedColors.push({ d, fill, area, dark: group.some((g) => g.dark) });
+        const seen = new Set();
+        const unique = group.filter((g) => {
+          if (seen.has(g.d)) return false;
+          seen.add(g.d);
+          return true;
+        });
+        packedColors.push({
+          d: unique.map((g) => g.d).join(" "),
+          fill,
+          area: unique.reduce((s, g) => s + g.area, 0),
+          dark: unique.some((g) => g.dark)
+        });
       });
       if (!packedColors.length) throw new Error("輪郭を取り出せませんでした");
-      packedColors.sort((a, b) => {
-        if (a.dark !== b.dark && a.area < 1800 !== b.area < 1800) return a.dark && a.area < 1800 ? 1 : -1;
-        return b.area - a.area;
-      });
-      packedColors.sort((a, b) => b.area - a.area);
       const darkLast = packedColors.filter((p) => p.dark && p.area < 2200);
       const rest = packedColors.filter((p) => !(p.dark && p.area < 2200));
       rest.sort((a, b) => b.area - a.area);
+      darkLast.sort((a, b) => b.area - a.area);
       const ordered = rest.concat(darkLast);
       const paths = ordered.map((l) => `<path fill="${l.fill}" stroke="none" fill-rule="evenodd" d="${l.d}"/>`).join("");
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${paths}</svg>`;
+      const markup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${paths}</svg>`;
+      ai._score = await scoreTrace(source, markup);
+      return markup;
     }
     async function traceBitmapToSvgLegacy(dataUrl, maxSize) {
       aiStatus("旧方式でトレースしています...");
@@ -4432,9 +4800,6 @@
       gen.disabled=on;
       convert.innerHTML=on?`<span class="spinner"></span>${label||"処理中"}`:"キャンバスへ取り込む";
     }
-    document.querySelectorAll("#trace-settings input").forEach((el) => {
-      el.addEventListener("input", () => { readTraceSliders(); if (ai.sourceDataUrl) scheduleRetrace(500); });
-    });
     document.getElementById("btn-retrace").addEventListener("click", () => { scheduleRetrace(0); });
     document.getElementById("btn-generate").addEventListener("click", async ()=>{
       const prompt=document.getElementById("prompt").value.trim(); if(!prompt) return aiStatus("プロンプトを入力してください",true);
@@ -4451,7 +4816,6 @@
         importSvgToCanvas(svg);
       }catch(err){ aiStatus(err.message||"変換に失敗しました",true); } finally{ setAiBusy(false); }
     });
-    readTraceSliders();
   </script>
 </body>
 </html>
